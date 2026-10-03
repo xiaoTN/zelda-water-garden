@@ -220,6 +220,11 @@ async function run() {
       await page.waitForFunction(()=>{const s=WaterGarden.inspect().stones[0];return s&&s.y<1&&s.y>.05;});
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-airborne.png')});
       await page.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);state=await inspect();assert(state.energy>.1,'impact must disturb water');
+      assert.equal(state.rings,0,'stone waves must come from the water simulation without drawn rings');assert.equal(state.drops,0);
+      if(viewport.width===390){
+        await page.screenshot({path:path.join(out,'stone-impact.png')});
+        await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'stone-ripples.png')});
+      }
       await page.waitForFunction(()=>WaterGarden.inspect().stones[0].settled);state=await inspect();
       assert(state.stoneDepth>-.21,'settled stone must update actual water depth');assert.equal(state.stoneImpacts,1);
       await page.mouse.click(x,y);await page.mouse.click(x,y);
@@ -302,7 +307,7 @@ async function run() {
     await slowPage.mouse.click(195,410); assert(await slowPage.evaluate(() => WaterGarden.inspect().energy > .001));
     reports.push({scenario:'synthetic slow timing normal → low → Canvas 2D',result:'passed'}); await slowContext.close();
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-03',errors,reports},null,2)+'\n');
+    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-04',errors,reports},null,2)+'\n');
     console.log('Browser checks passed: four viewports, local freeze, full freeze, fracture/shards, thaw, ice trails, frozen leaves, rotation persistence, touch, drag, long press, leaf, rain, light, audio, reset, safe areas, lifecycle, context loss/recovery, Canvas fallback and offline file URL.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }

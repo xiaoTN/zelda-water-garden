@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-04",
+  "artifact": {
+    "version": "1.8.4",
+    "file": "zelda-water-garden-minitool-v1.8.4.zip",
+    "bytes": 434521,
+    "entries": 13,
+    "sha256": "af5dbeb9e44b575fbf4be90f35cd92a18969985cd5ef82d2ec41bf57c924336b"
+  },
+  "gates": {
+    "unitTests": {
+      "passed": 30,
+      "failed": 0
+    },
+    "packageChecks": "passed",
+    "build": "passed",
+    "sourceAudit": {
+      "passed": true,
+      "warnings": 0
+    },
+    "zipSourceByteComparison": "passed",
+    "zipAudit": {
+      "passed": true,
+      "warnings": 0
+    },
+    "browser": {
+      "version": "154.0.4258.53",
+      "scenarios": 12,
+      "passed": true,
+      "errors": []
+    }
+  },
+  "actualDeviceCompatibility": "not measured",
+  "actualDevicePerformance": "not measured"
+}

@@ -4,6 +4,39 @@ const { WaveField, IceField, shore, bufferSize, waterMesh, updateMesh, seededRan
 const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
 
+test('even small stone waves spread wider and carry much more energy than a finger stroke',()=>{
+  for(const aspect of [.38,.462,1,2.2]){
+    const w=aspect>=1?192:Math.max(64,Math.round(192*aspect)),h=aspect>=1?Math.max(64,Math.round(192/aspect)):192;
+    const finger=new WaveField(w,h,aspect),small=new WaveField(w,h,aspect),large=new WaveField(w,h,aspect);
+    finger.stroke(.4,.49,.6,.49,.17);
+    small.stoneImpact(.5,.49,.075*Math.sqrt(Math.min(aspect,1)));
+    large.stoneImpact(.5,.49,.185*Math.sqrt(Math.min(aspect,1)));
+    const widthAcrossStroke=field=>{
+      let low=h,high=0;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(Math.abs(field.current[y*w+x])>.02){low=Math.min(low,y);high=Math.max(high,y);}
+      return high-low;
+    };
+    assert(widthAcrossStroke(small)>widthAcrossStroke(finger)*3,'the smallest rock needs a broad displacement, not a narrow finger wake');
+    assert(large.energy()>small.energy()*2,'larger rocks must displace more water');
+    let stoneEnergy=0,fingerEnergy=0;
+    for(let frame=0;frame<=30;frame++){
+      stoneEnergy+=small.energy();fingerEnergy+=finger.energy();
+      small.step();large.step();finger.step();
+    }
+    assert(stoneEnergy>fingerEnergy*4,'stone waves need much more energy over the first half-second, including troughs between crests');
+  }
+});
+
+test('stone entry still pushes surrounding water when an existing rock blocks its center',()=>{
+  const field=new WaveField(128,128,1);
+  field.setBathymetry({heightAt:(u,v)=>Math.hypot(u-.5,v-.49)<.035?.1:-.16});
+  assert.equal(field.disturb(.5,.49,.95,.06),false);
+  assert.equal(field.stoneImpact(.5,.49,.075),true);
+  assert(field.energy()>1,'the exposed perimeter must receive the impact');
+  for(let frame=0;frame<60;frame++)field.step();
+  for(let i=0;i<field.mask.length;i++)if(!field.mask[i])assert.equal(field.current[i],0);
+});
+
 test('compressed stones settle without ground contact chatter or spontaneous wakes',()=>{
   const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(6*713);
   s.attach(.462,terrain.bathymetry(scene,.462,true),scene);

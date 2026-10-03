@@ -94,11 +94,7 @@
     if(event!=='impact')return;
     if(field.ice.sample(stone.u,stone.v)>.1){iceEffects.breakAt(stone.u,stone.v,Math.max(.05,stone.radius*.7),now);}
     field.ice.paint(stone.u,stone.v,Math.max(.045,stone.radius*.65),false,false);
-    field.disturb(stone.u,stone.v,.75,stone.radius*.45);
-    for(var i=0;i<16;i++){
-      var a=i/16*Math.PI*2,r=stone.radius*1.22;
-      field.disturb(stone.u+Math.cos(a)*r/(field.aspect*2),stone.v+Math.sin(a)*r*.4330127,.24,Math.max(.009,stone.radius*.16));
-    }
+    field.stoneImpact(stone.u,stone.v,stone.radius);
     sound(.9,true);
   }
   function addLeaf(u, v) {
