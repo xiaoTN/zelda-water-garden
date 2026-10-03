@@ -1,0 +1,15 @@
+* text=auto
+*.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.png binary
+*.jpg binary
+*.wav binary
+*.m4a binary
+*.mp3 binary
+src/assets/audio-samples.js linguist-generated=true
+src/assets/fx-*.svg linguist-generated=true
