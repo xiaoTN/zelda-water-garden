@@ -19,7 +19,7 @@
 ## 开发与交付
 
 ```sh
-npm ci --workspaces=false
+npm ci
 npm start
 # 重新生成程序水纹素材（仅修改生成算法时需要）
 npm run assets
@@ -40,3 +40,9 @@ WebGL 1 用于真正的三维水面网格、顶点位移、实时法线与卡通
 浏览器自动化通过不等于真机通过。Android 8.1 / Chrome 61、iOS 小红书 WebView 的视觉兼容性、实际音频和性能尚未实测。
 
 水色按水面与实际三维池底 / 石面的高度差计算；露出水面的石头在波场中阻挡并反射水波，水下石面形成浅水区。计算方式与近似限制见 docs/release-v1.7.1.md。
+
+## 独立仓库与子模块
+
+独立仓库：[xiaoTN/zelda-water-garden](https://github.com/xiaoTN/zelda-water-garden)。可直接克隆，也可在工具集合中初始化本子模块。代码提交在本仓库完成；集合需要采用新版本时，再更新主仓库的提交指针。
+
+平台规范随本仓库一起维护，见 [小工具构建 Skill](.codex/minitool-zip-builder-1.6.0/minitool-zip-builder/SKILL.md)。迁移说明与验证记录见 [2026-10-04 子模块迁移](docs/submodule-migration-2026-10-04.md)。
