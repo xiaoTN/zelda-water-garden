@@ -6,8 +6,10 @@
   var renderer = null, scene, field, width = 1, height = 1, mode = 'touch', light = 0, rain = false, muted = true;
   var leaves = [], drops = [], rings = [], dust = [], fingers = {}, reduced = false;
   var iceEffects = new window.WaterIce.Effects();
+  var weather = new window.WaterWeather.System(), weatherAudio = null;
+  var rainOptions = document.getElementById('rain-options'), rainButtons = document.querySelectorAll('[data-rain]');
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
-  var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, rainTimer = 0, frameId = 0, lostCount = 0, fallbackMode = false;
+  var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
   var audio = null, master = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
   var hints = { touch: '轻点泛起涟漪 · 滑动拨开水面 · 长按蓄起水波', leaf: '轻点放下一片浮叶 · 滑动水面，推着叶子走', ice: '点水结冰 · 点冰踩碎 · 滑动凝出一条冰径', stone: '轻点选择落点 · 随机石头从高处落下 · 平静可清除' };
@@ -22,6 +24,7 @@
     if (!Constructor) { notice('这里暂时无法播放水声，仍可自在玩水'); return false; }
     try {
       audio = new Constructor(); master = audio.createGain(); master.gain.value = .38; master.connect(audio.destination);
+      weatherAudio = new window.WaterWeather.Audio(audio, master);
       if (audio.state === 'suspended') audio.resume().catch(function () {});
       return true;
     } catch (error) { notice('这里暂时无法播放水声，仍可自在玩水'); return false; }
@@ -43,6 +46,8 @@
     noise.onended = function () { noise.disconnect(); filter.disconnect(); gain.disconnect(); osc.disconnect(); tone.disconnect(); var index = audioNodes.indexOf(node); if (index !== -1) audioNodes.splice(index, 1); };
   }
   function stopAudio() {
+    weather.cancelThunder();
+    if (weatherAudio) weatherAudio.stop();
     for (var i = 0; i < audioNodes.length; i++) { try { audioNodes[i].noise.stop(); audioNodes[i].osc.stop(); } catch (error) {} }
     if (audio && audio.state === 'running') audio.suspend().catch(function () {});
   }
@@ -106,14 +111,14 @@
     if (leaves.length >= 18) leaves.shift();
     leaves.push({ u: u, v: v, vx: 0, vy: 0, angle: Math.random() * 6.28, turn: (Math.random() - .5) * .6, size: 10 + Math.random() * 5, hue: Math.random() });
   }
-  function addRing(u, v, strength) {
+  function addRing(u, v, strength, rainDrop) {
     if (rings.length >= 48) rings.shift();
-    rings.push({ u: u, v: v, born: now, strength: strength });
+    rings.push({ u: u, v: v, born: now, strength: strength, rainDrop: !!rainDrop });
   }
-  function splash(u, v, strength, noSpray, noRing) {
+  function splash(u, v, strength, noSpray, noRing, rainDrop) {
     if (core.shore(u, v) >= -.015 || field.ice.sample(u, v) > .45) return false;
     field.disturb(u, v, strength, .015 + strength * .013);
-    if (!noRing) addRing(u, v, strength);
+    if (!noRing) addRing(u, v, strength, rainDrop);
     var count = reduced || noSpray ? 0 : Math.floor((quality === 'normal' ? 20 : 9) * strength), limit = quality === 'normal' ? 150 : 60;
     for (var i = 0; i < count && drops.length < limit; i++) {
       var a = Math.random() * Math.PI * 2, speed = 15 + Math.random() * strength * 90;
@@ -240,19 +245,37 @@
     this.querySelector('.sun-icon').textContent = ['☼','☷','☾'][light];
     notice(['晨光落在水底','把一池水染成暮色','月光与萤火，陪你片刻'][light]);
   });
+  function showRainOptions(show) {
+    rainOptions.hidden = !show; document.getElementById('rain').setAttribute('aria-expanded', String(show));
+  }
+  function setRainLevel(level) {
+    weather.setLevel(level); rain = level > 0;
+    var name = window.WaterWeather.profiles[level].name, button = document.getElementById('rain');
+    button.setAttribute('aria-pressed', String(rain)); button.setAttribute('aria-label', rain ? '选择雨势，当前' + name : '开启小雨并选择雨势');
+    document.getElementById('rain-label').textContent = rain ? name : '下雨';
+    for (var i = 0; i < rainButtons.length; i++) rainButtons[i].setAttribute('aria-pressed', String(Number(rainButtons[i].getAttribute('data-rain')) === level));
+    if (weatherAudio) { weatherAudio.stop(); if (!muted && !document.hidden) weatherAudio.setLevel(level); }
+    if (!rain) showRainOptions(false); else garden.classList.add('touched');
+  }
   document.getElementById('rain').addEventListener('click', function () {
-    rain = !rain; this.setAttribute('aria-pressed', String(rain)); this.setAttribute('aria-label', rain ? '收起细雨' : '开启细雨');
-    notice(rain ? '听，一场小雨落进了水里' : '雨停了，水波还在');
+    if (!rain) { setRainLevel(1); showRainOptions(true); notice('小雨轻落，试试不同的雨势'); }
+    else showRainOptions(rainOptions.hidden);
   });
+  for (var r = 0; r < rainButtons.length; r++) rainButtons[r].addEventListener('click', function () {
+    var level = Number(this.getAttribute('data-rain')); setRainLevel(level);
+    notice(['雨停了，水波还在','小雨轻落，雨丝拂过水面','中雨连绵，偶有远雷','大雨倾落，雷电渐近','暴雨倾盆，电闪雷鸣'][level] + (muted && level >= 2 ? ' · 可开启声音' : ''));
+    if (!level) document.getElementById('rain').focus();
+  });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !rainOptions.hidden) { showRainOptions(false); document.getElementById('rain').focus(); } });
   document.getElementById('sound').addEventListener('click', function () {
     if (muted && !initAudio()) return;
-    muted = !muted; this.setAttribute('aria-pressed', String(!muted)); this.setAttribute('aria-label', muted ? '开启水声' : '关闭水声');
-    if (muted) stopAudio(); else { audioLast = -10; sound(.45, false); }
+    muted = !muted; this.setAttribute('aria-pressed', String(!muted)); this.setAttribute('aria-label', muted ? '开启水声、雨声和雷声' : '关闭声音');
+    if (muted) stopAudio(); else { if (weatherAudio) weatherAudio.setLevel(weather.level); audioLast = -10; sound(.45, false); }
   });
   document.getElementById('reset').addEventListener('click', function () {
-    field.clear(); field.ice.clear(); iceEffects.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {}; rain = false; rainTimer = 0;
+    field.clear(); field.ice.clear(); iceEffects.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
+    setRainLevel(0); weather.clear();
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
-    document.getElementById('rain').setAttribute('aria-pressed', 'false'); document.getElementById('rain').setAttribute('aria-label', '开启细雨');
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29); notice('一切，归于平静');
   });
   function waterPath(context) {
@@ -299,14 +322,15 @@
     ctx.save(); waterPath(ctx); ctx.clip();
     for (var i = rings.length - 1; i >= 0; i--) {
       var ring = rings[i], age = now - ring.born;
-      if (age > 2.5) { rings.splice(i, 1); continue; }
-      var radius = age * Math.min(width, height) * .19;
+      var lifetime = ring.rainDrop ? .65 : 2.5;
+      if (age > lifetime) { rings.splice(i, 1); continue; }
+      var radius = age * Math.min(width, height) * (ring.rainDrop ? .085 : .19);
       // Broken, irregular crests catch the light above the refracting wave field.
-      ctx.strokeStyle = 'rgba(239,247,218,' + Math.max(0, (1 - age / 2.5) * Math.sqrt(ring.strength) * (fallbackMode ? .7 : .48)) + ')';
+      ctx.strokeStyle = 'rgba(239,247,218,' + Math.max(0, (1 - age / lifetime) * Math.sqrt(ring.strength) * (ring.rainDrop || fallbackMode ? .7 : .48)) + ')';
       ctx.lineWidth = Math.max(.65, 1.4 - age * .25);
-      var segments = quality === 'normal' ? 72 : 36;
+      var segments = ring.rainDrop ? 24 : quality === 'normal' ? 72 : 36;
       for (var k = 0; k < 2; k++) {
-        var rr = radius - k * 7; if (rr < 1) continue;
+        var rr = radius - k * (ring.rainDrop ? 3 : 7); if (rr < 1) continue;
         var pen = false; ctx.beginPath();
         for (var segment = 0; segment <= segments; segment++) {
           var angle = segment / segments * Math.PI * 2;
@@ -351,7 +375,14 @@
       ctx.beginPath(); ctx.arc(mx, my, mote.size, 0, 6.28); ctx.fill();
     }
     ctx.shadowBlur = 0;
+    weather.draw(ctx, width, height, reduced);
   }
+  function rainImpact(u, v, strength) {
+    var terrain = renderer ? renderer.terrain : fallbackTerrain;
+    if (stoneDrops.blocks(u, v) || (terrain && terrain.blocks(u, v))) return false;
+    return splash(u, v, strength, true, false, true);
+  }
+  function thunder(strength) { if (!muted && weatherAudio) weatherAudio.thunder(strength); }
   function tick(time) {
     frameId = 0;
     if (document.hidden) return;
@@ -371,13 +402,7 @@
           if (now - finger.last > .28) { rings.push({u: finger.u, v: finger.v, born: now, strength: .16}); if (rings.length > 48) rings.shift(); finger.last = now; }
         }
       }
-      if (rain) {
-        rainTimer += dt;
-        if (rainTimer > (quality === 'normal' ? .09 : .17)) {
-          rainTimer = 0; var ru = .1 + Math.random() * .8, rv = .2 + Math.random() * .58;
-          if (splash(ru, rv, .09)) sound(.08, false);
-        }
-      }
+      weather.update(dt, quality !== 'normal', reduced, rainImpact, thunder);
       var steps = 0;
       field.ice.update(dt);
       iceEffects.update(field.ice, now, reduced, quality !== 'normal', function (u, v) { splash(u, v, .55); });
@@ -407,10 +432,24 @@
   window.addEventListener('blur', function () { fingers = {}; cursor.style.display = 'none'; });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) { cancelAnimationFrame(frameId); frameId = 0; fingers = {}; clearTimeout(noticeTimer); document.getElementById('notice').classList.remove('show'); stopAudio(); }
-    else { lastFrame = 0; lastRender = 0; accumulator = 0; if (!muted && audio) audio.resume().catch(function () {}); if (!frameId) frameId = requestAnimationFrame(tick); }
+    else { lastFrame = 0; lastRender = 0; accumulator = 0; if (!muted && audio) { audio.resume().catch(function () {}); if (weatherAudio) weatherAudio.setLevel(weather.level); } if (!frameId) frameId = requestAnimationFrame(tick); }
   });
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
-  window.WaterGarden = { inspect: function () { return { ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0, iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length, stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}), stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null, mode: mode, light: light, rain: rain, muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length, energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'canvas2d', surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0, waterMaps: renderer ? renderer.mapsLoaded : 0, width: width, height: height, bufferWidth: renderer ? canvas.width : fallback.width, bufferHeight: renderer ? canvas.height : fallback.height, activePointers: Object.keys(fingers).length }; } };
+  window.WaterGarden = { inspect: function () { return {
+    ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0,
+    iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length,
+    stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}),
+    stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null,
+    mode: mode, light: light, rain: rain, rainLevel: weather.level, rainStreaks: weather.count, rainImpacts: weather.hits,
+    lightningCount: weather.strikes, lightningFlash: weather.flash, lightningNext: isFinite(weather.nextStrike) ? weather.nextStrike : null,
+    thunderPending: weather.pendingThunder >= 0, thunderPlayed: weatherAudio ? weatherAudio.played : 0,
+    rainAudio: !!(weatherAudio && weatherAudio.rain), weatherAudioNodes: weatherAudio ? weatherAudio.nodes.length : 0,
+    muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length,
+    energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'canvas2d',
+    surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0,
+    waterMaps: renderer ? renderer.mapsLoaded : 0, width: width, height: height, bufferWidth: renderer ? canvas.width : fallback.width,
+    bufferHeight: renderer ? canvas.height : fallback.height, activePointers: Object.keys(fingers).length
+  }; } };
   resize();
   requestAnimationFrame(function () { garden.classList.add('ready'); frameId = requestAnimationFrame(tick); });
 }());

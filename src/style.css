@@ -28,6 +28,14 @@ h1 span { color: #b9b17c; }
 .touched .pool-caption { opacity: 0; }
 .bottom { position: absolute; width: 100%; left: 0; bottom: 0; padding: 0 20px 25px; padding-bottom: calc(25px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); text-align: center; pointer-events: none; }
 .hint { font-size: 11px; letter-spacing: 2px; color: #d1deca; margin-bottom: 20px; line-height: 1.8; text-shadow: 0 1px 5px #0b302b; }
+.rain-options { width: 300px; max-width: 100%; margin: 0 auto 12px; padding: 10px; border: 1px solid rgba(184,218,216,.3); border-radius: 16px; background: rgba(13,37,38,.96); pointer-events: auto; text-align: left; }
+.rain-options[hidden] { display: none; }
+.rain-options p { padding: 0 4px 8px; font-size: 12px; color: #e0eddb; }
+.rain-options p span { float: right; font-size: 10px; color: #a6bfb9; }
+.rain-levels { display: flex; }
+.rain-levels button { flex: 1; min-width: 44px; min-height: 44px; border-radius: 10px; color: #b9d2cb; font-size: 12px; }
+.rain-levels button + button { margin-left: 3px; }
+.rain-levels button[aria-pressed="true"] { background: #bbd6cf; color: #193f3d; }
 .ice-actions { margin: 0 auto 10px; pointer-events: auto; width: 220px; display: flex; justify-content: center; }
 .ice-actions[hidden] { display: none; }
 .ice-actions button { min-height: 44px; padding: 0 20px; border: 1px solid rgba(194,233,240,.35); border-radius: 24px; background: rgba(18,53,61,.9); color: #d7f6fa; font-size: 12px; letter-spacing: 1px; }
@@ -49,7 +57,7 @@ h1 span { color: #b9b17c; }
 #sound[aria-pressed="true"] .sound-off { display: none; }
 #cursor { position: absolute; display: none; width: 32px; height: 32px; margin: -16px 0 0 -16px; border: 1px solid rgba(233,247,214,.6); border-radius: 50%; pointer-events: none; }
 #cursor span { position: absolute; top: 14px; left: 14px; width: 2px; height: 2px; border-radius: 50%; background: #eff3d1; }
-.notice { position: absolute; top: 165px; left: 50%; transform: translateX(-50%); padding: 10px 17px; border-radius: 20px; background: rgba(15,42,35,.87); color: #dae6c6; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .35s; }
+.notice { position: absolute; top: 165px; left: 50%; transform: translateX(-50%); width: 300px; max-width: calc(100% - 32px); padding: 10px 17px; border-radius: 20px; background: rgba(15,42,35,.87); color: #dae6c6; font-size: 12px; text-align: center; line-height: 1.6; opacity: 0; pointer-events: none; transition: opacity .35s; }
 .notice.show { opacity: 1; }
 #loading { position: absolute; top: 0; bottom: 0; left: 0; right: 0; background: #122d29; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: opacity .6s; pointer-events: none; }
 #loading span { width: 28px; height: 28px; border: 1px solid #95b5a1; border-top-color: transparent; border-radius: 50%; animation: turn 1.5s linear infinite; }
@@ -87,4 +95,5 @@ h1 span { color: #b9b17c; }
 @media (max-width: 355px) { .toolbar { width: 278px; flex-wrap: wrap; justify-content: center; } .modes, .extras { justify-content: center; width: 100%; } .extras { margin-top: 3px; } .toolbar .divider { display: none; } .toolbar button { width: 60px; height: 44px; } .toolbar svg { width: 18px; height: 18px; margin-bottom: 3px; } h1 { font-size: 17px; } .hint { font-size: 9px; letter-spacing: .4px; margin-bottom: 9px; } .footnote { display: none; } }
 @media (max-height: 540px) and (min-width: 601px) { .topbar { padding-top: 15px; padding-top: calc(15px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); } .intro { top: 80px; } .bottom { padding-bottom: 12px; padding-bottom: calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); } .toolbar button { height: 48px; } .toolbar svg { width: 18px; height: 18px; margin-bottom: 3px; } .hint { margin-bottom: 7px; } .footnote { display: none; } }
 @media (prefers-reduced-motion: reduce) { #loading span { animation: none; } .pool-caption, .notice { transition: none; } }
+@media (max-height: 540px) { .rain-options { padding: 6px; margin-bottom: 6px; } .rain-options p { padding-bottom: 3px; } }
 @media (max-height: 540px) { .intro { display: none; } .topbar { padding-top: 12px; padding-top: calc(12px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); } .bottom { padding-bottom: 8px; padding-bottom: calc(8px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); } .toolbar button { height: 44px; } .toolbar svg { width: 18px; height: 18px; margin-bottom: 3px; } .hint { margin-bottom: 6px; } .footnote { display: none; } .ice-actions { margin-bottom: 4px; } .notice { top: 77px; } }

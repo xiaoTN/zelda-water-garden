@@ -3,6 +3,55 @@ const assert = require('node:assert/strict');
 const { WaveField, IceField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = require('../src/water-core.js');
 const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
+const {System: Weather}=require('../src/weather.js');
+
+test('larger rain presets visibly populate more streaks, land more drops and strike more often',()=>{
+  const results=[];
+  for(let level=1;level<=4;level++){
+    const w=new Weather(seededRandom(1729)),strikes=[],thunders=[];let time=0,lastStrike=0;
+    w.setLevel(level);
+    for(let step=0;step<7200;step++){
+      time+=1/60;
+      w.update(1/60,false,false,(u,v)=>shore(u,v)<-.015,()=>thunders.push(time));
+      if(w.strikes>lastStrike){strikes.push(time);lastStrike=w.strikes;}
+    }
+    for(let i=0;i<thunders.length;i++)assert(thunders[i]>strikes[i]+.28,'thunder must follow visible lightning');
+    results.push({count:w.count,hits:w.hits,strikes:w.strikes});
+  }
+  assert.equal(results[0].strikes,0,'light rain stays free of lightning');
+  for(let i=1;i<4;i++){
+    assert(results[i].count>results[i-1].count);
+    assert(results[i].hits>results[i-1].hits,'actual water impacts should rise with rainfall');
+    assert(results[i].strikes>results[i-1].strikes);
+  }
+  assert(results[3].strikes>=20,'storm should strike repeatedly within two simulated minutes');
+});
+
+test('rain impacts occur at streak landing, never during initial population',()=>{
+  const w=new Weather(seededRandom(41));let hits=0;
+  w.setLevel(4);w.update(0,false,false,()=>{hits++;return true;});assert.equal(hits,0);
+  for(let i=0;i<120;i++)w.update(1/60,false,false,()=>{hits++;return true;});
+  assert(hits>40);assert(hits<=138,'wave disturbances have a fixed budget');
+  assert(w.particles.slice(0,w.count).every(p=>p.y<p.v),'landed particles recycle above their next target');
+});
+
+test('stopping or clearing rain cancels queued thunder, flashes and falling streaks',()=>{
+  for(const action of ['setLevel','clear']){
+    const w=new Weather(seededRandom(20));let thunder=0;w.setLevel(4);
+    while(w.strikes===0)w.update(1/60,false,false,null,()=>thunder++);
+    assert(w.pendingThunder>0);
+    if(action==='clear')w.clear();else w.setLevel(0);
+    for(let i=0;i<180;i++)w.update(1/60,false,false,()=>assert.fail('stopped rain cannot hit'),()=>thunder++);
+    assert.equal(thunder,0);assert.equal(w.count,0);assert.equal(w.flash,0);assert(w.cloud<.001);
+  }
+});
+
+test('low quality reduces rain work while keeping storms and rain visible',()=>{
+  const w=new Weather(seededRandom(4));w.setLevel(4);let hits=0;
+  for(let i=0;i<1800;i++)w.update(1/60,true,false,()=>{hits++;return true;});
+  assert(w.count>50&&w.count<130);assert(hits<=1022);assert(w.strikes>=5);
+  w.update(1/60,true,true);assert(w.count<100);
+});
 
 test('compressed stones settle without ground contact chatter or spontaneous wakes',()=>{
   const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(6*713);

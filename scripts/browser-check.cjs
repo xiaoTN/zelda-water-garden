@@ -157,10 +157,51 @@ async function run() {
       await page.mouse.move(x-20,y); await page.mouse.down(); await page.mouse.move(x+35,y,{steps:12}); await page.mouse.up(); await page.waitForTimeout(240);
       assert((await inspect()).leafPositions[count].u > leafBefore.u + .002, 'moving water should push a nearby leaf');
       await page.locator('#rain').click(); await page.waitForTimeout(400); assert.equal((await inspect()).rain, true);
+      assert(await page.locator('#rain-options').isVisible());
+      const rainStates=[];
+      for(let level=1;level<=4;level++){
+        const selector='[data-rain="'+level+'"]',box=await page.locator(selector).boundingBox();
+        assert(box.x>=0&&box.x+box.width<=viewport.width&&box.y>=0&&box.y+box.height<=viewport.height,'rain selector fits viewport');
+        assert(box.width>=44&&box.height>=44,'rain choices have touch-sized targets');
+        await page.locator(selector).click();await page.waitForTimeout(450);state=await inspect();
+        assert.equal(state.rainLevel,level);assert(state.rainStreaks>0);assert.equal(await page.locator(selector).getAttribute('aria-pressed'),'true');
+        rainStates.push({level,streaks:state.rainStreaks});
+        if(viewport.width===390)await page.screenshot({path:path.join(out,'mobile-rain-'+level+'.png')});
+      }
+      for(let i=1;i<rainStates.length;i++)assert(rainStates[i].streaks>rainStates[i-1].streaks);
+      assert((await inspect()).rainImpacts>0,'falling rain must disturb water');
+      reports.push({scenario:'four rain levels',viewport,presets:rainStates,result:'passed'});
+      if(viewport.width===390){
+        // Measure actual streak pixels with cloud tint and flashes removed from this isolated canvas.
+        const streakPixels=await page.evaluate(()=>{
+          const surface=document.createElement('canvas');surface.width=390;surface.height=844;
+          const ctx=surface.getContext('2d'),w=new WaterWeather.System(WaterCore.seededRandom(3)),counts=[];
+          for(let level=1;level<=4;level++){
+            w.setLevel(level);w.update(0,false,false);w.draw(ctx,390,844,false);
+            const pixels=ctx.getImageData(0,0,390,844).data;let count=0;
+            for(let i=3;i<pixels.length;i+=4)if(pixels[i]>12)count++;
+            counts.push(count);ctx.clearRect(0,0,390,844);
+          }
+          return counts;
+        });
+        assert(streakPixels[0]>150,'light rain must contain visible airborne streaks');
+        for(let i=1;i<4;i++)assert(streakPixels[i]>streakPixels[i-1],'higher rainfall must visibly cover more pixels');
+        await page.locator('#sound').click();assert.equal((await inspect()).rainAudio,true);
+        await page.waitForFunction(()=>WaterGarden.inspect().lightningFlash>.45);
+        await page.screenshot({path:path.join(out,'mobile-storm-lightning.png')});
+        await page.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);
+        const firstStrike=(await inspect()).lightningCount;
+        await page.waitForFunction(count=>WaterGarden.inspect().lightningCount>count,firstStrike,{timeout:10000});
+        reports.push({scenario:'visible rain streaks and repeated storm lightning with delayed WebAudio thunder',streakPixels,state:await inspect(),result:'passed'});
+        await page.locator('#sound').click();assert.equal((await inspect()).rainAudio,false);
+        await page.waitForTimeout(80);assert.equal((await inspect()).weatherAudioNodes,0);
+      }
       await page.locator('#light').click(); assert.equal((await inspect()).light, 1); await page.locator('#light').click(); assert.equal((await inspect()).light, 2);
       if (viewport.width === 390) await page.screenshot({ path: path.join(out, 'mobile-moon-rain.png') });
       await page.locator('#sound').click(); assert.equal((await inspect()).muted, false); await page.touchscreen.tap(x, y); await page.locator('#sound').click(); assert.equal((await inspect()).muted, true);
       await page.locator('#reset').click(); state = await inspect(); assert.equal(state.rain, false); assert.equal(state.leaves, 3); assert(state.energy < .000001);
+      assert.equal(state.rainStreaks,0);assert.equal(state.lightningFlash,0);assert.equal(state.thunderPending,false);assert.equal(state.rainAudio,false);
+      assert.equal(await page.locator('#rain-options').isVisible(),false);
       await page.locator('#light').click();
       await page.locator('[data-mode="ice"]').click(); assert.equal((await inspect()).mode, 'ice');
       assert(await page.locator('#ice-actions').isVisible());
@@ -193,11 +234,16 @@ async function run() {
       if (viewport.width === 390) {
         await page.setViewportSize({width:844,height:390}); await page.waitForTimeout(600); assert.equal((await inspect()).width,844);
         await page.setViewportSize(viewport); await page.waitForTimeout(600);
+        await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();await page.locator('#sound').click();
+        await page.waitForTimeout(250);const beforePause=await inspect();assert(beforePause.rainAudio);
         // A controlled visibility event checks the exact lifecycle path without OS focus assumptions.
         await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable:true,value:true}); document.dispatchEvent(new Event('visibilitychange')); });
-        const paused = (await inspect()).steps; await page.waitForTimeout(220); assert.equal((await inspect()).steps, paused);
+        const pausedState=await inspect(),paused=pausedState.steps; await page.waitForTimeout(220); assert.equal((await inspect()).steps, paused);
+        assert.equal((await inspect()).rainAudio,false);assert.equal((await inspect()).lightningNext,pausedState.lightningNext);
         await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable:true,value:false}); document.dispatchEvent(new Event('visibilitychange')); });
         await page.waitForTimeout(170); assert((await inspect()).steps > paused);
+        assert((await inspect()).rainAudio);assert.equal((await inspect()).rainLevel,4);
+        await page.locator('#sound').click();await page.locator('#reset').click();
         await page.locator('[data-mode="ice"]').click(); await page.locator('#freeze-all').click(); await page.waitForFunction(() => WaterGarden.inspect().iceCoverage > .995);
         // Lose the actual GL context, then restore it once and verify the usable fallback.
         await page.evaluate(() => { window.testLostContext = document.getElementById('water').getContext('webgl').getExtension('WEBGL_lose_context'); window.testLostContext.loseContext(); });
@@ -273,7 +319,16 @@ async function run() {
     await fallbackPage.locator('#reset').click();await fallbackPage.locator('[data-mode="stone"]').click();await fallbackPage.mouse.click(195,405);
     assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().stones[0].y>1));await fallbackPage.waitForFunction(()=>WaterGarden.inspect().stones[0].settled);
     assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().stoneImpacts),1);
-    await fallbackPage.screenshot({path:path.join(out,'mobile-fallback.png')}); reports.push({scenario:'no WebGL with falling stone',result:'passed'}); await fallbackContext.close();
+    await fallbackPage.screenshot({path:path.join(out,'mobile-fallback.png')}); reports.push({scenario:'no WebGL with falling stone',result:'passed'});
+    await fallbackPage.locator('#reset').click();await fallbackPage.locator('[data-mode="ice"]').click();await fallbackPage.locator('#freeze-all').click();
+    await fallbackPage.waitForFunction(()=>WaterGarden.inspect().iceCoverage>.995);
+    await fallbackPage.locator('#rain').click();await fallbackPage.locator('[data-rain="4"]').click();await fallbackPage.waitForTimeout(700);
+    assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainImpacts),0,'rain cannot create liquid ripples through full ice');
+    assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0),'airborne rain stays visible over ice');
+    await fallbackPage.locator('#thaw-all').click();await fallbackPage.waitForFunction(()=>WaterGarden.inspect().rainImpacts>0);
+    await fallbackPage.screenshot({path:path.join(out,'mobile-fallback-storm.png')});
+    await fallbackPage.locator('[data-rain="0"]').click();assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().rain),false);
+    reports.push({scenario:'Canvas rain over ice, thaw and stop',result:'passed'});await fallbackContext.close();
     // A file URL needs no HTTP server, network permission, module loader or external asset.
     const offlineContext = await browser.newContext({viewport:{width:390,height:844}}), offlinePage = await offlineContext.newPage();
     let networkRequests = 0; offlinePage.on('request',request => { if (/^https?:/.test(request.url())) networkRequests++; });
@@ -282,6 +337,8 @@ async function run() {
     await offlinePage.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
     await offlinePage.mouse.click(195,410); assert(await offlinePage.evaluate(() => WaterGarden.inspect().energy > .001)); assert.equal(networkRequests,0);
     await offlinePage.locator('[data-mode="ice"]').click(); await offlinePage.locator('#freeze-all').click(); await offlinePage.waitForFunction(() => WaterGarden.inspect().iceCoverage > .99); assert.equal(networkRequests,0);
+    await offlinePage.locator('#rain').click();await offlinePage.locator('[data-rain="4"]').click();await offlinePage.locator('#sound').click();
+    await offlinePage.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);assert.equal(networkRequests,0);
     reports.push({scenario:'file URL offline', networkRequests, result:'passed'}); await offlineContext.close();
     const reducedContext = await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'}), reducedPage = await reducedContext.newPage();
     reducedPage.on('pageerror',e => errors.push(e.message));
@@ -292,6 +349,8 @@ async function run() {
     await reducedPage.locator('[data-mode="ice"]').click(); await reducedPage.locator('#freeze-all').click(); await reducedPage.waitForFunction(() => WaterGarden.inspect().iceCoverage > .99);
     await reducedPage.mouse.click(187.2,405.12); await reducedPage.waitForTimeout(300);
     assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceCenter),0); assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceShards),0);
+    await reducedPage.locator('#rain').click();await reducedPage.locator('[data-rain="4"]').click();await reducedPage.waitForTimeout(300);
+    assert(await reducedPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0&&WaterGarden.inspect().rainStreaks<200));
     reports.push({scenario:'reduced motion freezes and breaks without airborne shards',result:'passed'}); await reducedContext.close();
     // Simulated slow timing verifies both downgrade thresholds, without claiming real-device FPS.
     const slowContext = await browser.newContext({viewport:{width:390,height:844}}), slowPage = await slowContext.newPage();
@@ -302,8 +361,8 @@ async function run() {
     await slowPage.mouse.click(195,410); assert(await slowPage.evaluate(() => WaterGarden.inspect().energy > .001));
     reports.push({scenario:'synthetic slow timing normal → low → Canvas 2D',result:'passed'}); await slowContext.close();
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-03',errors,reports},null,2)+'\n');
-    console.log('Browser checks passed: four viewports, local freeze, full freeze, fracture/shards, thaw, ice trails, frozen leaves, rotation persistence, touch, drag, long press, leaf, rain, light, audio, reset, safe areas, lifecycle, context loss/recovery, Canvas fallback and offline file URL.');
+    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-04',errors,reports},null,2)+'\n');
+    console.log('Browser checks passed: four viewports, four rain levels, airborne streak pixels, repeated lightning, delayed thunder, rain audio lifecycle, ice, touch, stones, reset, safe areas, context recovery, Canvas fallback and offline file URL.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }
 run().catch(error => {console.error(error);process.exitCode=1;});
