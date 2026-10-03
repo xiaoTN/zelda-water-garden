@@ -302,7 +302,7 @@ async function run() {
     await slowPage.mouse.click(195,410); assert(await slowPage.evaluate(() => WaterGarden.inspect().energy > .001));
     reports.push({scenario:'synthetic slow timing normal → low → Canvas 2D',result:'passed'}); await slowContext.close();
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-03',errors,reports},null,2)+'\n');
+    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'}),errors,reports},null,2)+'\n');
     console.log('Browser checks passed: four viewports, local freeze, full freeze, fracture/shards, thaw, ice trails, frozen leaves, rotation persistence, touch, drag, long press, leaf, rain, light, audio, reset, safe areas, lifecycle, context loss/recovery, Canvas fallback and offline file URL.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }
