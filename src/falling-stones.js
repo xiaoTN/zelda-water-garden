@@ -155,7 +155,12 @@
   };
   Stones.prototype.add=function(u,v,random){
     random=random||Math.random;
-    if(!this.world||this.items.length>=limit||core.shore(u,v)>-.10||this.bed.heightAt(u,v)>-.025)return false;
+    if(!this.world||core.shore(u,v)>-.10||this.bed.heightAt(u,v)>-.025)return false;
+    if(this.items.length>=limit){
+      var oldest=this.items[0];
+      // Removing a support must wake its resting neighbours before the next physics step.
+      this.wakeGroup(oldest);this.world.removeBody(oldest.body);this.items.shift();
+    }
     var s={u:u,v:v,size:.075+random()*.11,tall:1.85+random()*.4,seed:Math.floor(random()*1000000)+1,angle:random()*6.28,entered:false,settled:false};
     var y=Math.max(1.5,v*4+.25);
     for(var i=0;i<this.items.length;i++){

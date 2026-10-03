@@ -163,8 +163,31 @@ test('random stone sizes, capacity and cancellation are bounded',()=>{
   assert(stones.add(.35,.45));assert.equal(stones.add(0,0),false);
   stones.clear();let events=0;stones.add(.5,.49);stones.update(.08);stones.clear();for(let i=0;i<100;i++)stones.update(.04,()=>events++);assert.equal(events,0);
   for(const v of [.28,.48,.68])for(const u of [.2,.4,.6,.8])stones.add(u,v,()=>0);
-  assert.equal(stones.items.length,stoneLimit);assert.equal(stones.add(.5,.49),false);
+  assert.equal(stones.items.length,stoneLimit);
+  const existing=stones.items.slice(),bodyCount=stones.world.bodies.length;
+  assert.equal(stones.add(0,0),false);assert.deepEqual(stones.items,existing,'invalid targets must not remove a stone');
+  for(let i=0;i<stoneLimit+2;i++){
+    const oldest=stones.items[0],next=stones.items[1],added=stones.add(.5,.49,()=>.3);
+    assert(added);assert.equal(stones.items.length,stoneLimit);assert.equal(stones.items[0],next);
+    assert.equal(stones.items[stoneLimit-1],added);assert(!stones.world.bodies.includes(oldest.body));
+    assert.equal(stones.world.bodies.length,bodyCount,'replacement must release the old physics body');
+  }
   const before=stones.items[0].y;stones.update(0);assert.equal(stones.items[0].y,before);
+});
+
+test('replacing the oldest stone wakes its resting support group without stale members',()=>{
+  const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(2*713);
+  s.attach(.462,terrain.bathymetry(scene,.462,true),scene);
+  for(let i=0;i<3;i++)s.add(.5,.49,random);
+  for(let i=0;i<2400;i++)s.update(1/120);
+  const oldest=s.items[0],neighbour=s.items[1],unrelated=s.items[2];
+  assert(oldest.restGroup.includes(neighbour));assert(neighbour.settled);
+  while(s.items.length<stoneLimit)assert(s.add(.75,.4,()=>0));
+  assert(s.add(.75,.4,()=>0));
+  assert(!s.world.bodies.includes(oldest.body));assert(!neighbour.settled);assert.equal(neighbour.restGroup,null);
+  assert(unrelated.settled,'unrelated resting rocks should remain asleep');
+  s.update(1/120);
+  for(const stone of s.items)assert(!stone.restGroup||!stone.restGroup.includes(oldest));
 });
 
 test('fixed physics steps agree across frame rates and ten overlapping drops stay bounded',()=>{

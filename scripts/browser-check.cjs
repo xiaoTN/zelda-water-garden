@@ -241,6 +241,15 @@ async function run() {
         await page.waitForFunction(()=>WaterGarden.inspect().stones.every(s=>s.settled));
         await page.setViewportSize(viewport);await page.waitForFunction(()=>WaterGarden.inspect().width===390);
       }
+      for(let n=3;n<10;n++)await page.mouse.click(x,y);
+      const fullQueue=(await inspect()).stones.map(s=>s.radius);
+      assert.equal(fullQueue.length,10);
+      await page.mouse.click(x,y);state=await inspect();
+      assert.equal(state.stones.length,10,'capacity must recycle the oldest stone');
+      assert.deepEqual(state.stones.slice(0,9).map(s=>s.radius),fullQueue.slice(1),'replacement must preserve insertion order');
+      assert(state.stones[9].y>1,'the next click must still launch a new stone');
+      assert(!(await page.locator('#notice').textContent()).includes('石头已经够多了'));
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-capacity.png')});
       await page.locator('#reset').click();assert.equal((await inspect()).stones.length,0);
       await page.mouse.click(x,y);await page.locator('#reset').click();await page.waitForTimeout(1100);assert.equal((await inspect()).stoneImpacts,0);
       await page.locator('[data-mode="ice"]').click();await page.locator('#freeze-all').click();await page.waitForFunction(()=>WaterGarden.inspect().iceCoverage>.99);

@@ -138,7 +138,8 @@
     garden.classList.add('touched');
     if (!muted) initAudio();
     if(mode==='stone'){
-      if(!stoneDrops.add(p.u,p.v))notice(stoneDrops.items.length>=window.WaterStones.limit?'石头已经够多了，轻点「平静」重新开始':'轻点池中的位置落石');
+      if(!stoneDrops.add(p.u,p.v))notice('轻点池中的位置落石');
+      else stoneBedDirty=true;
       return;
     }
     fingers[id] = { u: p.u, v: p.v, startU: p.u, startV: p.v, born: now, last: now, rippleDistance: 0, travel: 0, charged: false };
