@@ -8,14 +8,22 @@
     { name: '大雨', count: 420, speed: 1.45, length: 1.2, wind: .05, cloud: .14, impacts: 280, thunder: .68, interval: [8, 14], rippleScale: 5 / 3 },
     { name: '暴雨', count: 840, speed: 1.85, length: 1.4, wind: .07, cloud: .23, impacts: 640, thunder: 1, interval: [2.8, 5.6], rippleScale: 2 }
   ];
+  var blendKeys = ['count', 'speed', 'length', 'wind', 'cloud', 'impacts', 'thunder', 'rippleScale', 'intensity'];
+  function parameters(level) {
+    var values = {}, profile = profiles[level];
+    for (var i = 0; i < blendKeys.length; i++) { var key = blendKeys[i]; values[key] = key === 'intensity' ? level : profile[key]; }
+    return values;
+  }
   function Weather(random) {
     this.random = random || Math.random; this.level = 0; this.count = 0; this.cloud = 0; this.credit = 0;
     this.flashAge = 10; this.flash = 0; this.nextStrike = Infinity; this.pendingThunder = -1;
     this.hits = 0; this.strikes = 0; this.thunders = 0; this.particles = [];
+    this.current = parameters(0); this.transitionFrom = null; this.transitionTo = null; this.transitionAge = 0;
+    this.flashStrength = 0; this.flashDouble = false;
     for (var i = 0; i < profiles[4].count; i++) this.particles.push({ u: 0, v: 0, altitude: 0, span: 0, speed: 0, depth: 0 });
   }
   Weather.prototype.seed = function (p, warm) {
-    var r = this.random, profile = profiles[this.level];
+    var r = this.random, profile = this.current;
     p.u = r() * 1.08 - .04; p.v = r() * 1.08 - .04; p.depth = r(); p.span = .3 + r() * .4;
     p.altitude = p.span * (warm ? r() : 1); p.speed = profile.speed * (.8 + p.depth * .6);
   };
@@ -29,7 +37,18 @@
   }
   Weather.prototype.setLevel = function (level) {
     if (level !== Math.floor(level) || level < 0 || level > 4) return;
-    this.level = level; this.count = 0; this.credit = 0; this.flashAge = 10; this.flash = 0; this.pendingThunder = -1;
+    if (level === this.level) return;
+    if (this.level && level) {
+      // Snapshot the displayed state so an interrupted transition continues from here.
+      this.transitionFrom = {};
+      for (var i = 0; i < blendKeys.length; i++) { var key = blendKeys[i]; this.transitionFrom[key] = this.current[key]; }
+      this.transitionTo = parameters(level); this.transitionAge = 0;
+    } else {
+      this.current = parameters(level); this.transitionFrom = null; this.transitionTo = null;
+      this.count = 0; this.credit = 0; this.flashAge = 10; this.flash = 0; this.pendingThunder = -1;
+      this.flashStrength = 0; this.flashDouble = false;
+    }
+    this.level = level;
     var profile = profiles[level];
     this.nextStrike = profile.thunder ? (profile.interval[0] + (profile.interval[1] - profile.interval[0]) * this.random()) * .45 : Infinity;
   };
@@ -40,22 +59,31 @@
   Weather.prototype.strike = function () {
     var r = this.random, profile = profiles[this.level];
     this.strikes++; this.flashAge = 0;
+    this.flashStrength = this.current.thunder; this.flashDouble = this.level >= 3;
     this.pendingThunder = .3 + r() * (this.level === 4 ? .45 : 1.3);
     this.nextStrike = profile.interval[0] + (profile.interval[1] - profile.interval[0]) * r();
   };
   Weather.prototype.update = function (dt, low, reduced, impact, thunder) {
     dt = Math.max(0, Math.min(.08, dt));
-    var profile = profiles[this.level], count = Math.round(profile.count * (low ? .4 : 1) * (reduced ? .45 : 1));
+    if (this.transitionFrom) {
+      this.transitionAge = Math.min(1, this.transitionAge + dt);
+      var mix = this.transitionAge * this.transitionAge * (3 - 2 * this.transitionAge);
+      for (var k = 0; k < blendKeys.length; k++) {
+        var key = blendKeys[k]; this.current[key] = this.transitionFrom[key] + (this.transitionTo[key] - this.transitionFrom[key]) * mix;
+      }
+      if (this.transitionAge >= 1) { this.current = this.transitionTo; this.transitionFrom = null; this.transitionTo = null; }
+    }
+    var profile = this.current, count = Math.round(profile.count * (low ? .4 : 1) * (reduced ? .45 : 1));
     this.cloud += (profile.cloud - this.cloud) * Math.min(1, dt * 3);
     for (var i = this.count; i < count; i++) this.seed(this.particles[i], true);
     // Cover the maximum .08s update without throttling dense storms at slower frame rates.
     this.count = count; this.credit = Math.min(low ? 24 : 56, this.credit + profile.impacts * (low ? .4 : 1) * dt);
     for (i = 0; i < count; i++) {
-      var p = this.particles[i]; p.altitude -= p.speed * dt;
+      var p = this.particles[i]; p.speed = profile.speed * (.8 + p.depth * .6); p.altitude -= p.speed * dt;
       if (p.altitude <= 0) {
         // Every accepted landing adds a local, short-lived ripple to the water surface.
         if (this.credit >= 1 && impact) {
-          if (impact(p.u, p.v, .075 + this.level * .018 + p.depth * .025, profile.rippleScale)) {
+          if (impact(p.u, p.v, .075 + profile.intensity * .018 + p.depth * .025, profile.rippleScale)) {
             this.credit--; this.hits++;
           }
         }
@@ -64,17 +92,16 @@
     }
     this.flashAge += dt;
     var age = this.flashAge;
-    this.flash = Math.max(0, 1 - age / .18) + (this.level >= 3 ? Math.max(0, 1 - Math.abs(age - .25) / .09) * .55 : 0);
+    this.flash = Math.max(0, 1 - age / .18) + (this.flashDouble ? Math.max(0, 1 - Math.abs(age - .25) / .09) * .55 : 0);
     if (this.pendingThunder >= 0) {
       this.pendingThunder -= dt;
-      if (this.pendingThunder < 0) { this.thunders++; if (thunder) thunder(profile.thunder); }
+      if (this.pendingThunder < 0) { this.thunders++; if (thunder) thunder(this.flashStrength); }
     }
-    if (profile.thunder) { this.nextStrike -= dt; if (this.nextStrike <= 0) this.strike(); }
-    else this.flash = 0;
+    if (profiles[this.level].thunder) { this.nextStrike -= dt; if (this.nextStrike <= 0) this.strike(); }
   };
   var head = { u: 0, v: 0 }, tail = { u: 0, v: 0 };
   Weather.prototype.draw = function (ctx, width, height, reduced) {
-    var profile = profiles[this.level];
+    var profile = this.current;
     ctx.save(); ctx.shadowBlur = 0;
     if (this.cloud > .001) { ctx.fillStyle = 'rgba(9,24,45,' + this.cloud + ')'; ctx.fillRect(0, 0, width, height); }
     var scale = Math.min(1.6, Math.max(.7, Math.min(width, height) / 390));
@@ -94,7 +121,7 @@
       ctx.lineWidth *= .68; ctx.strokeStyle = 'rgba(220,242,255,' + (.34 + layer * .16) + ')'; ctx.stroke();
     }
     if (this.flash > 0) {
-      ctx.fillStyle = 'rgba(222,237,255,' + this.flash * (reduced ? .035 : .12 + profile.thunder * .2) + ')'; ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(222,237,255,' + this.flash * (reduced ? .035 : .12 + this.flashStrength * .2) + ')'; ctx.fillRect(0, 0, width, height);
     }
     ctx.restore();
   };

@@ -221,6 +221,38 @@ test('rain impacts occur at streak landing, never during initial population',()=
   assert(w.particles.slice(0,w.count).every(p=>p.altitude>0),'landed particles recycle above their next target');
 });
 
+test('rain preset changes preserve falling drops and blend density, speed and ripple size',()=>{
+  for(const [low,reduced] of [[false,false],[true,false],[true,true]]){
+    const w=new Weather(seededRandom(41));w.setLevel(3);w.update(0,low,reduced);
+    const before=w.particles.slice(0,w.count).map(p=>({...p})),params={...w.current},count=w.count;
+    w.credit=.6;w.setLevel(1);w.update(0,low,reduced);
+    assert.equal(w.count,count,'clicking a rain level must never empty the particle pool');
+    assert.deepEqual(w.current,params);assert.deepEqual(w.particles.slice(0,w.count),before,'falling drops retain their landing coordinates and altitude');assert.equal(w.credit,.6);
+    const first=before.findIndex(p=>p.altitude>.3);assert(first>=0);w.update(1/60,low,reduced);
+    assert(w.particles[first].altitude<before[first].altitude,'rain continues falling on the first transition frame');
+    assert(Math.abs(w.particles[first].speed-before[first].speed)<.002,'existing rain decelerates gradually');
+    let previous=w.count;for(let i=0;i<10;i++){w.update(.05,low,reduced);assert(w.count<=previous&&w.count>0);previous=w.count;}
+    const multiplier=(low?.4:1)*(reduced?.45:1);
+    assert(w.count>Math.round(48*multiplier)&&w.count<count);assert(w.current.rippleScale>1&&w.current.rippleScale<5/3);
+    const halfway={...w.current},halfCount=w.count;w.setLevel(4);w.update(0,low,reduced);
+    assert.deepEqual(w.current,halfway,'rapid switches start from the displayed intermediate rain');assert.equal(w.count,halfCount);
+    for(let i=0;i<25;i++)w.update(.05,low,reduced);
+    assert.equal(w.count,Math.round(840*multiplier));assert.equal(w.current.speed,1.85);assert.equal(w.current.rippleScale,2);assert.equal(w.transitionFrom,null);
+    const current={...w.current},particles=w.particles.slice(0,w.count).map(p=>({...p}));w.setLevel(4);w.update(0,low,reduced);
+    assert.deepEqual(w.current,current);assert.deepEqual(w.particles.slice(0,w.count),particles,'reselecting rain never reseeds it');
+    w.setLevel(1);w.clear();assert.equal(w.count,0);assert.equal(w.transitionFrom,null);assert.equal(w.current.speed,0);
+  }
+});
+
+test('changing rain preserves drawn streaks and lets the current lightning and thunder finish',()=>{
+  const w=new Weather(seededRandom(7));w.setLevel(4);w.update(0,false,false);w.strike();w.update(.04,false,false);
+  function draw(){const commands=[],ctx={save(){},restore(){},beginPath(){commands.push('begin');},moveTo(x,y){commands.push(['move',x,y]);},lineTo(x,y){commands.push(['line',x,y]);},arc(...args){commands.push(['arc',...args]);},stroke(){commands.push(['stroke',this.strokeStyle,this.lineWidth]);},fillRect(...args){commands.push(['fill',this.fillStyle,...args]);}};w.draw(ctx,390,844,false);return commands;}
+  const before=draw(),age=w.flashAge,strength=w.flashStrength,pending=w.pendingThunder;w.setLevel(1);w.update(0,false,false);
+  assert.deepEqual(draw(),before,'the rendered rain and flash remain identical at the switch boundary');assert.equal(w.flashAge,age);assert.equal(w.pendingThunder,pending);
+  const thunders=[];for(let i=0;i<120;i++)w.update(1/60,false,false,null,value=>thunders.push(value));
+  assert.deepEqual(thunders,[strength]);assert.equal(w.flash,0);assert.equal(w.strikes,1,'light rain schedules no new lightning');
+});
+
 test('stopping or clearing rain cancels queued thunder, flashes and falling streaks',()=>{
   for(const action of ['setLevel','clear']){
     const w=new Weather(seededRandom(20));let thunder=0;w.setLevel(4);

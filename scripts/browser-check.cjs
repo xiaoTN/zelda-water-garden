@@ -293,7 +293,7 @@ async function run() {
         const selector='[data-rain="'+level+'"]',box=await page.locator(selector).boundingBox();
         assert(box.x>=0&&box.x+box.width<=viewport.width&&box.y>=0&&box.y+box.height<=viewport.height,'rain selector fits viewport');
         assert(box.width>=44&&box.height>=44,'rain choices have touch-sized targets');
-        await page.locator(selector).click();await page.waitForTimeout(450);state=await inspect();
+        await page.locator(selector).click();await page.waitForFunction(()=>!WaterGarden.inspect().rainTransition);state=await inspect();
         assert.equal(state.rainLevel,level);assert(state.rainStreaks>0);assert.equal(await page.locator(selector).getAttribute('aria-pressed'),'true');
         assert.equal(state.rainStreaks,Math.round([0,48,168,420,840][level]*(state.quality==='normal'?1:.4)),'each rain level uses the increased particle density');
         rainStates.push({level,streaks:state.rainStreaks,impacts:state.rainImpacts,energy:state.energy});
@@ -303,6 +303,32 @@ async function run() {
       assert((await inspect()).rainImpacts>0,'falling rain must disturb water');
       reports.push({scenario:'four rain levels',viewport,presets:rainStates,result:'passed'});
       if(viewport.width===390){
+        await page.evaluate(()=>{
+          const proto=WaterWeather.System.prototype,setLevel=proto.setLevel,update=proto.update;
+          window.transitionProbe={setLevel,update,boundaries:[],frames:[]};
+          proto.setLevel=function(level){
+            function snapshot(w){return {count:w.count,current:{...w.current},particles:w.particles.slice(0,Math.min(20,w.count)).map(p=>({...p}))};}
+            const before=snapshot(this);setLevel.call(this,level);transitionProbe.boundaries.push({target:level,before,after:snapshot(this)});
+          };
+          proto.update=function(...args){update.apply(this,args);transitionProbe.frames.push({level:this.level,count:this.count,speed:this.current.speed,scale:this.current.rippleScale,transition:!!this.transitionFrom});};
+        });
+        await page.locator('[data-rain="1"]').click();await page.waitForTimeout(320);
+        state=await inspect();const rainFactor=state.quality==='normal'?1:.4;
+        assert(state.rainTransition&&state.rainStreaks>Math.round(48*rainFactor)&&state.rainStreaks<Math.round(840*rainFactor),'storm softens toward light rain over multiple frames');
+        await page.screenshot({path:path.join(out,'mobile-storm-to-light-transition.png')});
+        await page.locator('[data-rain="3"]').click();await page.waitForTimeout(250);assert((await inspect()).rainTransition);
+        await page.locator('[data-rain="1"]').click();await page.waitForFunction(()=>!WaterGarden.inspect().rainTransition);
+        state=await inspect();assert.equal(state.rainStreaks,Math.round(48*(state.quality==='normal'?1:.4)));
+        await page.locator('[data-rain="4"]').click();await page.waitForFunction(()=>!WaterGarden.inspect().rainTransition);
+        state=await inspect();assert.equal(state.rainStreaks,Math.round(840*(state.quality==='normal'?1:.4)));
+        const transitions=await page.evaluate(()=>{
+          const p=transitionProbe;WaterWeather.System.prototype.setLevel=p.setLevel;WaterWeather.System.prototype.update=p.update;
+          const result={boundaries:p.boundaries,frames:p.frames};delete window.transitionProbe;return result;
+        });
+        for(const boundary of transitions.boundaries)assert.deepEqual(boundary.after,boundary.before,'real button clicks must retain displayed particles and rain parameters');
+        assert(transitions.frames.every(f=>f.count>0&&f.speed>0),'falling rain must never stop between presets');
+        assert(transitions.frames.some(f=>f.transition&&f.scale>1&&f.scale<2));
+        reports.push({scenario:'real rain buttons preserve falling streaks through gradual and interrupted transitions',...transitions,result:'passed'});
         await page.locator('#reset').click();
         await page.locator('[data-mode="touch"]').click();
         // Observe the application's short rain response and touch solver on the same rendered field.
@@ -320,7 +346,8 @@ async function run() {
         await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();
         await page.waitForTimeout(1800);state=await inspect();
         const rainWaves=await page.evaluate(()=>({hits:WaterGarden.inspect().rainImpacts,impulses:rainProbe.impulses,fields:rainProbe.fields.size,scales:Array.from(rainProbe.scales)}));
-        assert.deepEqual(rainWaves.scales,[2],'real storm landings must use twice the light-rain ripple radius');
+        assert(rainWaves.scales.length>1&&rainWaves.scales.every(scale=>scale>=1&&scale<=2),'new rain ripples grow smoothly during the transition');
+        assert.equal(rainWaves.scales[rainWaves.scales.length-1],2,'settled storm landings must use twice the light-rain ripple radius');
         assert(rainWaves.hits>300,'storm must inject hundreds of actual water waves');
         assert.equal(rainWaves.impulses,rainWaves.hits,'every accepted rain drop must disturb the simulated water');
         assert.equal(rainWaves.fields,1);assert(state.energy>.001,'small rain ripples must move the real water surface');
@@ -340,8 +367,9 @@ async function run() {
         // Measure actual streak pixels with cloud tint and flashes removed from this isolated canvas.
         const streakPixels=await page.evaluate(()=>{
           const surface=document.createElement('canvas');surface.width=390;surface.height=844;
-          const ctx=surface.getContext('2d'),w=new WaterWeather.System(WaterCore.seededRandom(3)),counts=[];
+          const ctx=surface.getContext('2d'),counts=[];
           for(let level=1;level<=4;level++){
+            const w=new WaterWeather.System(WaterCore.seededRandom(3));
             w.setLevel(level);w.update(0,false,false);w.draw(ctx,390,844,false);
             const pixels=ctx.getImageData(0,0,390,844).data;let count=0;
             for(let i=3;i<pixels.length;i+=4)if(pixels[i]>12)count++;

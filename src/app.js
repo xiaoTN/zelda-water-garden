@@ -458,6 +458,7 @@
     stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}),
     stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null,
     mode: mode, light: light, rain: rain, rainLevel: weather.level, rainStreaks: weather.count, rainImpacts: weather.hits,
+    rainTransition: !!weather.transitionFrom, rainSpeed: weather.current.speed, rainRippleScale: weather.current.rippleScale,
     lightningCount: weather.strikes, lightningFlash: weather.flash, lightningNext: isFinite(weather.nextStrike) ? weather.nextStrike : null,
     thunderPending: weather.pendingThunder >= 0, thunderPlayed: weatherAudio ? weatherAudio.played : 0,
     rainAudio: !!(weatherAudio && weatherAudio.rain && weatherAudio.level), rainAudioFading: !!(weatherAudio && weatherAudio.rainEnd), weatherAudioNodes: weatherAudio ? weatherAudio.nodes.length : 0,
