@@ -1,6 +1,6 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.9.9",
+  "version": "1.9.10",
   "private": true,
   "description": "海拉鲁水之庭：塞尔达风格的离线交互水面",
   "engines": {
@@ -10,6 +10,7 @@
     "start": "node scripts/serve.cjs",
     "assets": "node scripts/generate-water-maps.cjs",
     "physics": "node scripts/bundle-physics.cjs",
+    "audio": "node scripts/bundle-audio.cjs",
     "test": "node --test tests/water.test.cjs",
     "check": "node scripts/verify-package.cjs",
     "build": "node scripts/build.cjs",

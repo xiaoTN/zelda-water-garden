@@ -72,6 +72,24 @@ test('rain presets expand actual height ripples progressively, with storm radius
   assert(Math.abs(radii[3]/radii[0]-2)<.05,'storm radius must be twice light rain in the actual sampled height field');
 });
 
+test('tap sample preserves the supplied MP3 bytes and bounds decoded audio voices',()=>{
+  const fs=require('fs'),asset=require('../src/water-tap-asset.js'),{Tap}=require('../src/water-audio.js');
+  assert(Buffer.from(asset.base64,'base64').equals(fs.readFileSync(require('path').join(__dirname,'../assets-source/audio/water-tap.mp3'))));
+  let success,decodes=0;const sources=[],gains=[],buffer={duration:.608};
+  const context={state:'running',decodeAudioData(bytes,done){decodes++;assert.equal(bytes.byteLength,asset.bytes);success=done;},createBufferSource(){const s={connect(){},disconnect(){this.disconnected=true;},start(){this.started=true;},stop(){this.stopped=true;}};sources.push(s);return s;},createGain(){const g={gain:{value:0},connect(){},disconnect(){this.disconnected=true;}};gains.push(g);return g;}};
+  const tap=new Tap(context,{},asset);tap.play(.6);tap.stop();success(buffer);assert.equal(tap.played,0,'stopping cancels a tap queued during decoding');
+  for(let i=0;i<9;i++)tap.play(.6);
+  assert.equal(decodes,1);assert.equal(tap.voices.length,4);assert(sources.every(s=>s.buffer===buffer));assert(sources.slice(0,5).every(s=>s.stopped&&s.disconnected));
+  sources[8].onended();assert.equal(tap.voices.length,3);tap.stop();assert.equal(tap.voices.length,0);assert(sources.every(s=>s.disconnected));assert(gains.every(g=>g.disconnected));
+  context.state='suspended';assert.equal(tap.play(.6),false);assert.equal(sources.length,9);
+});
+
+test('tap decoding failure falls back without an unhandled rejection',async()=>{
+  const {Tap}=require('../src/water-audio.js'),asset=require('../src/water-tap-asset.js');
+  const tap=new Tap({decodeAudioData(bytes,done,fail){fail();return Promise.reject(Error('decoder unavailable'));}},{},asset);
+  await Promise.resolve();assert.equal(tap.play(.6),false);assert.equal(tap.pending.length,0);
+});
+
 test('sliding water sound reuses its voices, follows speed and releases every node',()=>{
   const {Stroke}=require('../src/water-audio.js');
   const nodes=[],targets=[],buffers=[];

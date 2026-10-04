@@ -1,5 +1,38 @@
 (function (root) {
   'use strict';
+  function TapAudio(context, output, asset) {
+    this.context=context;this.output=output;this.buffer=null;this.voices=[];this.pending=[];this.failed=false;this.played=0;
+    var self=this;
+    function fail(){self.failed=true;self.pending.length=0;}
+    try {
+      var raw=root.atob(asset.base64),bytes=new Uint8Array(raw.length);
+      for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+      var decoded=context.decodeAudioData(bytes.buffer,function(buffer){
+        self.buffer=buffer;
+        var pending=self.pending.slice();self.pending.length=0;
+        for(var n=0;n<pending.length;n++)self.play(pending[n]);
+      },fail);
+      if(decoded&&decoded.catch)decoded.catch(fail);
+    } catch(error){fail();}
+  }
+  TapAudio.prototype.play=function(strength){
+    if(this.failed)return false;
+    if(!this.buffer){if(this.pending.length<4)this.pending.push(strength);return true;}
+    var c=this.context;if(c.state!=='running')return false;
+    // Rapid taps share one decoded buffer and keep at most four short voices.
+    if(this.voices.length>=4){var oldest=this.voices.shift();oldest.source.stop();oldest.source.disconnect();oldest.gain.disconnect();}
+    var source=c.createBufferSource(),gain=c.createGain(),self=this;
+    source.buffer=this.buffer;gain.gain.value=.5*Math.sqrt(Math.max(.1,Math.min(1,strength)));
+    source.connect(gain);gain.connect(this.output);
+    var voice={source:source,gain:gain};this.voices.push(voice);
+    source.onended=function(){source.disconnect();gain.disconnect();var index=self.voices.indexOf(voice);if(index!==-1)self.voices.splice(index,1);};
+    source.start();this.played++;return true;
+  };
+  TapAudio.prototype.stop=function(){
+    this.pending.length=0;
+    var voices=this.voices.slice();this.voices.length=0;
+    for(var i=0;i<voices.length;i++){try{voices[i].source.stop();}catch(error){}voices[i].source.disconnect();voices[i].gain.disconnect();}
+  };
   // Reusable noise layers: a soft rush of water with irregular submerged bubbles.
   // No pitched drop oscillator and no new buffer for each pointer move.
   function StrokeAudio(context, output, random) {
@@ -58,6 +91,6 @@
     try { n.rush.stop(); n.bubbles.stop(); } catch (error) {}
     n.rush.disconnect(); n.bubbles.disconnect(); n.low.disconnect(); n.high.disconnect(); n.band.disconnect(); n.gain.disconnect(); n.bubbleGain.disconnect();
   };
-  root.WaterSound = { Stroke: StrokeAudio };
+  root.WaterSound = { Stroke: StrokeAudio, Tap: TapAudio };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterSound;
 }(typeof window !== 'undefined' ? window : global));

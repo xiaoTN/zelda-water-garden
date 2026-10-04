@@ -1,0 +1,75 @@
+
+> zelda-water-garden@1.9.10 build
+> node scripts/build.cjs
+
+Bundled water tap sample: 5686 bytes
+✔ rain ripples stay local and disappear before a finger wave settles (65.2456ms)
+✔ rain height is packed and sampled with touch, masked by rocks, and reset immediately (5.2646ms)
+✔ storm rain has a fixed work budget in both quality modes (266.0169ms)
+✔ rain presets expand actual height ripples progressively, with storm radius twice light rain (44.7077ms)
+✔ tap sample preserves the supplied MP3 bytes and bounds decoded audio voices (2.3501ms)
+✔ tap decoding failure falls back without an unhandled rejection (0.5017ms)
+✔ sliding water sound reuses its voices, follows speed and releases every node (3.8935ms)
+✔ overhead rain converges to its own ground point from every side of the optical center (1.0791ms)
+✔ storm surface impacts stay dense at 60, 30 and 12.5 updates per second (9.3599ms)
+✔ larger rain presets visibly populate more streaks, land more drops and strike more often (77.2718ms)
+✔ rain impacts occur at streak landing, never during initial population (0.7917ms)
+✔ stopping or clearing rain cancels queued thunder, flashes and falling streaks (0.9188ms)
+✔ low quality reduces rain work while keeping storms and rain visible (3.068ms)
+✔ fish body shading stays continuous across shared mesh edges while retaining natural color variation (17.1659ms)
+✔ animated fish geometry raises displayed water depth and clears old footprints without altering the solid bed (190.1579ms)
+✔ nearby strokes startle fish, accelerate the Blender swim cycle and then decay (9.0989ms)
+✔ water moves fish and shallow fish feed back bounded wakes without repainting pool depth (83.9801ms)
+✔ a new stone overlapping a fish does not trap it forever or teleport it (10.7951ms)
+✔ airborne stones trigger a fast escape toward safety before water impact (0.6148ms)
+✔ fast underwater swimming and sharp turns create balanced wakes that settle (79.2245ms)
+✔ Blender fish asset contains a closed swim cycle with stronger tail movement and an animated GLB (1.1205ms)
+✔ fish keep a bounded underwater footprint around banks and obstacles across aspect ratios (267.6796ms)
+✔ even small stone waves spread wider and carry much more energy than a finger stroke (77.0995ms)
+✔ stone entry still pushes surrounding water when an existing rock blocks its center (8.5062ms)
+✔ compressed stones settle without ground contact chatter or spontaneous wakes (413.9793ms)
+✔ five touching rocks rest as a group without repeatedly waking each other (1831.1882ms)
+✔ faceted contact friction does not sustain motion in a resting pile (2151.5743ms)
+✔ a new impact wakes the complete resting support group and it settles again (1658.8597ms)
+✔ stone undersides have irregular facets and rendering matches the full collision hull (3.1831ms)
+✔ large stones lose almost all head-on rebound energy at mutual contact (20.913ms)
+✔ rigid stones accelerate, rotate, impact once and settle without sinking through the bed (323.3229ms)
+✔ same-point rigid bodies collide, transfer momentum, roll apart and sleep (2379.093ms)
+✔ random stone sizes, capacity and cancellation are bounded (6.2219ms)
+✔ replacing the oldest stone wakes its resting support group without stale members (2586.9416ms)
+✔ fixed physics steps agree across frame rates and ten overlapping drops stay bounded (6766.1229ms)
+✔ small rocks and shore contacts dissipate rolling motion and enter sleep (1443.4434ms)
+✔ repeated drops dissipate impact energy instead of scattering across the pool (25658.2439ms)
+✔ displayed underwater depth reconstructs diagonal edges without large stair steps (130.2965ms)
+✔ bathymetry comes from stone triangles and blocks waves at dry footprints (332.5061ms)
+✔ solid barriers reflect instead of transmitting, including the finger brush (27.1893ms)
+✔ shallower water propagates waves more slowly (15.0226ms)
+✔ 3D terrain has submerged bed, dry bank and faceted shoreline rocks (473.9061ms)
+✔ 3D water mesh has valid topology, camera alignment and bounded low quality geometry (13.3916ms)
+✔ mesh receives touch and rain heights, and reset clears displacement (96.979ms)
+✔ a calm pool remains calm; shoreline rejects land touches (12.1099ms)
+✔ a tap propagates beyond its origin and loses energy (188.818ms)
+✔ swiping disturbs a continuous path and clear removes history (2.9261ms)
+✔ many overlapping strokes stay finite and dry bank stays dry (177.8353ms)
+✔ height packing preserves sign and stays within two-byte precision (0.7482ms)
+✔ all viewport sizes obey pixel and DPR budgets (0.1901ms)
+ℹ tests 50
+ℹ suites 0
+ℹ pass 50
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48052.7637
+Package checks passed: 17 offline files, classic scripts, CSP capabilities, DOM bindings, baseline CSS, WebGL degradation.
+PASS: 17 file(s), 0 warning(s)
+Verified 17 ZIP files, root index.html, allowed extensions and source bytes
+NOTE: Node audit checks zip size only; artifact contents must be audited before packaging
+PASS: 1 file(s), 0 warning(s)
+{
+  "version": "1.9.10",
+  "file": "zelda-water-garden-minitool-v1.9.10.zip",
+  "bytes": 460383,
+  "entries": 17,
+  "sha256": "8ef2083d7d13e07d7e4f42b9a0895fc8c398f4e6f2d1a991422c7f8659a329ec"
+}

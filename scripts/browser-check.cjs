@@ -26,6 +26,28 @@ async function run() {
       assert.deepEqual(await page.locator('[data-mode]').evaluateAll(buttons=>buttons.map(b=>b.dataset.mode)),['touch','leaf','stone']);
       assert.equal(await page.locator('#ice-actions, #freeze-all, #thaw-all').count(),0);
       let state = await inspect(); assert.equal(state.renderer, 'webgl'); assert(state.bufferWidth * state.bufferHeight <= 2000000);
+      if(viewport.width===390){
+        await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,0,'muted taps stay silent');
+        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().tapReady);
+        const sample=await page.evaluate(async()=>{
+          const raw=atob(WaterTapAsset.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+          const audio=new OfflineAudioContext(2,22050,22050),buffer=await audio.decodeAudioData(bytes.buffer);
+          const source=audio.createBufferSource();source.buffer=buffer;source.connect(audio.destination);source.start();
+          const rendered=await audio.startRendering();let peak=0;
+          for(let channel=0;channel<rendered.numberOfChannels;channel++)for(const value of rendered.getChannelData(channel))peak=Math.max(peak,Math.abs(value));
+          return {duration:buffer.duration,channels:buffer.numberOfChannels,peak,bytes:WaterTapAsset.bytes};
+        });
+        assert(sample.duration>.4&&sample.duration<.8&&sample.peak>.01,'supplied sample must decode and render non-silent PCM');
+        await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,1);
+        await page.waitForFunction(()=>WaterGarden.inspect().tapVoices===0);
+        await page.mouse.move(120,410);await page.mouse.down();await page.mouse.move(270,410,{steps:12});await page.mouse.up();
+        assert.equal((await inspect()).tapPlayed,1,'swipes use continuous water sound only');
+        await page.touchscreen.tap(195,410);await page.locator('#reset').click();assert.equal((await inspect()).tapVoices,0);
+        await page.touchscreen.tap(195,410);await page.locator('#sound').click();assert.equal((await inspect()).tapVoices,0);
+        const mutedCount=(await inspect()).tapPlayed;await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,mutedCount);
+        await page.locator('#reset').click();
+        reports.push({scenario:'supplied tap sample decodes, plays on taps, stays out of swipes and stops on mute/reset',...sample,result:'passed'});
+      }
       assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
       const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
       const beforeScare=(await inspect()).fish[0],fx=beforeScare.u*viewport.width,fy=(beforeScare.v-beforeScare.y*.25)*viewport.height;
@@ -324,6 +346,7 @@ async function run() {
         await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable:true,value:true}); document.dispatchEvent(new Event('visibilitychange')); });
         const pausedState=await inspect(),paused=pausedState.steps; await page.waitForTimeout(220); assert.equal((await inspect()).steps, paused);
         assert.equal((await inspect()).rainAudio,false);assert.equal((await inspect()).lightningNext,pausedState.lightningNext);
+        assert.equal((await inspect()).tapVoices,0);
         await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable:true,value:false}); document.dispatchEvent(new Event('visibilitychange')); });
         await page.waitForTimeout(170); assert((await inspect()).steps > paused);
         assert((await inspect()).rainAudio);assert.equal((await inspect()).rainLevel,4);
@@ -445,6 +468,9 @@ async function run() {
     await offlinePage.goto(pathToFileURL(path.join(root, 'src/index.html')).href); await offlinePage.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 5);
     await offlinePage.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
     await offlinePage.mouse.click(195,410); assert(await offlinePage.evaluate(() => WaterGarden.inspect().energy > .001)); assert.equal(networkRequests,0);
+    await offlinePage.locator('#sound').click();await offlinePage.waitForFunction(()=>WaterGarden.inspect().tapReady);
+    await offlinePage.mouse.click(195,410);assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapPlayed),1);
+    await offlinePage.locator('#sound').click();assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapVoices),0);
     await offlinePage.locator('#rain').click();await offlinePage.locator('[data-rain="4"]').click();await offlinePage.locator('#sound').click();
     await offlinePage.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);assert.equal(networkRequests,0);
     reports.push({scenario:'file URL offline', networkRequests, result:'passed'}); await offlineContext.close();
