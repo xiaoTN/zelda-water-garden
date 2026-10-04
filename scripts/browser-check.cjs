@@ -280,8 +280,20 @@ async function run() {
         await cdp.detach();
       }
       await page.locator('#reset').click();await page.locator('[data-mode="stone"]').click();
+      if(viewport.width===390){
+        const target=(await inspect()).fish[0];
+        await page.mouse.click(target.u*viewport.width,target.v*viewport.height);
+        await page.waitForTimeout(300);const fleeing=await inspect(),fish=fleeing.fish[0];
+        assert.equal(fleeing.stoneImpacts,0,'fish must react while the stone is still airborne');
+        assert(fish.fear>.7&&fish.speed>.15,'nearby fish accelerate before impact');
+        assert(Math.hypot(fish.u-target.u,fish.v-target.v)>.012,'fish leave the target position');
+        assert(fleeing.energy>.001,'escaping fish disturb the water before stone impact');
+        assert.equal(fleeing.rings,0);
+        await page.screenshot({path:path.join(out,'fish-escape-airborne.png')});
+        await page.locator('#reset').click();
+      }
       await page.mouse.click(x,y);state=await inspect();
-      assert.equal(state.stones.length,1);assert(state.stones[0].y>1);assert.equal(state.stoneImpacts,0);assert.equal(state.energy,0,'water waits until the stone reaches it');
+      assert.equal(state.stones.length,1);assert(state.stones[0].y>1);assert.equal(state.stoneImpacts,0);
       await page.waitForFunction(()=>{const s=WaterGarden.inspect().stones[0];return s&&s.y<1&&s.y>.05;});
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-airborne.png')});
       await page.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);state=await inspect();assert(state.energy>.1,'impact must disturb water');

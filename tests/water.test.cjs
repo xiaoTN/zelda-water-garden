@@ -58,8 +58,37 @@ test('a new stone overlapping a fish does not trap it forever or teleport it',()
   const school=new FishSchool();school.attach(1);const f=school.items[0],u=f.u,v=f.v;
   const bed={heightAt:(x,y)=>Math.hypot((x-u)*2,(y-v)/.4330127)<.13?.03:-.22};
   school.scare(u,v,1.5);
-  for(let i=0;i<600;i++){const a=f.u,b=f.v;school.update(1/30,bed,false);assert(Math.hypot((f.u-a)*2,(f.v-b)/.4330127)<.01);}
+  for(let i=0;i<600;i++){const a=f.u,b=f.v;school.update(1/30,bed,false);assert(Math.hypot((f.u-a)*2,(f.v-b)/.4330127)<.018);}
   assert(school.clearAt(f.u,f.v,f.size,bed),'fish must be able to leave a newly occupied footprint');
+});
+
+test('airborne stones trigger a fast escape toward safety before water impact',()=>{
+  const school=new FishSchool();school.attach(1);const f=school.items[0],u=f.u,v=f.v;
+  const stone={u:u-.15,v,y:1,entered:false,settled:false,body:{velocity:{x:.54,y:-1,z:0}}};
+  school.anticipate([stone]);assert(f.fear>.9,'projected landing point must startle the fish');
+  const bed={heightAt:()=>-.22};
+  for(let i=0;i<9;i++)school.update(1/30,bed,false);
+  assert(f.speed>.27,'escape must accelerate within 300 ms');
+  assert(Math.hypot((f.u-u)*2,(f.v-v)/.4330127)>.055,'fish must actually move before impact');
+  school.calm();stone.entered=true;school.anticipate([stone]);assert.equal(f.fear,0,'submerged rocks do not keep renewing the airborne threat');
+});
+
+test('fast underwater swimming and sharp turns create balanced wakes that settle',()=>{
+  const bed={heightAt:()=>-.22};
+  function wakes(turn){
+    const school=new FishSchool();school.attach(1);school.items=school.items.slice(0,1);
+    const f=school.items[0];f.speed=.35;f.fear=1;f.y=-.16;f.angle=0;f.wake=1;
+    f.threatU=f.u+(turn?.1:-.1);f.threatV=f.v;
+    const impulses=[];school.update(1/30,bed,false,{sample:()=>0,ice:{sample:()=>0},disturb:(u,v,s,r)=>impulses.push(s)});
+    assert(Math.abs(impulses.reduce((a,b)=>a+b,0))<1e-8);return impulses;
+  }
+  const straight=wakes(false),turn=wakes(true);
+  assert.equal(straight.length,2);assert(straight[0]>.02,'a diving fish still drives a visible wake');
+  assert.equal(turn.length,4,'turn adds a lateral water push');assert(turn[0]>straight[0]);
+  const field=new WaveField(96,96,1);field.setBathymetry(bed);const school=new FishSchool();school.attach(1);
+  school.scare(school.items[0].u,school.items[0].v,2);
+  let maximum=0;for(let i=0;i<600;i++){school.update(1/30,bed,false,field);field.step();field.step();maximum=Math.max(maximum,field.energy());}
+  assert(maximum>.01&&maximum<20,'escape waves remain bounded');assert(school.items.every(f=>f.fear<.002),'escape wakes must not sustain panic');
 });
 
 test('Blender fish asset contains a closed swim cycle with stronger tail movement and an animated GLB',()=>{

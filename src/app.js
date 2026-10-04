@@ -367,6 +367,7 @@
       var dt = Math.min(.08, (time - lastRender) / 1000 || .033); lastRender = time;
       stoneDrops.update(dt,stoneEvent);
       if(stoneBedDirty){refreshStoneBed();stoneBedDirty=false;}
+      fishSchool.anticipate(stoneDrops.items);
       fishSchool.update(dt,field.bathymetry,reduced,field);
       for (var key in fingers) {
         var finger = fingers[key];

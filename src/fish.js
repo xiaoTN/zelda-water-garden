@@ -32,6 +32,15 @@
     }
     return true;
   };
+  System.prototype.anticipate=function(stones){
+    for(var i=0;i<stones.length;i++){
+      var stone=stones[i];if(stone.entered||stone.settled||stone.y<=0)continue;
+      var velocity=stone.body.velocity,vy=velocity.y;
+      var untilImpact=Math.min(1.2,(vy+Math.sqrt(vy*vy+13*stone.y))/6.5);
+      var u=stone.u+velocity.x*untilImpact/(2*this.aspect),v=stone.v+velocity.z*untilImpact*.4330127;
+      this.scare(u,v,1.7+Math.max(0,.6-untilImpact));
+    }
+  };
   System.prototype.update=function(dt,bed,reduced,field){
     if(reduced)return;
     dt=Math.min(.08,Math.max(0,dt));this.clock+=dt;this.quiet=Math.max(0,this.quiet-dt);
@@ -53,7 +62,7 @@
       fish.flowX+=(core.clamp(-gx*1.5,-.09,.09)*this.scale-fish.flowX)*follow;
       fish.flowZ+=(core.clamp(-gz*1.5,-.09,.09)*this.scale-fish.flowZ)*follow;
       var cruise=(.030+i*.002+.009*Math.sin(this.clock*.6+fish.phase))*this.scale;
-      fish.speed+=(cruise+fish.fear*.15*this.scale-fish.speed)*(1-Math.exp(-dt*5));
+      fish.speed+=(cruise+fish.fear*.36*this.scale-fish.speed)*(1-Math.exp(-dt*(5+fish.fear*9)));
       var depth=-.085-i*.004+Math.sin(this.clock*.45+fish.phase)*.016-fish.fear*.065+core.clamp(wave*.028,-.012,.012);
       fish.y+=(depth-fish.y)*(1-Math.exp(-dt*3));
       var target=fish.angle+Math.sin(this.clock*.31+fish.phase)*.32*dt;
@@ -79,8 +88,8 @@
         target=bestAngle;
       }
       var turn=Math.atan2(Math.sin(target-fish.angle),Math.cos(target-fish.angle));
-      var maxTurn=dt*(1.25+fish.fear*4);
-      fish.angle+=core.clamp(turn,-maxTurn,maxTurn);
+      var maxTurn=dt*(1.25+fish.fear*9),turned=core.clamp(turn,-maxTurn,maxTurn);
+      fish.angle+=turned;
       fish.bank+=(core.clamp(-turn*.16,-.16,.16)-fish.bank)*follow;
       var vx=Math.cos(fish.angle)*fish.speed+fish.flowX+separateX,vz=Math.sin(fish.angle)*fish.speed+fish.flowZ+separateZ;
       var nu=fish.u+vx*dt/(2*this.aspect),nv=fish.v+vz*dt*.4330127,moved=false;
@@ -88,14 +97,20 @@
       if(this.clearAt(nu,nv,r,bed)||(!clearHere&&this.clearAt(nu,nv,r,null))){fish.u=nu;fish.v=nv;moved=true;}
       fish.swim+=dt*(.65+fish.speed/(.035*this.scale)*.45+fish.fear*1.2);
       fish.wake+=dt;
-      // A shallow moving fish produces a small bow crest / stern trough in the real wave field.
-      // Paired impulses displace water locally instead of changing the static pool-bed depth map.
-      if(field&&moved&&fish.wake>=.12&&this.quiet===0&&liquid>.8){
+      // Fast strokes and abrupt turns transmit a stronger wake even during an escape dive.
+      var fast=core.clamp((fish.speed/this.scale-.055)/.28,0,1),turning=core.clamp(Math.abs(turned)/Math.max(dt,.001)/7,0,1)*fast;
+      if(field&&(moved||turning>.15)&&fish.wake>=.12-fast*.055&&(this.quiet===0||fish.fear>.4)&&liquid>.8){
         fish.wake=0;
-        var nearSurface=core.clamp((fish.y+.13)/.065,0,1),strength=(.006+fish.speed/this.scale*.06)*nearSurface*nearSurface;
+        var nearSurface=core.clamp((fish.y+.13)/.065,0,1),strength=(.006+fish.speed/this.scale*.06)*nearSurface*nearSurface+(.10*fast*fast+.09*turning)*(.35+.65*nearSurface);
         var ox=Math.cos(fish.angle)*r*.42/(2*this.aspect),oz=Math.sin(fish.angle)*r*.42*.4330127;
-        field.disturb(fish.u+ox,fish.v+oz,strength,.011*this.scale);
-        field.disturb(fish.u-ox,fish.v-oz,-strength,.011*this.scale);
+        var radius=(.011+fast*.010)*this.scale;
+        field.disturb(fish.u+ox,fish.v+oz,strength,radius);
+        field.disturb(fish.u-ox,fish.v-oz,-strength,radius);
+        if(turning>.15){
+          var side=turned>0?1:-1,sx=-Math.sin(fish.angle)*r*.65/(2*this.aspect),sz=Math.cos(fish.angle)*r*.65*.4330127;
+          field.disturb(fish.u+sx,fish.v+sz,strength*side*.7,radius);
+          field.disturb(fish.u-sx,fish.v-sz,-strength*side*.7,radius);
+        }
       }
     }
   };
