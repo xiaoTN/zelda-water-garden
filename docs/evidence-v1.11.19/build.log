@@ -1,0 +1,114 @@
+
+> zelda-water-garden@1.11.19 build
+> node scripts/build.cjs
+
+Bundled water-tap sample: 5686 bytes
+Bundled water-swipe sample: 52763 bytes
+Bundled stone-impact sample: 25805 bytes
+Bundled water-ripples sample: 64827 bytes
+✔ perspective projection and ray picking agree on a deformed world in both views and orientations (2.5563ms)
+✔ rolling rotates around the direction of travel, stays normalized and reverses consistently (0.5138ms)
+✔ fast cloud gestures open deeper gaps without widening the brush (11.244ms)
+✔ cloud shoulders flow inward, with fast closure then a slower wispy tail (110.8874ms)
+✔ parting clouds builds a soft depression over time instead of cutting to full depth on contact (6.1207ms)
+✔ snowfall fills depressions and smooths banks at twice the previous rate, without overshooting (2.7828ms)
+✔ footprints have a mirrored medial arch, broad forefoot, heel and conserved displaced snow (9.2899ms)
+✔ a snow stroke stays continuous, local and persistent without snowfall (19.9475ms)
+✔ snow pressure is bounded and affects positions above the former cutoff (9.1425ms)
+✔ rolling a selected snowball grows it and leaves a compressed track (10.7735ms)
+✔ only one snowball can exist and reset clears it with footprints (1.581ms)
+✔ parting clouds opens a local gap which recovers over time (569.5126ms)
+✔ gather pulls nearby clouds inward (2.9878ms)
+✔ cloud brush reaches one third as far and gathering moves twice the material per second (9.8949ms)
+✔ reduced motion suppresses ambient drift while direct cloud interaction still works (2.5147ms)
+✔ cloud sea channels retain displaced rims and refill while snow channels persist (14.6658ms)
+✔ ambient breeze moves the continuous cloud material (1.0902ms)
+✔ a channel moves its missing volume to both shoulders and repeated pressure creates no material (24.328ms)
+✔ covering the complete playable field repeatedly retains displaced snow instead of lowering the entire sheet (819.6284ms)
+✔ crossing an old trench refills it locally and moves its old banks without deleting snow (15.1909ms)
+✔ cloud part, gather and relaxation preserve displaced volume across a full-field sweep (21.9187ms)
+✔ snow and cloud carving crosses all old rectangle limits and extends beyond the viewport coordinates (7.3839ms)
+✔ render smoothing removes one-cell teeth while preserving volume and untouched terrain (17.0451ms)
+✔ rain ripples stay local and disappear before a finger wave settles (64.1872ms)
+✔ rain height is packed and sampled with touch, masked by rocks, and reset immediately (3.6264ms)
+✔ storm rain has a fixed work budget in both quality modes (293.0785ms)
+✔ rain presets expand actual height ripples progressively, with storm radius twice light rain (44.996ms)
+✔ water-tap preserves the supplied MP3 bytes, plays directly and bounds decoded audio voices (1.7153ms)
+✔ stone-impact preserves the supplied MP3 bytes, plays directly and bounds decoded audio voices (0.6425ms)
+✔ tap decoding failure falls back without an unhandled rejection (0.1814ms)
+✔ scene gains crossfade continuously, keep three buses and support rapid reversals on older AudioParams (0.29ms)
+✔ scene changes fade recorded short effects without changing their normal attack and cancel pending playback (0.5175ms)
+✔ ripple recording follows actual wave strength, preserves its loop and reverses fades on the same source (4.6096ms)
+✔ delayed ripple decoding waits for current waves and decoder failure stays silent (3.0504ms)
+✔ weak remaining ripples fade once, stay silent near the threshold, and resume only for stronger waves (1.838ms)
+✔ more simulated ripples raise sound level and settling waves become silent while weak geometry remains (178.8758ms)
+✔ recorded swipe sound crossfades its loop, follows speed and reuses one source (1.9418ms)
+✔ delayed swipe decoding starts only a current gesture and cancels stopped gestures (2.905ms)
+✔ swipe decoder failure leaves interactions silent and releases pending movement (0.745ms)
+✔ rain intensity changes and rapid stop/resume reuse one voice through gentle fades (2.3857ms)
+✔ thunder stops with a finite fade, while hidden-page cleanup releases immediately (1.4374ms)
+✔ overhead rain converges to its own ground point from every side of the optical center (0.4698ms)
+✔ storm surface impacts stay dense at 60, 30 and 12.5 updates per second (9.1672ms)
+✔ larger rain presets visibly populate more streaks, land more drops and strike more often (72.7599ms)
+✔ rain impacts occur at streak landing, never during initial population (0.7523ms)
+✔ rain preset changes preserve falling drops and blend density, speed and ripple size (4.2623ms)
+✔ changing rain preserves drawn streaks and lets the current lightning and thunder finish (2.4071ms)
+✔ stopping or clearing rain cancels queued thunder, flashes and falling streaks (1.3494ms)
+✔ low quality reduces rain work while keeping storms and rain visible (3.4964ms)
+✔ fish body shading stays continuous across shared mesh edges while retaining natural color variation (15.7969ms)
+✔ animated fish geometry raises displayed water depth and clears old footprints without altering the solid bed (183.4898ms)
+✔ nearby strokes startle fish, accelerate the Blender swim cycle and then decay (7.2837ms)
+✔ water moves fish and shallow fish feed back bounded wakes without repainting pool depth (91.0885ms)
+✔ a new stone overlapping a fish does not trap it forever or teleport it (11.0916ms)
+✔ airborne stones trigger a fast escape toward safety before water impact (0.699ms)
+✔ fast underwater swimming and sharp turns create balanced wakes that settle (86.8229ms)
+✔ Blender fish asset contains a closed swim cycle with stronger tail movement and an animated GLB (0.8113ms)
+✔ fish keep a bounded underwater footprint around banks and obstacles across aspect ratios (255.578ms)
+✔ even small stone waves spread wider and carry much more energy than a finger stroke (73.4444ms)
+✔ stone entry still pushes surrounding water when an existing rock blocks its center (8.1716ms)
+✔ compressed stones settle without ground contact chatter or spontaneous wakes (386.2436ms)
+✔ five touching rocks rest as a group without repeatedly waking each other (1608.6099ms)
+✔ faceted contact friction does not sustain motion in a resting pile (2213.9091ms)
+✔ a new impact wakes the complete resting support group and it settles again (1453.2176ms)
+✔ stone undersides have irregular facets and rendering matches the full collision hull (2.3545ms)
+✔ large stones lose almost all head-on rebound energy at mutual contact (17.8505ms)
+✔ rigid stones accelerate, rotate, impact once and settle without sinking through the bed (196.0121ms)
+✔ same-point rigid bodies collide, transfer momentum, roll apart and sleep (2124.0738ms)
+✔ random stone sizes, capacity and cancellation are bounded (3.3052ms)
+✔ replacing the oldest stone wakes its resting support group without stale members (769.8092ms)
+✔ fixed physics steps agree across frame rates and ten overlapping drops stay bounded (5148.0679ms)
+✔ small rocks and shore contacts dissipate rolling motion and enter sleep (1016.0929ms)
+✔ repeated drops dissipate impact energy instead of scattering across the pool (18500.1375ms)
+✔ displayed underwater depth reconstructs diagonal edges without large stair steps (23.2738ms)
+✔ bathymetry comes from stone triangles and blocks waves at dry footprints (73.891ms)
+✔ solid barriers reflect instead of transmitting, including the finger brush (14.4228ms)
+✔ shallower water propagates waves more slowly (12.1707ms)
+✔ 3D terrain has submerged bed, dry bank and faceted shoreline rocks (118.4038ms)
+✔ 3D water mesh has valid topology, camera alignment and bounded low quality geometry (6.8968ms)
+✔ mesh receives touch and rain heights, and reset clears displacement (2.104ms)
+✔ a calm pool remains calm; shoreline rejects land touches (7.3733ms)
+✔ a tap propagates beyond its origin and loses energy (67.5291ms)
+✔ swiping disturbs a continuous path and clear removes history (1.1637ms)
+✔ many overlapping strokes stay finite and dry bank stays dry (48.2244ms)
+✔ height packing preserves sign and stays within two-byte precision (0.7674ms)
+✔ all viewport sizes obey pixel and DPR budgets (0.2757ms)
+ℹ tests 86
+ℹ suites 0
+ℹ pass 86
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35400.3958
+Package checks passed: 26 offline files, classic scripts, CSP capabilities, DOM bindings, baseline CSS, WebGL degradation.
+PASS: 26 file(s), 0 warning(s)
+Verified 26 ZIP files, root index.html, allowed extensions and source bytes
+NOTE: Node audit checks zip size only; artifact contents must be audited before packaging
+PASS: 1 file(s), 0 warning(s)
+{
+  "version": "1.11.19",
+  "file": "zelda-water-garden-minitool-v1.11.19.zip",
+  "bytes": 719227,
+  "entries": 26,
+  "sha256": "c483f3fe21da9b6ea8ec1b9d883f21a9714f9f5c776ff3d36eba4e175a3d9b11"
+}
