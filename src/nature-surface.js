@@ -5,7 +5,7 @@
     'uniform sampler2D uNoise,uTracks; uniform float uAspect,uTime; uniform mediump float uCloud,uObject; uniform vec2 uFlow,uFieldDomain;',
     'uniform vec4 uBall;uniform mediump vec4 uRotation; varying mediump vec3 vNormal,vWorld,vLocal; varying mediump float vCut,vNoise,vBottom;',
     'float noiseAt(vec2 uv){vec2 n=texture2D(uNoise,vec2(uv.x*uAspect,uv.y)*mix(.85,1.9,uCloud)+uFlow*uCloud).rg;return n.r+n.g/255.;}',
-    'vec2 trackAt(vec2 uv){vec2 p=(uv-vec2(uFieldDomain.x))/uFieldDomain.y;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.)return vec2(0.);vec3 t=texture2D(uTracks,p).rgb;return vec2(t.r,(t.g+t.b/255.)*16.);}',
+    'vec2 trackAt(vec2 uv){vec2 p=(uv-vec2(uFieldDomain.x))/uFieldDomain.y;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.)return vec2(0.);return texture2D(uTracks,p).rg;}',
     'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*.65,uCloud);return base+(t.g-t.r)*mix(.38,.62,uCloud);}',
     'vec3 rotate(vec3 p){return p+2.*cross(uRotation.xyz,cross(uRotation.xyz,p)+uRotation.w*p);}',
     'void main(){vec3 p;vBottom=0.;vCut=0.;vNoise=.5;vLocal=aPosition;',
@@ -153,7 +153,7 @@
   };
   Surface.prototype.point=function(u,v,kind,clouds,pickBall){
     var self=this,field=kind==='snow'?this.snow:clouds.field;
-    var p=window.Nature3D.intersect(this.camera,u,v,function(x,z){return self.height(x,z,kind,field,clouds);},kind==='snow'&&field.bankLimit>1 ? .025 : .2);
+    var p=window.Nature3D.intersect(this.camera,u,v,function(x,z){return self.height(x,z,kind,field,clouds);});
     if(!p)return null;
     // Select the visible sphere before the snow behind it; dragging keeps its contact point.
     if(pickBall&&kind==='snow'&&this.snow){var ray=this.camera.ray(u,v),nearest=Math.hypot(p[0]-ray.origin[0],p[1]-ray.origin[1],p[2]-ray.origin[2]),selected=null;
@@ -187,9 +187,7 @@
     if(this.revision!==field.revision||this.kind!==kind){
       if(!this.pixels)this.pixels=new Uint8Array(field.depth.length*4);
       var heights=field.renderDepth();
-      // R retains sole/cut depth. G+B encode taller local banks with 16-bit
-      // precision so GPU displacement agrees with CPU support and ray picking.
-      for(var i=0;i<heights.length;i++){var bank=Math.round(Math.min(16,Math.max(0,-heights[i]))/16*65025);this.pixels[i*4]=Math.round(Math.max(0,heights[i])*255);this.pixels[i*4+1]=Math.floor(bank/255);this.pixels[i*4+2]=bank%255;this.pixels[i*4+3]=255;}
+      for(var i=0;i<heights.length;i++){this.pixels[i*4]=Math.round(Math.max(0,heights[i])*255);this.pixels[i*4+1]=Math.round(Math.max(0,-heights[i])*255);this.pixels[i*4+3]=255;}
       if(this.trackSize!==field.size){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,field.size,field.size,0,gl.RGBA,gl.UNSIGNED_BYTE,this.pixels);this.trackSize=field.size;}
       else gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,field.size,field.size,gl.RGBA,gl.UNSIGNED_BYTE,this.pixels);
       this.revision=field.revision;this.kind=kind;

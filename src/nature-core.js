@@ -10,9 +10,9 @@
   function Snow() {
     this.size = 640; this.origin = -.6; this.span = 2; this.depth = new Float32Array(this.size * this.size);
     this.filtered=new Float32Array(this.depth.length);this.filterWork=new Float32Array(this.depth.length);this.filterRevision=-1;this.active=false;
-    this.balls = []; this.ballLimit = 12; this.bankLimit = 1; this.revision = 0; this.foot = 0; this.aspect = 1;
+    this.balls = []; this.ballLimit = 12; this.revision = 0; this.foot = 0; this.aspect = 1;
   }
-  Snow.prototype.clear = function () { this.depth.fill(0); this.active=false; this.balls.length = 0; this.bankLimit = 1; this.foot = 0; this.revision++; };
+  Snow.prototype.clear = function () { this.depth.fill(0); this.active=false; this.balls.length = 0; this.foot = 0; this.revision++; };
   Snow.prototype.index=function(u,v){var x=clamp(Math.floor((u-this.origin)/this.span*this.size),0,this.size-1),y=clamp(Math.floor((v-this.origin)/this.span*this.size),0,this.size-1);return y*this.size+x;};
   Snow.prototype.renderDepth=function(){
     if(this.filterRevision===this.revision)return this.filtered;
@@ -33,17 +33,7 @@
     var n=this.size,origin=this.origin,scale=n/this.span,aspect=this.aspect,reach=radius*1.8,direction=gather?-1:1;
     var x0=Math.max(0,Math.floor((u-reach/aspect-origin)*scale)),x1=Math.min(n-1,Math.ceil((u+reach/aspect-origin)*scale));
     var y0=Math.max(0,Math.floor((v-reach-origin)*scale)),y1=Math.min(n-1,Math.ceil((v+reach-origin)*scale));
-    var ca=Math.cos(angle||0),sa=Math.sin(angle||0),cuts=0,banks=0,removed=0,capacity=0,bankCap=direction>0?this.bankLimit:1;
-    // A shoe pushes snow into low shoulders, not narrow towers. Limit its berm
-    // to one depth unit above the highest snow already inside this brush.
-    if(direction>0&&this.bankLimit>1){
-      bankCap=1;for(var by=y0;by<=y1;by++)for(var bx=x0;bx<=x1;bx++)bankCap=Math.max(bankCap,Math.min(this.bankLimit,1-this.depth[by*n+bx]));
-    }
-    var pileFoot=footSide&&bankCap>1.1;
-    if(pileFoot){
-      reach=radius*3;x0=Math.max(0,Math.floor((u-reach/aspect-origin)*scale));x1=Math.min(n-1,Math.ceil((u+reach/aspect-origin)*scale));
-      y0=Math.max(0,Math.floor((v-reach-origin)*scale));y1=Math.min(n-1,Math.ceil((v+reach-origin)*scale));
-    }
+    var ca=Math.cos(angle||0),sa=Math.sin(angle||0),cuts=0,banks=0,removed=0,capacity=0;
     strength=clamp(strength,0,1);
     for(var y=y0;y<=y1;y++)for(var x=x0;x<=x1;x++){
       var dx=(origin+x/scale-u)*aspect,dy=origin+y/scale-v;
@@ -63,9 +53,8 @@
         if(this.soft)target=strength*Math.pow(1-d*d,2);
         var amount=Math.max(0,target-direction*this.depth[at])*clamp(rate===undefined?1:rate,0,1);
         if(amount>0){cutIndices[cuts]=at;cutAmounts[cuts++]=amount;removed+=amount;}
-      }else if(pileFoot?Math.hypot(dx,dy)<radius*3:d<1.8){
-        var shoulder=pileFoot?clamp((Math.hypot(dx,dy)/radius-.8)/2.2,0,1):(d-1)/.8;
-        var weight=Math.pow(Math.sin(shoulder*Math.PI),2),room=bankCap+direction*this.depth[at];
+      }else if(d<1.8){
+        var weight=Math.pow(Math.sin((d-1)/.8*Math.PI),2),room=1+direction*this.depth[at];
         if(flowAngle!==undefined){var side=(dx*Math.sin(flowAngle)-dy*Math.cos(flowAngle))/Math.max(1e-8,Math.hypot(dx,dy));weight*=.02+.98*side*side;}
         if(weight>1e-5&&room>0){bankIndices[banks]=at;bankWeights[banks++]=weight;capacity+=room;}
       }
@@ -78,19 +67,19 @@
     // Saturated cells stop receiving; remaining material spreads to available cells.
     for(var pass=0;pass<5&&volume>1e-6;pass++){
       var total=0;
-      for(i=0;i<banks;i++)if(bankCap+direction*this.depth[bankIndices[i]]>1e-7)total+=bankWeights[i];
+      for(i=0;i<banks;i++)if(1+direction*this.depth[bankIndices[i]]>1e-7)total+=bankWeights[i];
       if(total<=0)break;
       var budget=volume;
       for(i=0;i<banks;i++){
-        index=bankIndices[i];before=this.depth[index];var space=bankCap+direction*before;
+        index=bankIndices[i];before=this.depth[index];var space=1+direction*before;
         var moved=Math.min(space,budget*bankWeights[i]/total);
-        this.depth[index]=clamp(before-direction*moved,-this.bankLimit,1);volume-=(before-this.depth[index])*direction;
+        this.depth[index]=clamp(before-direction*moved,-1,1);volume-=(before-this.depth[index])*direction;
       }
     }
     if(volume>1e-6){
-      var available=0;for(i=0;i<banks;i++)available+=bankCap+direction*this.depth[bankIndices[i]];
+      var available=0;for(i=0;i<banks;i++)available+=1+direction*this.depth[bankIndices[i]];
       var ratio=Math.min(1,volume/available);
-      for(i=0;i<banks;i++){index=bankIndices[i];this.depth[index]-=direction*(bankCap+direction*this.depth[index])*ratio;}
+      for(i=0;i<banks;i++){index=bankIndices[i];this.depth[index]-=direction*(1+direction*this.depth[index])*ratio;}
     }
     this.active=true;this.revision++;
   };
@@ -100,42 +89,12 @@
     var flowAngle=Math.atan2(y-v,(x-u)*this.aspect);
     for (var i = 1; i <= count; i++) this.stamp(u + (x - u) * i / count, v + (y - v) * i / count, radius, strength,0,1,false,1,flowAngle);
   };
-  Snow.prototype.footprint = function (u, v, angle, radius, ball) {
-    var crushed=ball&&this.crush(ball);
+  Snow.prototype.footprint = function (u, v, angle, radius) {
     this.foot++;
     var side = this.foot % 2 ? -1 : 1;
-    if(!crushed){u += Math.cos(angle) * radius * .65 * side / this.aspect;v += Math.sin(angle) * radius * .65 * side;}
+    u += Math.cos(angle) * radius * .65 * side / this.aspect;
+    v += Math.sin(angle) * radius * .65 * side;
     this.stamp(u, v, radius, .56, angle, 1, false, 1, undefined, side);
-  };
-  Snow.prototype.crush = function (ball) {
-    var selected=this.balls.indexOf(ball);if(selected<0)return false;
-    var n=this.size,scale=n/this.span,cellArea=Math.pow(12/scale,2)*this.aspect;
-    // Height displacement is 0.38 world units per depth unit. Return the sphere's
-    // volume to the same height field, then the footprint presses into that snow.
-    var volume=4*Math.PI/3*Math.pow(ball.radius*12,3)/(cellArea*.38);
-    // Keep broken snow beside the sphere. Taller, uneven heaps accommodate its
-    // volume without widening the deposit or lifting any distant terrain.
-    var reach=Math.max(.012*Math.min(this.aspect,1),ball.radius*1.9),limit=16,banks=0,capacity=0;
-    var x0=Math.max(0,Math.floor((ball.u-reach/this.aspect-this.origin)*scale)),x1=Math.min(n-1,Math.ceil((ball.u+reach/this.aspect-this.origin)*scale));
-    var y0=Math.max(0,Math.floor((ball.v-reach-this.origin)*scale)),y1=Math.min(n-1,Math.ceil((ball.v+reach-this.origin)*scale));
-    for(var y=y0;y<=y1;y++)for(var x=x0;x<=x1;x++){
-      var dx=(this.origin+(x+.5)/scale-ball.u)*this.aspect,dz=this.origin+(y+.5)/scale-ball.v,distance=Math.hypot(dx,dz)/reach,at=y*n+x;
-      if(distance>=1||this.depth[at]<=-limit)continue;
-      var ring=Math.sin(distance*Math.PI),angle=Math.atan2(dz,dx);
-      bankIndices[banks]=at;bankWeights[banks++]=Math.pow(1-distance*distance,2)*(.18+.82*ring)*(1+.65*Math.cos(angle*3+.35)*ring);capacity+=limit+this.depth[at];
-    }
-    if(capacity+1e-6<volume)return false;
-    for(var pass=0;pass<6&&volume>1e-6;pass++){
-      var total=0,i;for(i=0;i<banks;i++)if(this.depth[bankIndices[i]]>-limit)total+=bankWeights[i];
-      if(total<=0)break;
-      var budget=volume;
-      for(i=0;i<banks;i++){var index=bankIndices[i],before=this.depth[index];this.depth[index]=Math.max(-limit,before-Math.min(limit+before,budget*bankWeights[i]/total));volume-=before-this.depth[index];}
-    }
-    if(volume>1e-6){
-      var room=0;for(i=0;i<banks;i++)room+=limit+this.depth[bankIndices[i]];
-      var fraction=Math.min(1,volume/room);for(i=0;i<banks;i++){index=bankIndices[i];this.depth[index]-=(limit+this.depth[index])*fraction;}
-    }
-    this.bankLimit=limit;this.balls.splice(selected,1);ball.crushed=true;this.active=true;this.revision++;return true;
   };
   Snow.prototype.ball = function (u, v, radius) {
     if(!isFinite(u+v+radius)||radius<0)return null;

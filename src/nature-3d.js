@@ -28,11 +28,10 @@
     var a=this.matrix,w=a[3]*p[0]+a[7]*p[1]+a[11]*p[2]+a[15];
     return {u:((a[0]*p[0]+a[4]*p[1]+a[8]*p[2]+a[12])/w+1)/2,v:(1-(a[1]*p[0]+a[5]*p[1]+a[9]*p[2]+a[13])/w)/2};
   };
-  function intersect(camera,u,v,height,step) {
+  function intersect(camera,u,v,height) {
     var ray=camera.ray(u,v),o=ray.origin,d=ray.direction,previous=0;
-    step=step>0?Math.min(.2,step):.2;
     // Find the first surface crossing, then refine: steep ridges still pick the visible face.
-    for(var t=step;t<55;t+=step) {
+    for(var t=.2;t<55;t+=.2) {
       var x=o[0]+d[0]*t,z=o[2]+d[2]*t;
       if(o[1]+d[1]*t<=height(x,z)) {
         var lo=previous,hi=t;
