@@ -1,0 +1,413 @@
+{
+  "browser": "154.0.4258.53",
+  "date": "2026-10-04",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "Blender fish animation, underwater visibility and occlusion",
+      "visible": 2550,
+      "animated": 2089,
+      "frozen": 0,
+      "occluded": 0,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "smooth wave reconstruction",
+      "linear": {
+        "kink": 6,
+        "peak": 151
+      },
+      "smooth": {
+        "kink": 2,
+        "peak": 102
+      },
+      "antialias": true,
+      "result": "passed"
+    },
+    {
+      "scenario": "isolated coastal foam coupling",
+      "changed": 1169,
+      "remote": 0,
+      "resetDifference": 1,
+      "result": "passed"
+    },
+    {
+      "scenario": "3D stone and water depth occlusion",
+      "dry": 17098,
+      "dryCovered": 0,
+      "wet": 1337,
+      "wetTinted": 1337,
+      "iceCovered": 0,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "geometry-derived water material depth",
+      "shallowerPixels": 872,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "readyAndSettleMs": 3956,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "fishTime": 32.44450000000034,
+        "fish": [
+          {
+            "u": 0.2964597838562791,
+            "v": 0.5955720685213557,
+            "y": -0.085,
+            "angle": 2.1349710238774104
+          },
+          {
+            "u": 0.5255234691354327,
+            "v": 0.5069194502390896,
+            "y": -0.09100000000000001,
+            "angle": -0.07630287709690689
+          },
+          {
+            "u": 0.43602154850439057,
+            "v": 0.5892472781596253,
+            "y": -0.097,
+            "angle": 1.220074213884742
+          },
+          {
+            "u": 0.44987155750774516,
+            "v": 0.46933866808979485,
+            "y": -0.10300000000000001,
+            "angle": 4.760663327390242
+          },
+          {
+            "u": 0.3340768045623973,
+            "v": 0.32986764267149665,
+            "y": -0.10900000000000001,
+            "angle": -2.289760542323677
+          }
+        ],
+        "fishTriangles": 1175,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.2200003171494336,
+            "v": 0.48002919
+          },
+          {
+            "u": 0.7599580649942056,
+            "v": 0.5600291900000001
+          },
+          {
+            "u": 0.6999543676899117,
+            "v": 0.29002919
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 188,
+        "quality": "low",
+        "renderer": "webgl",
+        "surfaceVertices": 2145,
+        "surfaceTriangles": 4096,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 390,
+        "bufferHeight": 844,
+        "activePointers": 0
+      }
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "readyAndSettleMs": 1404,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "fishTime": 18.772300000000037,
+        "fish": [
+          {
+            "u": 0.32739851257258934,
+            "v": 0.567628489418083,
+            "y": -0.085,
+            "angle": 0.5069049892113124
+          },
+          {
+            "u": 0.5629108498830946,
+            "v": 0.5186117691427604,
+            "y": -0.09100000000000001,
+            "angle": 1.5775399276926698
+          },
+          {
+            "u": 0.40063299397843916,
+            "v": 0.42668101081448856,
+            "y": -0.097,
+            "angle": -0.45986984879871473
+          },
+          {
+            "u": 0.5827497311576699,
+            "v": 0.4363221150820546,
+            "y": -0.10300000000000001,
+            "angle": 3.960110244465705
+          },
+          {
+            "u": 0.3963628931305403,
+            "v": 0.5130133577870759,
+            "y": -0.10900000000000001,
+            "angle": 1.0107796539390146
+          }
+        ],
+        "fishTriangles": 1175,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1120,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 11094,
+        "surfaceTriangles": 21760,
+        "waterMaps": 2,
+        "width": 1440,
+        "height": 960,
+        "bufferWidth": 1732,
+        "bufferHeight": 1154,
+        "activePointers": 0
+      }
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "readyAndSettleMs": 1351,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "fishTime": 15.896100000000027,
+        "fish": [
+          {
+            "u": 0.2816216421188821,
+            "v": 0.4815631442492632,
+            "y": -0.085,
+            "angle": 1.8781015663304437
+          },
+          {
+            "u": 0.40827384474406037,
+            "v": 0.43167298376285956,
+            "y": -0.09100000000000001,
+            "angle": 2.880748048789386
+          },
+          {
+            "u": 0.2948850520636719,
+            "v": 0.5116269418239111,
+            "y": -0.097,
+            "angle": -1.696623609888735
+          },
+          {
+            "u": 0.3897261513785188,
+            "v": 0.552364484534418,
+            "y": -0.10300000000000001,
+            "angle": 3.293066654644626
+          },
+          {
+            "u": 0.29612547251156546,
+            "v": 0.4344256133694646,
+            "y": -0.10900000000000001,
+            "angle": 0.9123186176121015
+          }
+        ],
+        "fishTriangles": 1175,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 948,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 9417,
+        "surfaceTriangles": 18432,
+        "waterMaps": 2,
+        "width": 320,
+        "height": 568,
+        "bufferWidth": 480,
+        "bufferHeight": 852,
+        "activePointers": 0
+      }
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "readyAndSettleMs": 1328,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "fishTime": 21.034800000000025,
+        "fish": [
+          {
+            "u": 0.3394176406493038,
+            "v": 0.5797796190227581,
+            "y": -0.085,
+            "angle": 0.4304425804858625
+          },
+          {
+            "u": 0.5701058319071348,
+            "v": 0.5453506643471242,
+            "y": -0.09100000000000001,
+            "angle": 2.438240987949891
+          },
+          {
+            "u": 0.38069370003969866,
+            "v": 0.38324669402814865,
+            "y": -0.097,
+            "angle": -1.6588447501197805
+          },
+          {
+            "u": 0.5991323524533333,
+            "v": 0.42076289270913064,
+            "y": -0.10300000000000001,
+            "angle": 3.298354288875745
+          },
+          {
+            "u": 0.3886163892041076,
+            "v": 0.44732265601399723,
+            "y": -0.10900000000000001,
+            "angle": 2.950396007598333
+          }
+        ],
+        "fishTriangles": 1175,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1257,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 844,
+        "height": 390,
+        "bufferWidth": 1266,
+        "bufferHeight": 585,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "shoreline without derivatives or fragment highp",
+      "result": "passed"
+    },
+    {
+      "scenario": "no WebGL with falling stone",
+      "result": "passed"
+    },
+    {
+      "scenario": "file URL offline",
+      "networkRequests": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "reduced motion freezes and breaks without airborne shards",
+      "result": "passed"
+    },
+    {
+      "scenario": "synthetic slow timing normal → low → Canvas 2D",
+      "result": "passed"
+    }
+  ]
+}

@@ -24,10 +24,74 @@ async function run() {
       const inspect = () => page.evaluate(() => window.WaterGarden.inspect());
       assert.equal(await page.locator('[data-mode]').count(),4); assert.equal(await page.getByText('落石',{exact:true}).count(),1);
       let state = await inspect(); assert.equal(state.renderer, 'webgl'); assert(state.bufferWidth * state.bufferHeight <= 2000000);
+      assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
+      const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
+      const beforeScare=(await inspect()).fish[0],fx=beforeScare.u*viewport.width,fy=(beforeScare.v-beforeScare.y*.25)*viewport.height;
+      await page.mouse.move(fx-24,fy);await page.mouse.down();await page.mouse.move(fx+24,fy,{steps:8});await page.mouse.up();
+      const alarm=(await inspect()).fish[0];assert(alarm.fear>.4,'a real pointer stroke near the fish must frighten it');
+      await page.waitForTimeout(350);const fleeing=(await inspect()).fish[0];
+      assert(fleeing.speed>beforeScare.speed*1.4,'nearby fish accelerate');assert(fleeing.y<beforeScare.y-.004,'nearby fish dive');
+      assert.equal((await inspect()).rings,0,'swimming and fleeing must not add drawn rings');
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'fish-startled.png')});
+      reports.push({scenario:'pointer stroke startles fish',viewport,before:beforeScare,alarm,fleeing,result:'passed'});
+      await page.locator('#reset').click();assert((await inspect()).fish.every(f=>f.fear===0));
       await page.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
       assert(state.surfaceVertices > 4000 && state.surfaceVertices < 65536);
       assert(state.surfaceTriangles > 8000 && state.surfaceTriangles <= 32768);
       if(viewport.width === 390) {
+        const fishCheck=await page.evaluate(()=>{
+          const canvas=document.createElement('canvas'),field=new WaterCore.WaveField(96,96,1);
+          const renderer=new WaterRenderer(canvas,WaterScene.create(1),field),school=new WaterFish.System();
+          renderer.resize(480,480);school.attach(1);school.update(.08,field.bathymetry,false);
+          const gl=renderer.gl,read=enabled=>{
+            renderer.fishSystem=enabled?school:null;renderer.draw(0,0);
+            const pixels=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;
+          };
+          const difference=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>6)n++;return n;};
+          try{
+            const visible=difference(read(true),read(false));
+            const solidDraw=renderer.drawSolid;
+            renderer.drawSolid=function(buffer,count,pass){if(pass!==5)solidDraw.call(this,buffer,count,pass);};
+            const shallowWater=difference(read(true),read(false));renderer.drawSolid=solidDraw;
+            const poseA=read(true);for(let n=0;n<4;n++)school.update(.075,field.bathymetry,false);const animated=difference(poseA,read(true));
+            field.ice.paint(.5,.49,1,true,true);for(let i=0;i<90;i++)field.ice.update(1/30);
+            const frozen=difference(read(true),read(false));field.ice.clear();
+            // An opaque solid above all fish must fully occlude their underwater draw pass.
+            const cover=[];for(const p of [[-1,-1],[-1,1],[1,-1],[1,-1],[-1,1],[1,1]])cover.push(p[0],.05,p[1],.5+p[0]/2,.5+p[1]*.433,0,1,0,.4,.5,.3);
+            renderer.terrain.stones=new Float32Array(cover);gl.bindBuffer(gl.ARRAY_BUFFER,renderer.stones);gl.bufferData(gl.ARRAY_BUFFER,renderer.terrain.stones,gl.STATIC_DRAW);
+            const occluded=difference(read(true),read(false));
+            return {visible,shallowWater,animated,frozen,occluded,error:gl.getError()};
+          }finally{renderer.destroy();}
+        });
+        assert(fishCheck.visible>100,'Blender fish must be visible underwater');
+        assert(fishCheck.shallowWater>100,'fish geometry must change the existing water material even when its color pass is hidden');
+        assert(fishCheck.animated>50,'the baked tail pose must change visible pixels');
+        assert.equal(fishCheck.frozen,0,'opaque ice must hide fish');assert.equal(fishCheck.occluded,0,'rocks must hide fish');assert.equal(fishCheck.error,0);
+        reports.push({scenario:'Blender fish animation, underwater visibility and occlusion',...fishCheck,result:'passed'});
+        await page.screenshot({path:path.join(out,'fish-mobile.png')});
+        const waveEdges=await page.evaluate(()=>{
+          const canvas=document.createElement('canvas'),field=new WaterCore.WaveField(32,32,1);
+          const proto=WebGLRenderingContext.prototype,source=proto.shaderSource;let renderer;
+          try{
+            proto.shaderSource=function(shader,text){return source.call(this,shader,text.replace('alpha=mix(.62,.94,smoothstep(.008,.18,depth));','col=vec3(heightAt(uv));alpha=1.;'));};
+            renderer=new WaterRenderer(canvas,WaterScene.create(1),field);proto.shaderSource=source;renderer.resize(640,640);
+            for(let y=0;y<32;y++)field.current[y*32+15]=.6;
+            const gl=renderer.gl,measure=low=>{
+              renderer.low=low;renderer.draw(4,0);const width=canvas.width,p=new Uint8Array(width*4);
+              gl.readPixels(0,Math.floor(canvas.height/2),width,1,gl.RGBA,gl.UNSIGNED_BYTE,p);
+              let kink=0,peak=0;
+              for(let x=Math.floor(width*.4);x<width*.6;x++){
+                peak=Math.max(peak,p[x*4]);kink=Math.max(kink,Math.abs(p[(x+1)*4]-2*p[x*4]+p[(x-1)*4]));
+              }
+              return {kink,peak};
+            };
+            return {linear:measure(true),smooth:measure(false),antialias:gl.getContextAttributes().antialias};
+          }finally{proto.shaderSource=source;if(renderer)renderer.destroy();}
+        });
+        assert(waveEdges.linear.kink>4,'the fixture must expose the old interpolation corner');
+        assert(waveEdges.smooth.kink<waveEdges.linear.kink*.5,'water reconstruction must smooth the visible wave corner');
+        assert(waveEdges.smooth.peak>60,'smoothing must preserve a visible wave');
+        reports.push({scenario:'smooth wave reconstruction',...waveEdges,result:'passed'});
         // Isolate the actual foam shader at a fixed time and fixed geometry.
         // A timer-only foam layer must fail even if the rest of the water reacts.
         const foamResponse = await page.evaluate(() => {
@@ -59,7 +123,8 @@ async function run() {
         });
         assert(foamResponse.changed>80,'coastal foam must respond to wave data with the animation clock fixed');
         assert.equal(foamResponse.remote,0,'local interaction must not shake the opposite bank');
-        assert.equal(foamResponse.resetDifference,0,'clearing waves must restore unperturbed foam');
+        // Multisample resolve can round a channel by one 8-bit unit between frames.
+        assert(foamResponse.resetDifference<=1,'clearing waves must restore unperturbed foam within output rounding');
         reports.push({scenario:'isolated coastal foam coupling',...foamResponse,result:'passed'});
         // Color-code actual rock geometry by height, then compare before/after the water pass.
         const depthResult = await page.evaluate(() => {
@@ -176,9 +241,12 @@ async function run() {
         await page.locator('[data-mode="touch"]').click();
         // Observe the real application's field, so decorative rain or a second field cannot pass.
         await page.evaluate(()=>{
-          const proto=WaterCore.WaveField.prototype,disturb=proto.disturb,stroke=proto.stroke;
-          window.rainProbe={fields:new Set(),impulses:0,strokes:0,disturb,stroke};
-          proto.disturb=function(...args){const accepted=disturb.apply(this,args);if(accepted){rainProbe.fields.add(this);rainProbe.impulses++;}return accepted;};
+          const proto=WaterCore.WaveField.prototype,disturb=proto.disturb,stroke=proto.stroke,update=WaterWeather.System.prototype.update;
+          window.rainProbe={fields:new Set(),impulses:0,strokes:0,disturb,stroke,update,inRain:false};
+          WaterWeather.System.prototype.update=function(dt,low,reduced,impact,thunder){
+            return update.call(this,dt,low,reduced,(...args)=>{rainProbe.inRain=true;try{return impact(...args);}finally{rainProbe.inRain=false;}},thunder);
+          };
+          proto.disturb=function(...args){const accepted=disturb.apply(this,args);if(accepted){rainProbe.fields.add(this);if(rainProbe.inRain)rainProbe.impulses++;}return accepted;};
           proto.stroke=function(...args){rainProbe.fields.add(this);rainProbe.strokes++;return stroke.apply(this,args);};
         });
         await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();
@@ -193,7 +261,7 @@ async function run() {
         const shared=await page.evaluate(()=>{
           const p=rainProbe,field=Array.from(p.fields)[0];
           const result={fields:p.fields.size,strokes:p.strokes,energy:field.energy(),finite:Array.from(field.current).every(Number.isFinite)};
-          WaterCore.WaveField.prototype.disturb=p.disturb;WaterCore.WaveField.prototype.stroke=p.stroke;delete window.rainProbe;return result;
+          WaterCore.WaveField.prototype.disturb=p.disturb;WaterCore.WaveField.prototype.stroke=p.stroke;WaterWeather.System.prototype.update=p.update;delete window.rainProbe;return result;
         });
         assert.equal(shared.fields,1,'rain and manual swipes must modify the very same wave field');
         assert(shared.strokes>0&&shared.energy>.1&&shared.finite);
@@ -236,8 +304,18 @@ async function run() {
       for (const selector of ['[data-mode="ice"]','#freeze-all','#thaw-all','#reset']) {
         const box = await page.locator(selector).boundingBox(); assert(box.x >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height, 'ice controls must fit viewport'); assert(box.width >= 44 && box.height >= 44);
       }
+      // Fish can flee the freezing gesture outside this patch. Check the frozen cells
+      // themselves, rather than requiring the entire living pool to have no waves.
+      await page.evaluate(()=>{
+        const proto=WaterCore.WaveField.prototype,step=proto.step;
+        window.iceProbe={step,samples:0,maxHeight:0};
+        proto.step=function(){step.call(this);for(let i=0;i<this.current.length;i++)if(this.ice.current[i]>.7){iceProbe.samples++;iceProbe.maxHeight=Math.max(iceProbe.maxHeight,Math.abs(this.current[i]));}};
+      });
       await page.touchscreen.tap(x,y); await page.waitForFunction(() => WaterGarden.inspect().iceCenter > .95);
-      state = await inspect(); assert(state.iceCoverage > .01 && state.iceCoverage < .4); assert.equal(state.energy,0);
+      state = await inspect(); assert(state.iceCoverage > .01 && state.iceCoverage < .4);
+      const frozenCells=await page.evaluate(()=>{const p=iceProbe;WaterCore.WaveField.prototype.step=p.step;delete window.iceProbe;return {samples:p.samples,maxHeight:p.maxHeight};});
+      assert(frozenCells.samples>0);assert.equal(frozenCells.maxHeight,0,'frozen water cells must not displace even with fish wakes outside');
+      reports.push({scenario:'local ice stops displacement while surrounding water remains interactive',viewport,...frozenCells,result:'passed'});
       if (viewport.width === 390) await page.screenshot({path:path.join(out,'mobile-local-ice.png')});
       await page.touchscreen.tap(x,y); await page.waitForTimeout(250);
       state = await inspect(); assert.equal(state.iceCenter,0); assert(state.iceShards > 0); assert(state.energy > .001);
@@ -289,8 +367,27 @@ async function run() {
         await cdp.detach();
       }
       await page.locator('#reset').click();await page.locator('[data-mode="stone"]').click();
+      if(viewport.width===390){
+        const target=(await inspect()).fish[0];
+        await page.mouse.click(target.u*viewport.width,target.v*viewport.height);
+        await page.waitForTimeout(300);const fleeing=await inspect(),fish=fleeing.fish[0];
+        assert.equal(fleeing.stoneImpacts,0,'fish must react while the stone is still airborne');
+        assert(fish.fear>.7&&fish.speed>.15,'nearby fish accelerate before impact');
+        assert(Math.hypot(fish.u-target.u,fish.v-target.v)>.012,'fish leave the target position');
+        assert(fleeing.energy>.001,'escaping fish disturb the water before stone impact');
+        assert.equal(fleeing.rings,0);
+        await page.screenshot({path:path.join(out,'fish-escape-airborne.png')});
+        await page.locator('#reset').click();
+      }
+      // Reuse a fixed varied rock sequence; weather/audio consume random values at
+      // different rates, which must not change this independent physics fixture.
+      await page.evaluate(()=>{
+        const proto=WaterStones.System.prototype,add=proto.add,random=WaterCore.seededRandom(713);
+        window.restoreStoneFixture=()=>{proto.add=add;delete window.restoreStoneFixture;};
+        proto.add=function(u,v){return add.call(this,u,v,random);};
+      });
       await page.mouse.click(x,y);state=await inspect();
-      assert.equal(state.stones.length,1);assert(state.stones[0].y>1);assert.equal(state.stoneImpacts,0);assert.equal(state.energy,0,'water waits until the stone reaches it');
+      assert.equal(state.stones.length,1);assert(state.stones[0].y>1);assert.equal(state.stoneImpacts,0);
       await page.waitForFunction(()=>{const s=WaterGarden.inspect().stones[0];return s&&s.y<1&&s.y>.05;});
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-airborne.png')});
       await page.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);state=await inspect();assert(state.energy>.1,'impact must disturb water');
@@ -322,6 +419,7 @@ async function run() {
       assert.equal(state.stones.length,10,'capacity must recycle the oldest stone');
       assert.deepEqual(state.stones.slice(0,9).map(s=>s.radius),fullQueue.slice(1),'replacement must preserve insertion order');
       assert(state.stones[9].y>1,'the next click must still launch a new stone');
+      await page.evaluate(()=>restoreStoneFixture());
       assert(!(await page.locator('#notice').textContent()).includes('石头已经够多了'));
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-capacity.png')});
       await page.locator('#reset').click();assert.equal((await inspect()).stones.length,0);

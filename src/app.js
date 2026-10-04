@@ -8,6 +8,7 @@
   var iceEffects = new window.WaterIce.Effects();
   var weather = new window.WaterWeather.System(), weatherAudio = null;
   var rainOptions = document.getElementById('rain-options'), rainButtons = document.querySelectorAll('[data-rain]');
+  var fishSchool = new window.WaterFish.System();
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
@@ -71,8 +72,9 @@
     var aspect = width / height, nx = aspect >= 1 ? 192 : Math.max(64, Math.round(192 * aspect)), ny = aspect >= 1 ? Math.max(64, Math.round(192 / aspect)) : 192;
     var previousIce = field ? field.ice : null;
     field = new core.WaveField(nx, ny, aspect); field.ice.restore(previousIce); scene = window.WaterScene.create(aspect, fallbackMode);
+    fishSchool.attach(aspect);
     if (!fallbackMode) {
-      try { renderer = new window.WaterRenderer(canvas, scene, field); renderer.dropSystem = stoneDrops; renderer.low = quality === 'low'; renderer.resize(width, height); }
+      try { renderer = new window.WaterRenderer(canvas, scene, field); renderer.dropSystem = stoneDrops; renderer.fishSystem = fishSchool; renderer.low = quality === 'low'; renderer.resize(width, height); }
       catch (error) { fallbackOn('已为你换成轻量水面'); }
     }
     if(!field.bathymetry)prepareFallbackStones();
@@ -100,6 +102,7 @@
     if(field.ice.sample(stone.u,stone.v)>.1){iceEffects.breakAt(stone.u,stone.v,Math.max(.05,stone.radius*.7),now);}
     field.ice.paint(stone.u,stone.v,Math.max(.045,stone.radius*.65),false,false);
     field.stoneImpact(stone.u,stone.v,stone.radius);
+    fishSchool.scare(stone.u,stone.v,1.5);
     sound(.9,true);
   }
   function addLeaf(u, v) {
@@ -144,10 +147,11 @@
     if (!muted) initAudio();
     if(mode==='stone'){
       if(!stoneDrops.add(p.u,p.v))notice('轻点池中的位置落石');
-      else stoneBedDirty=true;
+      else {stoneBedDirty=true;fishSchool.scare(p.u,p.v,.9);}
       return;
     }
     fingers[id] = { u: p.u, v: p.v, startU: p.u, startV: p.v, born: now, last: now, rippleDistance: 0, travel: 0, charged: false };
+    fishSchool.scare(p.u,p.v,.65);
     if (field.ice.sample(p.u, p.v) > .45 || (mode === 'ice' && field.ice.sample(p.u, p.v, true))) {
       fingers[id].iceAction = 'break'; breakAt(p.u, p.v);
     } else if (mode === 'ice') { fingers[id].iceAction = 'freeze'; freezeAt(p.u, p.v, false); }
@@ -170,6 +174,7 @@
         if (now - f.last > .15) { breakAt(p.u, p.v); f.last = now; }
 
       } else {
+        fishSchool.scare(p.u,p.v,Math.min(1,.35+distance/65),f.u,f.v);
         field.stroke(f.u, f.v, p.u, p.v, Math.min(.17, .035 + distance * .002));
         pushLeaves(p.u, p.v, dx / width, dy / height);
         swipeRipple(f, p, distance);
@@ -273,6 +278,7 @@
     field.clear(); field.ice.clear(); iceEffects.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
     setRainLevel(0); weather.clear();
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
+    fishSchool.calm();
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29); notice('一切，归于平静');
   });
   function waterPath(context) {
@@ -305,6 +311,7 @@
     }
     fctx.restore();
     if (light !== 0) { fctx.fillStyle = light === 1 ? 'rgba(129,56,18,.24)' : 'rgba(3,18,49,.52)'; fctx.fillRect(0, 0, width, height); }
+    fishSchool.drawFallback(fctx,width,height,field,light);
     var stoneGeometry=stoneDrops.geometry(false);
     for(var at=0;at<stoneGeometry.length;at+=33){
       var ny=stoneGeometry[at+6],nz=stoneGeometry[at+7];if(ny*.866-nz*.5<0)continue;
@@ -393,6 +400,8 @@
       var dt = Math.min(.08, (time - lastRender) / 1000 || .033); lastRender = time;
       stoneDrops.update(dt,stoneEvent);
       if(stoneBedDirty){refreshStoneBed();stoneBedDirty=false;}
+      fishSchool.anticipate(stoneDrops.items);
+      fishSchool.update(dt,field.bathymetry,reduced,field);
       for (var key in fingers) {
         var finger = fingers[key];
         if (mode === 'touch' && !finger.iceAction && field.ice.sample(finger.u, finger.v) < .45 && finger.travel < 15 && now - finger.born > .55) {
@@ -435,6 +444,7 @@
   });
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return {
+    fishTime: fishSchool.clock, fish: fishSchool.items.map(function(f){return {u:f.u,v:f.v,y:f.y,angle:f.angle,fear:f.fear,speed:f.speed,swim:f.swim,flowX:f.flowX,flowZ:f.flowZ};}), fishTriangles: fishSchool.vertices.length/33,
     ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0,
     iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length,
     stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}),
