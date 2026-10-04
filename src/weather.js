@@ -11,10 +11,8 @@
   function Weather(random) {
     this.random = random || Math.random; this.level = 0; this.count = 0; this.cloud = 0; this.credit = 0;
     this.flashAge = 10; this.flash = 0; this.nextStrike = Infinity; this.pendingThunder = -1;
-    this.hits = 0; this.strikes = 0; this.thunders = 0; this.particles = []; this.ripples = [];
-    this.rippleCursor = 0; this.rippleCount = 0; this.rippleLimit = 384;
+    this.hits = 0; this.strikes = 0; this.thunders = 0; this.particles = [];
     for (var i = 0; i < 420; i++) this.particles.push({ u: 0, v: 0, altitude: 0, span: 0, speed: 0, depth: 0 });
-    for (i = 0; i < 384; i++) this.ripples.push({ u: 0, v: 0, age: 0, life: 0, size: 0, phase: 0 });
   }
   Weather.prototype.seed = function (p, warm) {
     var r = this.random, profile = profiles[this.level];
@@ -29,10 +27,6 @@
     out.v = .49 + (v - .49) * perspective;
     return out;
   }
-  Weather.prototype.clearRipples = function () {
-    for (var i = 0; i < this.ripples.length; i++) this.ripples[i].life = 0;
-    this.rippleCount = 0; this.rippleCursor = 0;
-  };
   Weather.prototype.setLevel = function (level) {
     if (level !== Math.floor(level) || level < 0 || level > 4) return;
     this.level = level; this.count = 0; this.credit = 0; this.flashAge = 10; this.flash = 0; this.pendingThunder = -1;
@@ -40,7 +34,7 @@
     this.nextStrike = profile.thunder ? (profile.interval[0] + (profile.interval[1] - profile.interval[0]) * this.random()) * .45 : Infinity;
   };
   Weather.prototype.clear = function () {
-    this.setLevel(0); this.clearRipples(); this.cloud = 0; this.hits = 0; this.strikes = 0; this.thunders = 0;
+    this.setLevel(0); this.cloud = 0; this.hits = 0; this.strikes = 0; this.thunders = 0;
   };
   Weather.prototype.cancelThunder = function () { this.pendingThunder = -1; };
   Weather.prototype.strike = function () {
@@ -52,26 +46,16 @@
   Weather.prototype.update = function (dt, low, reduced, impact, thunder) {
     dt = Math.max(0, Math.min(.08, dt));
     var profile = profiles[this.level], count = Math.round(profile.count * (low ? .4 : 1) * (reduced ? .45 : 1));
-    this.rippleLimit = low ? 144 : 384; this.rippleCount = 0;
-    for (var ri = 0; ri < this.ripples.length; ri++) {
-      var ripple = this.ripples[ri]; ripple.age += dt;
-      if (ri >= this.rippleLimit || ripple.age >= ripple.life) ripple.life = 0;
-      if (ripple.life > 0) this.rippleCount++;
-    }
     this.cloud += (profile.cloud - this.cloud) * Math.min(1, dt * 3);
     for (var i = this.count; i < count; i++) this.seed(this.particles[i], true);
     this.count = count; this.credit = Math.min(low ? 12 : 28, this.credit + profile.impacts * (low ? .4 : 1) * dt);
     for (i = 0; i < count; i++) {
       var p = this.particles[i]; p.altitude -= p.speed * dt;
       if (p.altitude <= 0) {
-        // Spend the surface-detail budget on actual water, not rain landing on the banks.
+        // Every accepted landing injects a wave into the same water field as touch input.
         if (this.credit >= 1 && impact) {
-          if (impact(p.u, p.v, .035 + this.level * .009)) {
+          if (impact(p.u, p.v, .075 + this.level * .018 + p.depth * .025)) {
             this.credit--; this.hits++;
-            var index = this.rippleCursor++ % this.rippleLimit, ring = this.ripples[index];
-            if (!ring.life) this.rippleCount++;
-            ring.u = p.u; ring.v = p.v; ring.age = 0; ring.life = .9 + p.depth * .3;
-            ring.size = 5 + p.depth * 5; ring.phase = p.depth * Math.PI * 2;
           }
         }
         this.seed(p, false);
@@ -86,29 +70,6 @@
     }
     if (profile.thunder) { this.nextStrike -= dt; if (this.nextStrike <= 0) this.strike(); }
     else this.flash = 0;
-  };
-  Weather.prototype.drawRipples = function (ctx, width, height, ice) {
-    var scale = Math.min(1.5, Math.max(.7, Math.min(width, height) / 390));
-    ctx.save(); ctx.lineWidth = .7 * scale;
-    // Batch hundreds of small overlapping impact rings by age; no large finger-ring limit.
-    for (var band = 0; band < 4; band++) {
-      ctx.beginPath();
-      for (var i = 0; i < this.rippleLimit; i++) {
-        var ring = this.ripples[i]; if (!ring.life) continue;
-        var t = ring.age / ring.life;
-        if (Math.min(3, Math.floor(t * 4)) !== band || (ice && ice.sample(ring.u, ring.v) > .35)) continue;
-        var radius = (.8 + Math.sqrt(t) * ring.size) * scale, x = ring.u * width, y = ring.v * height;
-        ctx.moveTo(x + Math.cos(ring.phase) * radius, y + Math.sin(ring.phase) * radius * .9);
-        ctx.ellipse(x, y, radius, radius * .9, 0, ring.phase, ring.phase + 6.1);
-        if (t < .16) {
-          radius *= .38;
-          ctx.moveTo(x + Math.cos(ring.phase + 2) * radius, y + Math.sin(ring.phase + 2) * radius * .9);
-          ctx.ellipse(x, y, radius, radius * .9, 0, ring.phase + 2, ring.phase + 6.6);
-        }
-      }
-      ctx.strokeStyle = 'rgba(221,247,248,' + (.44 * Math.pow(1 - band / 4, 1.4)) + ')'; ctx.stroke();
-    }
-    ctx.restore();
   };
   var head = { u: 0, v: 0 }, tail = { u: 0, v: 0 };
   Weather.prototype.draw = function (ctx, width, height, reduced) {

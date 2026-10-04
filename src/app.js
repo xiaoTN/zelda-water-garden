@@ -6,7 +6,7 @@
   var renderer = null, scene, field, width = 1, height = 1, mode = 'touch', light = 0, rain = false, muted = true;
   var leaves = [], drops = [], rings = [], dust = [], fingers = {}, reduced = false;
   var iceEffects = new window.WaterIce.Effects();
-  var weather = new window.WaterWeather.System(), weatherAudio = null, rainWaveCredit = 0;
+  var weather = new window.WaterWeather.System(), weatherAudio = null;
   var rainOptions = document.getElementById('rain-options'), rainButtons = document.querySelectorAll('[data-rain]');
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
@@ -76,7 +76,7 @@
       catch (error) { fallbackOn('已为你换成轻量水面'); }
     }
     if(!field.bathymetry)prepareFallbackStones();
-    fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0; weather.clearRipples();
+    fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0;
     // Three small existing leaves make the pool feel alive before the first touch.
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29);
     dust.length = 0;
@@ -113,7 +113,7 @@
   }
   function splash(u, v, strength, noSpray, noRing) {
     if (core.shore(u, v) >= -.015 || field.ice.sample(u, v) > .45) return false;
-    field.disturb(u, v, strength, .015 + strength * .013);
+    if (!field.disturb(u, v, strength, .015 + strength * .013)) return false;
     if (!noRing) addRing(u, v, strength);
     var count = reduced || noSpray ? 0 : Math.floor((quality === 'normal' ? 20 : 9) * strength), limit = quality === 'normal' ? 150 : 60;
     for (var i = 0; i < count && drops.length < limit; i++) {
@@ -228,7 +228,7 @@
     for (var i = 0; i < buttons.length; i++) { var selected = buttons[i] === this; buttons[i].classList.toggle('selected', selected); buttons[i].setAttribute('aria-pressed', String(selected)); }
   });
   document.getElementById('freeze-all').addEventListener('click', function () {
-    fingers = {}; iceEffects.clear(); rings.length = 0; drops.length = 0; weather.clearRipples();
+    fingers = {}; iceEffects.clear(); rings.length = 0; drops.length = 0;
     field.ice.paint(.5, .49, 1, true, true); garden.classList.add('touched');
     iceEffects.freeze(.5, .49, Math.min(width, height) / height * .42, now);
     if (!muted) initAudio(); sound(.4, false, true); notice('一池薄冰，试着轻点踩碎');
@@ -271,7 +271,7 @@
   });
   document.getElementById('reset').addEventListener('click', function () {
     field.clear(); field.ice.clear(); iceEffects.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
-    setRainLevel(0); weather.clear(); rainWaveCredit = 0;
+    setRainLevel(0); weather.clear();
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29); notice('一切，归于平静');
   });
@@ -339,7 +339,6 @@
         ctx.stroke();
       }
     }
-    weather.drawRipples(ctx, width, height, field.ice);
     if (fallbackMode) iceEffects.drawFallback(ctx, field.ice, width, height, light);
     for (i = 0; i < leaves.length; i++) {
       var leaf = leaves[i], gx = field.sample(leaf.u + .005, leaf.v) - field.sample(leaf.u - .005, leaf.v), gy = field.sample(leaf.u, leaf.v + .005) - field.sample(leaf.u, leaf.v - .005);
@@ -380,9 +379,7 @@
     if (!field.mask[cell]) return false;
     var terrain = renderer ? renderer.terrain : fallbackTerrain;
     if (terrain && terrain.blocks(u, v)) return false;
-    // Dense visible impacts have their own pool; cap expensive wave-grid impulses separately.
-    if (rainWaveCredit >= 1) { rainWaveCredit--; field.disturb(u, v, strength, .01); }
-    return true;
+    return splash(u, v, strength, true, true);
   }
   function thunder(strength) { if (!muted && weatherAudio) weatherAudio.thunder(strength); }
   function tick(time) {
@@ -404,7 +401,6 @@
           if (now - finger.last > .28) { rings.push({u: finger.u, v: finger.v, born: now, strength: .16}); if (rings.length > 48) rings.shift(); finger.last = now; }
         }
       }
-      rainWaveCredit = Math.min(12, rainWaveCredit + dt * (quality === 'normal' ? 110 : 44));
       weather.update(dt, quality !== 'normal', reduced, rainImpact, thunder);
       var steps = 0;
       field.ice.update(dt);
@@ -443,7 +439,7 @@
     iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length,
     stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}),
     stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null,
-    mode: mode, light: light, rain: rain, rainLevel: weather.level, rainStreaks: weather.count, rainImpacts: weather.hits, rainRipples: weather.rippleCount,
+    mode: mode, light: light, rain: rain, rainLevel: weather.level, rainStreaks: weather.count, rainImpacts: weather.hits,
     lightningCount: weather.strikes, lightningFlash: weather.flash, lightningNext: isFinite(weather.nextStrike) ? weather.nextStrike : null,
     thunderPending: weather.pendingThunder >= 0, thunderPlayed: weatherAudio ? weatherAudio.played : 0,
     rainAudio: !!(weatherAudio && weatherAudio.rain), weatherAudioNodes: weatherAudio ? weatherAudio.nodes.length : 0,

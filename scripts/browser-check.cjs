@@ -165,19 +165,41 @@ async function run() {
         assert(box.width>=44&&box.height>=44,'rain choices have touch-sized targets');
         await page.locator(selector).click();await page.waitForTimeout(450);state=await inspect();
         assert.equal(state.rainLevel,level);assert(state.rainStreaks>0);assert.equal(await page.locator(selector).getAttribute('aria-pressed'),'true');
-        rainStates.push({level,streaks:state.rainStreaks,ripples:state.rainRipples});
+        rainStates.push({level,streaks:state.rainStreaks,impacts:state.rainImpacts,energy:state.energy});
         if(viewport.width===390)await page.screenshot({path:path.join(out,'mobile-rain-'+level+'.png')});
       }
       for(let i=1;i<rainStates.length;i++)assert(rainStates[i].streaks>rainStates[i-1].streaks);
       assert((await inspect()).rainImpacts>0,'falling rain must disturb water');
       reports.push({scenario:'four rain levels',viewport,presets:rainStates,result:'passed'});
       if(viewport.width===390){
-        const hitsBefore=(await inspect()).rainImpacts;
+        await page.locator('#reset').click();
+        await page.locator('[data-mode="touch"]').click();
+        // Observe the real application's field, so decorative rain or a second field cannot pass.
+        await page.evaluate(()=>{
+          const proto=WaterCore.WaveField.prototype,disturb=proto.disturb,stroke=proto.stroke;
+          window.rainProbe={fields:new Set(),impulses:0,strokes:0,disturb,stroke};
+          proto.disturb=function(...args){const accepted=disturb.apply(this,args);if(accepted){rainProbe.fields.add(this);rainProbe.impulses++;}return accepted;};
+          proto.stroke=function(...args){rainProbe.fields.add(this);rainProbe.strokes++;return stroke.apply(this,args);};
+        });
+        await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();
         await page.waitForTimeout(1800);state=await inspect();
-        assert(state.rainImpacts-hitsBefore>300,'storm must visibly land dense water impacts');
-        assert(state.rainRipples>180,'storm should retain overlapping small ripples across the pool');
+        const rainWaves=await page.evaluate(()=>({hits:WaterGarden.inspect().rainImpacts,impulses:rainProbe.impulses,fields:rainProbe.fields.size}));
+        assert(rainWaves.hits>300,'storm must inject hundreds of actual water waves');
+        assert.equal(rainWaves.impulses,rainWaves.hits,'every accepted rain drop must disturb the simulated water');
+        assert.equal(rainWaves.fields,1);assert(state.energy>.1,'rain must move the real water surface');
+        assert.equal(state.rings,0,'rain must not substitute decorative overlay rings for water waves');
         await page.screenshot({path:path.join(out,'mobile-topdown-storm.png')});
-        reports.push({scenario:'dense overhead storm',impactsIn1800ms:state.rainImpacts-hitsBefore,liveRipples:state.rainRipples,result:'passed'});
+        await page.mouse.move(x-45,y);await page.mouse.down();await page.mouse.move(x+65,y,{steps:18});await page.mouse.up();
+        const shared=await page.evaluate(()=>{
+          const p=rainProbe,field=Array.from(p.fields)[0];
+          const result={fields:p.fields.size,strokes:p.strokes,energy:field.energy(),finite:Array.from(field.current).every(Number.isFinite)};
+          WaterCore.WaveField.prototype.disturb=p.disturb;WaterCore.WaveField.prototype.stroke=p.stroke;delete window.rainProbe;return result;
+        });
+        assert.equal(shared.fields,1,'rain and manual swipes must modify the very same wave field');
+        assert(shared.strokes>0&&shared.energy>.1&&shared.finite);
+        assert.equal((await inspect()).rings,0);
+        await page.screenshot({path:path.join(out,'mobile-storm-swipe.png')});
+        reports.push({scenario:'dense overhead storm and manual swipe share simulated water',rainWaves,shared,result:'passed'});
         // Measure actual streak pixels with cloud tint and flashes removed from this isolated canvas.
         const streakPixels=await page.evaluate(()=>{
           const surface=document.createElement('canvas');surface.width=390;surface.height=844;
@@ -206,7 +228,7 @@ async function run() {
       if (viewport.width === 390) await page.screenshot({ path: path.join(out, 'mobile-moon-rain.png') });
       await page.locator('#sound').click(); assert.equal((await inspect()).muted, false); await page.touchscreen.tap(x, y); await page.locator('#sound').click(); assert.equal((await inspect()).muted, true);
       await page.locator('#reset').click(); state = await inspect(); assert.equal(state.rain, false); assert.equal(state.leaves, 3); assert(state.energy < .000001);
-      assert.equal(state.rainStreaks,0);assert.equal(state.rainRipples,0);assert.equal(state.lightningFlash,0);assert.equal(state.thunderPending,false);assert.equal(state.rainAudio,false);
+      assert.equal(state.rainStreaks,0);assert.equal(state.lightningFlash,0);assert.equal(state.thunderPending,false);assert.equal(state.rainAudio,false);
       assert.equal(await page.locator('#rain-options').isVisible(),false);
       await page.locator('#light').click();
       await page.locator('[data-mode="ice"]').click(); assert.equal((await inspect()).mode, 'ice');
