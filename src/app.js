@@ -61,8 +61,9 @@
     if (audio && audio.state === 'running') audio.suspend().catch(function () {});
   }
   function fallbackOn(message) {
-    if (renderer) renderer.destroy(); renderer = null; fallbackMode = true; quality = 'canvas2d';
-    canvas.style.display = 'none'; fallback.style.display = 'block';
+    if (renderer) renderer.destroy(); renderer = null; fallbackMode = true; quality = 'unavailable';
+    canvas.style.display = 'none'; fallback.style.display = 'none';
+    document.getElementById('render-status').textContent='3D 画面暂不可用，请启用硬件加速或刷新后重试。';
     if (field) {
       scene = window.WaterScene.create(field.aspect, true);
       prepareFallbackStones();
@@ -84,7 +85,7 @@
     field = new core.WaveField(nx, ny, aspect); field.ice.restore(previousIce); scene = window.WaterScene.create(aspect, fallbackMode);
     if (!fallbackMode) {
       try { renderer = new window.WaterRenderer(canvas, scene, field); renderer.dropSystem = stoneDrops; renderer.low = quality === 'low'; renderer.resize(width, height); }
-      catch (error) { fallbackOn('已为你换成轻量水面'); }
+      catch (error) { fallbackOn('此设备暂时无法运行 3D 水面'); }
     }
     if(!field.bathymetry)prepareFallbackStones();
     fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0;
@@ -153,7 +154,8 @@
   function breakAt(u, v) { iceEffects.breakAt(u, v, iceRadius() * .9, now); sound(.8, true, true); }
   function begin(id, x, y) {
     var p = point(x, y);
-    if (sceneKind !== 'water') { if(natureRenderer.surface)p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds); beginNature(id, p); return; }
+    if(sceneKind==='water'&&!renderer)return;
+    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,true); if(p)beginNature(id, p); return; }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
     if (mode!=='stone' && renderer && renderer.terrain.blocks(p.u, p.v)) return;
     if (core.shore(p.u, p.v) >= -.025) { notice('轻触池中的青绿水面'); return; }
@@ -173,7 +175,7 @@
   function move(id, x, y) {
     var f = fingers[id]; if (!f) return;
     var p = point(x, y), dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, distance = Math.sqrt(dx * dx + dy * dy);
-    if (sceneKind !== 'water') { if(natureRenderer.surface)p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds); distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height); moveNature(f, p, distance); return; }
+    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,false); if(!p)return; distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height); moveNature(f, p, distance); return; }
     f.travel += distance;
     if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
@@ -243,11 +245,13 @@
   natureCanvas.addEventListener('keydown', keyRipple);
   function syncSurfaces() {
     var water = sceneKind === 'water';
+    document.getElementById('render-status').hidden = water ? !fallbackMode : natureRenderer.available();
+    document.getElementById('view-3d').hidden = water;
     canvas.style.display = water && !fallbackMode ? 'block' : 'none';
-    fallback.style.display = water && fallbackMode ? 'block' : 'none'; overlay.style.display = water ? 'block' : 'none';
+    fallback.style.display = 'none'; overlay.style.display = water && !fallbackMode ? 'block' : 'none';
     natureCanvas.style.display = water ? 'none' : 'block';
     canvas.setAttribute('aria-hidden', String(!water || fallbackMode)); canvas.tabIndex = water && !fallbackMode ? 0 : -1;
-    fallback.setAttribute('aria-hidden', String(!water || !fallbackMode)); fallback.tabIndex = water && fallbackMode ? 0 : -1;
+    fallback.setAttribute('aria-hidden', 'true'); fallback.tabIndex = -1;
     natureCanvas.setAttribute('aria-hidden', String(water)); natureCanvas.tabIndex = water ? -1 : 0;
   }
   function syncNatureControls() {
@@ -294,11 +298,16 @@
   for (var si = 0; si < sceneButtons.length; si++) sceneButtons[si].addEventListener('click', function () { setScene(this.getAttribute('data-scene')); });
   var natureButtons = document.querySelectorAll('[data-nature]');
   for (var ni = 0; ni < natureButtons.length; ni++) natureButtons[ni].addEventListener('click', function () { fingers = {}; natureModes[sceneKind] = Number(this.getAttribute('data-nature')); syncNatureControls(); });
+  document.getElementById('view-3d').addEventListener('click',function(){
+    if(!natureRenderer.available())return;
+    var surface=natureRenderer.surface;surface.oblique=!surface.oblique;surface.camera=new window.Nature3D.Camera(surface.aspect,surface.oblique);fingers={};this.setAttribute('aria-pressed',String(surface.oblique));
+  });
   function natureRadius() { return Math.min(width, height) / height; }
   function beginNature(id, p) {
     if (p.v < .29 || p.v > .86) return;
     garden.classList.add('touched'); if (!muted) initAudio();
     var f = { u: p.u, v: p.v, born: now, last: now, travel: 0, spacing: 0, angle: 0 }, selected = natureModes[sceneKind];
+    f.offsetU=p.ball?p.u-p.groundU:0; f.offsetV=p.ball?p.v-p.groundV:0;
     fingers[id] = f;
     if (sceneKind === 'snow') {
       var r = natureRadius();
@@ -309,7 +318,7 @@
     sound(.22, false);
   }
   function moveNature(f, p, distance) {
-    p.u = core.clamp(p.u, 0, 1); p.v = core.clamp(p.v, .29, .86);
+    p.u = core.clamp(p.u+f.offsetU, 0, 1); p.v = core.clamp(p.v+f.offsetV, .29, .86);
     var selected = natureModes[sceneKind], r = natureRadius();
     if (sceneKind === 'snow') {
       if (selected === 0) snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
@@ -328,6 +337,7 @@
     f.travel += distance; f.u = p.u; f.v = p.v;
   }
   function updateNature(dt) {
+    if(!natureRenderer.available()){fingers={};natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
     for (var id in fingers) {
       var f = fingers[id], selected = natureModes[sceneKind];
       if (sceneKind === 'snow' && selected === 0 && f.travel < 15 && now - f.born > .3) snow.stamp(f.u, f.v, natureRadius() * .04, Math.min(1, .65 + (now - f.born) * .2));
@@ -385,36 +395,6 @@
       if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
     }
     context.closePath();
-  }
-  function drawFallback() {
-    fctx.drawImage(scene, 0, 0, width, height); fctx.save(); waterPath(fctx); fctx.clip();
-    var tint = fctx.createRadialGradient(width*.5,height*.49,Math.min(width,height)*.07,width*.5,height*.49,Math.max(width*.465,height*.35));
-    tint.addColorStop(0,'#299aad'); tint.addColorStop(.65,'#45b8bb'); tint.addColorStop(.94,'#85d9c4'); tint.addColorStop(1,'#ceeee0');
-    fctx.fillStyle = tint; fctx.fillRect(0,0,width,height);
-    for (var foam = 0; foam < 3; foam++) {
-      var foamTime = reduced ? 0 : now, progress = (foamTime*.18+foam/3)%1, opacity = Math.sin(progress*Math.PI);
-      fctx.beginPath();
-      for (var n = 0; n <= 180; n++) {
-        var a = n/180*Math.PI*2, r = 1+.048*Math.sin(a*5+.7)+.024*Math.sin(a*9-.5)+.04*Math.cos(a*3);
-        r -= .008 + (1-progress)*.20 + .012*Math.sin(a*11+foamTime*.6);
-        var foamU = .5+Math.cos(a)*.465*r, foamV = .49+Math.sin(a)*.35*r;
-        var foamWave = field.sample(foamU,foamV)*(1-field.ice.sample(foamU,foamV));
-        r += core.clamp(foamWave*.14,-.065,.065);
-        var x = (.5+Math.cos(a)*.465*r)*width, y = (.49+Math.sin(a)*.35*r)*height;
-        if (!n || (Math.sin(a*8-foam+foamTime*.5) < -.1)) fctx.moveTo(x,y); else fctx.lineTo(x,y);
-      }
-      fctx.strokeStyle = 'rgba(231,255,246,'+(opacity*.7)+')'; fctx.lineWidth = 1.2+opacity*1.8; fctx.stroke();
-    }
-    fctx.restore();
-    if (light !== 0) { fctx.fillStyle = light === 1 ? 'rgba(129,56,18,.24)' : 'rgba(3,18,49,.52)'; fctx.fillRect(0, 0, width, height); }
-    var stoneGeometry=stoneDrops.geometry(false);
-    for(var at=0;at<stoneGeometry.length;at+=33){
-      var ny=stoneGeometry[at+6],nz=stoneGeometry[at+7];if(ny*.866-nz*.5<0)continue;
-      var shade=.60+Math.max(0,-stoneGeometry[at+5]*.4+ny*.8-nz*.3)*.5;
-      var wet=stoneGeometry[at+1]+stoneGeometry[at+12]+stoneGeometry[at+23]<0;
-      fctx.fillStyle=wet?'rgba(85,152,144,.85)':'rgb('+Math.round(stoneGeometry[at+8]*shade*255)+','+Math.round(stoneGeometry[at+9]*shade*255)+','+Math.round(stoneGeometry[at+10]*shade*255)+')';
-      fctx.beginPath();for(var j=0;j<3;j++){var k=at+j*11,x=(stoneGeometry[k]/(2*field.aspect)+.5)*width,y=(.5+stoneGeometry[k+2]*.4330127-stoneGeometry[k+1]*.25)*height;if(!j)fctx.moveTo(x,y);else fctx.lineTo(x,y);}fctx.closePath();fctx.fill();
-    }
   }
   function drawLife(dt) {
     ctx.clearRect(0, 0, width, height);
@@ -484,7 +464,7 @@
     if (time - lastRender >= (quality === 'normal' ? 32 : 40)) {
       var dt = Math.min(.08, (time - lastRender) / 1000 || .033); lastRender = time;
       if (sceneKind !== 'water') { accumulator = 0; updateNature(dt); }
-      else {
+      else if(renderer) {
       stoneDrops.update(dt,stoneEvent);
       if(stoneBedDirty){refreshStoneBed();stoneBedDirty=false;}
       for (var key in fingers) {
@@ -507,7 +487,7 @@
       iceEffects.update(field.ice, now, reduced, quality !== 'normal', function (u, v) { splash(u, v, .55); });
       while (accumulator >= 1 / 60 && steps < 5) { field.step(); accumulator -= 1 / 60; steps++; }
       if (steps === 5) accumulator = 0;
-      if (renderer) renderer.draw(reduced ? 0 : now, light); else drawFallback();
+      renderer.draw(reduced ? 0 : now, light);
       drawLife(dt);
       }
     }
@@ -517,12 +497,12 @@
       if (frameTotal / frameSamples > .045) slowFrames++; else slowFrames = 0;
       frameSamples = 0; frameTotal = 0;
       if (slowFrames >= 2 && quality === 'normal') { quality = 'low'; if (renderer) { renderer.low = true; renderer.resize(width, height); } natureRenderer.resize(width, height, true); drops.length = 0; slowFrames = 0; }
-      else if (slowFrames >= 2 && quality === 'low') { natureRenderer.fallback(); fallbackOn('已换成轻量画面，让指尖更自在'); slowFrames = 0; }
+      else if (slowFrames >= 2 && quality === 'low') { if(sceneKind==='water')fallbackOn('3D 渲染已暂停，请刷新重试');else{natureRenderer.fallback();quality='unavailable';} slowFrames = 0; }
     }
     frameId = requestAnimationFrame(tick);
   }
   canvas.addEventListener('webglcontextlost', function (event) {
-    event.preventDefault(); lostCount++; fallbackOn('水面已切换为轻量模式'); fingers = {};
+    event.preventDefault(); lostCount++; fallbackOn('3D 水面暂时中断，等待恢复'); fingers = {};
   });
   canvas.addEventListener('webglcontextrestored', function () {
     if (lostCount > 1) return;
@@ -535,8 +515,8 @@
     else { lastFrame = 0; lastRender = 0; accumulator = 0; if (!muted && audio) audio.resume().catch(function () {}); if (!frameId) frameId = requestAnimationFrame(tick); }
   });
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
-  window.WaterGarden = { inspect: function () { return { ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0, iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length, stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}), stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null, mode: mode, light: light, rain: rain, muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length, energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'canvas2d', surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0, waterMaps: renderer ? renderer.mapsLoaded : 0, width: width, height: height, bufferWidth: renderer ? canvas.width : fallback.width, bufferHeight: renderer ? canvas.height : fallback.height, activePointers: Object.keys(fingers).length }; } };
-  window.NatureGarden = { inspect: function () { return { scene: sceneKind, renderLight: natureRenderer.light, renderer: natureRenderer.surface ? 'webgl' : 'canvas2d', triangles: natureRenderer.surface ? natureRenderer.surface.count / 3 : 0, cloudCarve: clouds.field.inspect().depth, mode: natureModes[sceneKind], weather: sceneKind === 'water' ? rain : weather[sceneKind], snow: snow.inspect(), cloud: clouds.inspect(), activePointers: Object.keys(fingers).length, bufferWidth: natureCanvas.width, bufferHeight: natureCanvas.height }; } };
+  window.WaterGarden = { inspect: function () { return { ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0, iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length, stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}), stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null, mode: mode, light: light, rain: rain, muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length, energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'unavailable', surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0, waterMaps: renderer ? renderer.mapsLoaded : 0, width: width, height: height, bufferWidth: renderer ? canvas.width : fallback.width, bufferHeight: renderer ? canvas.height : fallback.height, activePointers: Object.keys(fingers).length }; } };
+  window.NatureGarden = { inspect: function () { return { scene: sceneKind, renderLight: natureRenderer.light, renderer: natureRenderer.available() ? 'webgl' : 'unavailable', camera: natureRenderer.surface && natureRenderer.surface.camera ? 'perspective' : null, ballMeshes: natureRenderer.available() && sceneKind === 'snow' ? snow.balls.length : 0, drawCalls: natureRenderer.surface ? natureRenderer.surface.drawCalls : 0, closedCloudMesh: !!(natureRenderer.surface && natureRenderer.surface.cloudMesh), triangles: natureRenderer.surface ? natureRenderer.surface.count / 3 : 0, cloudCarve: clouds.field.inspect().depth, mode: natureModes[sceneKind], weather: sceneKind === 'water' ? rain : weather[sceneKind], snow: snow.inspect(), cloud: clouds.inspect(), activePointers: Object.keys(fingers).length, bufferWidth: natureCanvas.width, bufferHeight: natureCanvas.height }; } };
   resize();
   requestAnimationFrame(function () { garden.classList.add('ready'); frameId = requestAnimationFrame(tick); });
 }());

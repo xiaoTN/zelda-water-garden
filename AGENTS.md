@@ -12,6 +12,13 @@ This is an independent Xiaohongshu offline H5 mini-tool repository. It can be cl
 - For icon-heavy tools, preserve individual source images in assets-source/, package atlases in src/, and verify the ZIP entry count in package checks.
 - Commit tool changes in this repository. When used as a submodule, the collection records a separate pinned commit; push the tool commit before publishing an updated collection pointer.
 
+## 3D game contract
+
+- Build the playable world with real WebGL 3D geometry, world-space lighting, depth testing, and a camera. Snowballs must be sphere meshes; snow and clouds must have spatial depth and deform in world space. Canvas 2D, CSS gradients, and painted sprites must not substitute for these objects.
+- Resolve pointer interactions against the 3D scene. Keep object placement, rolling, surface contact, shadows, and occlusion consistent with the same world coordinates.
+- Reduce resolution, geometry, and optional effects on slow devices. If 3D is unavailable, show an explicit unavailable/recovery state rather than a simulated 2D game. DOM/CSS remain appropriate for interface controls.
+- When changing rendering, validate geometry and camera picking as well as screenshots, interactions, context recovery, and both quality tiers before release.
+
 ## Completion
 
 - Finish only after this tool's tests, package checks, build, and artifact audit pass, or report the exact failing gate.

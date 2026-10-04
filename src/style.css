@@ -105,3 +105,8 @@ h1 span { color: #b9b17c; }
 @media (max-height: 540px) { .scene-switch { top: 13px; top: calc(13px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); } .scene-switch button { min-width: 69px; } }
 @media (max-height: 540px) and (max-width: 700px) { .scene-switch { top: 72px; top: calc(72px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); } }
 @media (max-height: 540px) { .intro { display: none; } .topbar { padding-top: 12px; padding-top: calc(12px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); } .bottom { padding-bottom: 8px; padding-bottom: calc(8px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); } .toolbar button { height: 44px; } .toolbar svg { width: 18px; height: 18px; margin-bottom: 3px; } .hint { margin-bottom: 6px; } .footnote { display: none; } .ice-actions { margin-bottom: 4px; } .notice { top: 77px; } }
+
+#render-status { position: absolute; top: 43%; left: 10%; right: 10%; z-index: 8; padding: 24px; border-radius: 18px; background: #29434d; color: #f3f4e7; text-align: center; line-height: 1.8; }
+
+#view-3d { position: absolute; right: 24px; top: 165px; z-index: 5; min-width: 48px; min-height: 44px; border: 1px solid #adbec0; border-radius: 22px; background: #29434dcc; color: #eef1e4; font: inherit; font-size: 12px; cursor: pointer; }
+@media (max-height: 540px) { #view-3d { top: 75px; right: 16px; } }

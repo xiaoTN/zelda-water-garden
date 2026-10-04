@@ -1,9 +1,9 @@
 (function (root, factory) {
   'use strict';
-  var api = factory();
+  var api = factory(typeof module === 'object' && module.exports ? require('./nature-3d.js') : root.Nature3D);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.GardenNature = api;
-}(typeof window !== 'undefined' ? window : this, function () {
+}(typeof window !== 'undefined' ? window : this, function (math) {
   'use strict';
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
   function random(seed) { return function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
@@ -46,13 +46,14 @@
       if (Math.hypot((u - b.u) * this.aspect, v - b.v) < b.radius * 1.7) return b;
     }
     if (this.balls.length >= 12) return null;
-    var item = { u: u, v: v, radius: radius, turn: 0 }; this.balls.push(item); return item;
+    var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1] }; this.balls.push(item); return item;
   };
   Snow.prototype.roll = function (ball, u, v) {
     u = clamp(u, ball.radius / this.aspect, 1 - ball.radius / this.aspect); v = clamp(v, .31, .83);
     var distance = Math.hypot((u - ball.u) * this.aspect, v - ball.v);
     this.stroke(ball.u, ball.v, u, v, ball.radius * .65, .65);
     ball.radius = Math.min(Math.min(this.aspect, 1) * .085, ball.radius + distance * .025);
+    ball.rotation = math.rotation(ball.rotation, (u-ball.u)*this.aspect, v-ball.v, ball.radius);
     ball.turn += distance / ball.radius; ball.u = u; ball.v = v;
   };
   Snow.prototype.update = function (dt, falling) {
@@ -67,7 +68,7 @@
   Snow.prototype.inspect = function () {
     var cells = 0, depth = 0;
     for (var i = 0; i < this.depth.length; i++) if (this.depth[i] > .01) { cells++; depth += this.depth[i]; }
-    return { markedCells: cells, depth: depth, footprints: this.foot, balls: this.balls.map(function (b) { return { u: b.u, v: b.v, radius: b.radius }; }) };
+    return { markedCells: cells, depth: depth, footprints: this.foot, balls: this.balls.map(function (b) { return { u: b.u, v: b.v, radius: b.radius, rotation: b.rotation.slice() }; }) };
   };
   function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.drift = 0; this.clear(); }
   Clouds.prototype.clear = function () {
