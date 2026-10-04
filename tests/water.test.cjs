@@ -117,8 +117,11 @@ test('recorded swipe sound crossfades its loop, follows speed and reuses one sou
   assert.equal(nodes.length,2);assert.equal(f.buffers.length,2);assert.equal(voice.source.buffer,audio.buffer);assert.equal(voice.source.loop,true);
   assert(targets[targets.length-1].value>slow*2);assert(targets.every(t=>t.fade>0));
   context.currentTime+=.11;audio.update();assert.equal(audio.speed,0);assert.equal(targets[targets.length-1].value,0);
-  context.currentTime+=.4;audio.update();assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
-  audio.stroke(.8);audio.stop();assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
+  context.currentTime+=.4;audio.update();assert.equal(audio.node,voice,'the quiet tail keeps playing during its fade');
+  audio.stroke(.8);assert.equal(audio.node,voice,'resuming during the fade reuses the loop');assert.equal(audio.fadeEnd,0);
+  audio.stop();assert.equal(audio.speed,0);assert.equal(audio.node,voice);assert.equal(voice.source.stopped,undefined,'normal stop fades before releasing');
+  context.currentTime+=.7;audio.update();assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
+  audio.stroke(.8);audio.stop(true);assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
   context.state='suspended';audio.stroke(1);assert.equal(audio.node,null);
 });
 
@@ -133,6 +136,37 @@ test('delayed swipe decoding starts only a current gesture and cancels stopped g
 
 test('swipe decoder failure leaves interactions silent and releases pending movement',()=>{
   const f=strokeFixture();f.audio.stroke(.8);f.fail();f.audio.stroke(1);assert.equal(f.audio.node,null);assert.equal(f.audio.speed,0);
+});
+
+function weatherAudioFixture(hold=true){
+  const {Audio}=require('../src/weather.js'),nodes=[],events=[];
+  function parameter(){const p={value:0,setValueAtTime(value,time){this.value=value;events.push({kind:'value',value,time});},setTargetAtTime(value,time,fade){events.push({kind:'target',value,time,fade});},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){},cancelScheduledValues(time){events.push({kind:'cancel',time});}};if(hold)p.cancelAndHoldAtTime=time=>events.push({kind:'hold',time});return p;}
+  function node(){const n={gain:parameter(),frequency:parameter(),connect(){},disconnect(){this.disconnected=true;},start(){},stop(time){this.stoppedAt=time;}};nodes.push(n);return n;}
+  const context={state:'running',currentTime:1,sampleRate:8000,createBuffer(channels,length){return {getChannelData:()=>new Float32Array(length)};},createBufferSource:node,createGain:node,createBiquadFilter:node};
+  return {audio:new Audio(context,{}),context,nodes,events};
+}
+
+test('rain intensity changes and rapid stop/resume reuse one voice through gentle fades',()=>{
+  const {audio,context,nodes,events}=weatherAudioFixture();audio.setLevel(1);const voice=audio.rain;
+  for(let i=0;i<20;i++){context.currentTime+=.01;audio.setLevel(i%4+1);assert.equal(audio.rain,voice);}
+  assert.equal(nodes.length,3);assert(events.filter(e=>e.kind==='target').every(e=>e.fade>=.3));
+  audio.stop();const end=audio.rainEnd;assert(end>context.currentTime+.6);assert.equal(audio.level,0);assert.equal(voice.source.stoppedAt,undefined);
+  context.currentTime+=.2;audio.update();assert.equal(audio.rain,voice);
+  audio.setLevel(4);assert.equal(audio.rain,voice);assert.equal(audio.rainEnd,0);
+  context.currentTime=end+.1;audio.update();assert.equal(audio.rain,voice,'a cancelled fade must never stop resumed rain');
+  audio.stop();context.currentTime+=.8;audio.update();assert.equal(audio.rain,null);assert(nodes.every(n=>n.disconnected));
+  audio.setLevel(1);audio.stop(true);assert.equal(audio.rain,null);assert(nodes.every(n=>n.disconnected));
+});
+
+test('thunder stops with a finite fade, while hidden-page cleanup releases immediately',()=>{
+  for(const hold of [true,false]){
+    const {audio,context,nodes,events}=weatherAudioFixture(hold);audio.thunder(.8);audio.thunder(.5);audio.thunder(.7);assert.equal(audio.nodes.length,2);
+    audio.stop();assert.equal(audio.nodes.length,2);assert(events.some(e=>e.kind===(hold?'hold':'cancel')));
+    for(const voice of audio.nodes){assert.equal(voice.source.stoppedAt,context.currentTime+.7);assert.equal(voice.source.disconnected,undefined);}
+    const count=events.length;context.currentTime+=.1;audio.stop();assert.equal(events.length,count,'repeat stop keeps the existing fade deadline');
+    for(const voice of audio.nodes.slice())voice.source.onended();assert.equal(audio.nodes.length,0);assert(nodes.every(n=>n.disconnected));
+    audio.thunder(.8);audio.setLevel(4);audio.stop(true);assert.equal(audio.nodes.length,0);assert.equal(audio.rain,null);assert(nodes.every(n=>n.disconnected));
+  }
 });
 
 test('overhead rain converges to its own ground point from every side of the optical center',()=>{

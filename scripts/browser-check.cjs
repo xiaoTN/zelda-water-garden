@@ -43,6 +43,35 @@ async function run() {
         assert(swipeSample.duration>6&&swipeSample.duration<7);assert(swipeSample.peak>.01&&swipeSample.afterLoop>.01);
         assert(Math.abs(swipeSample.duration-swipeSample.loopDuration-.12)<.001);assert(Math.abs(swipeSample.seam-swipeSample.adjacent)<1e-6,'loop boundary must retain the original adjacent-sample transition');
         reports.push({scenario:'supplied swipe sample renders continuously across two loop seams',...swipeSample,result:'passed'});
+        const fades=await page.evaluate(async()=>{
+          async function render(kind,resume){
+            const c=new OfflineAudioContext(1,8000*3,8000);let time=0;
+            const original=c.createBuffer(1,16000,8000);original.getChannelData(0).fill(1);
+            const clock={state:'running',sampleRate:8000,get currentTime(){return time;},decodeAudioData(bytes,done){done(original);},createBuffer:c.createBuffer.bind(c),createBufferSource:c.createBufferSource.bind(c),createGain:c.createGain.bind(c),createBiquadFilter:c.createBiquadFilter.bind(c)};
+            let controller,voice;
+            if(kind==='swipe'){
+              controller=new WaterSound.Stroke(clock,c.destination,WaterSwipeAsset);controller.stroke(1.4);voice=controller.node;
+              time=1;controller.release();
+              if(resume){time=1.25;controller.stroke(1.4);}
+            }else{
+              controller=new WaterWeather.Audio(clock,c.destination);controller.rainBuffer.getChannelData(0).fill(1);
+              controller.setLevel(1);voice=controller.rain;time=1;controller.setLevel(4);time=2;controller.stopRain();
+            }
+            const sameVoice=(kind==='swipe'?controller.node:controller.rain)===voice;
+            const data=(await c.startRendering()).getChannelData(0);
+            function average(t){const at=Math.round(t*8000);let sum=0;for(let i=at;i<at+80;i++)sum+=Math.abs(data[i]);return sum/80;}
+            function jump(t){const i=Math.round(t*8000);return Math.abs(data[i]-data[i-1]);}
+            return {sameVoice,early:average(.01),settled:average(.8),tail:average(kind==='swipe'?1.15:2.2),end:average(kind==='swipe'?1.64:2.69),resumed:average(1.8),switchJump:jump(kind==='swipe'?(resume?1.25:1):1),stopJump:jump(kind==='swipe'?1:2)};
+          }
+          return {swipe:await render('swipe',false),resumed:await render('swipe',true),rain:await render('rain',false)};
+        });
+        for(const value of [fades.swipe,fades.rain]){
+          assert(value.sameVoice);assert(value.early<value.settled*.3,'long sound fades in');
+          assert(value.tail>value.end*8&&value.end<value.settled*.02,'long sound fades to a quiet finite tail');
+          assert(value.switchJump<.001&&value.stopJump<.001,'transitions must preserve PCM continuity');
+        }
+        assert(fades.resumed.sameVoice&&fades.resumed.resumed>.85,'a resumed swipe reverses its fade without restarting the source');
+        reports.push({scenario:'real WebAudio PCM validates long-sound fades, continuous rain level changes and swipe fade reversal',...fades,result:'passed'});
         await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,0,'muted taps stay silent');
         await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().tapReady);
         const sample=await page.evaluate(async()=>{
@@ -330,7 +359,13 @@ async function run() {
         await page.waitForFunction(count=>WaterGarden.inspect().lightningCount>count,firstStrike,{timeout:10000});
         reports.push({scenario:'visible rain streaks and repeated storm lightning with delayed WebAudio thunder',streakPixels,state:await inspect(),result:'passed'});
         await page.locator('#sound').click();assert.equal((await inspect()).rainAudio,false);
-        await page.waitForTimeout(80);assert.equal((await inspect()).weatherAudioNodes,0);
+        assert.equal((await inspect()).rainAudioFading,true);assert.equal((await inspect()).audioState,'running','mute lets long sounds finish their fade');
+        await page.waitForTimeout(120);await page.locator('#sound').click();
+        await page.waitForTimeout(850);assert.equal((await inspect()).audioState,'running','a cancelled mute must never suspend resumed audio');assert.equal((await inspect()).rainAudio,true);
+        await page.locator('[data-rain="2"]').click();await page.locator('[data-rain="4"]').click();assert.equal((await inspect()).rainAudioFading,false);
+        await page.locator('#sound').click();
+        await page.waitForFunction(()=>WaterGarden.inspect().audioState==='suspended');assert.equal((await inspect()).weatherAudioNodes,0);assert.equal((await inspect()).rainAudioFading,false);
+        reports.push({scenario:'rapid mute/unmute cancels suspension and rain intensity changes retain continuous playback',result:'passed'});
         await page.locator('[data-rain="0"]').click();await page.locator('#reset').click();
         await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().strokeReady);
         await page.mouse.move(x-40,y);await page.mouse.down();
@@ -338,9 +373,10 @@ async function run() {
         state=await inspect();assert(state.strokeAudio&&state.strokeSpeed>0,'a real swipe must create continuous water sound');
         await page.waitForTimeout(160);assert.equal((await inspect()).strokeSpeed,0,'holding still must silence the swipe');
         await page.mouse.move(x+55,y);await page.waitForTimeout(35);assert((await inspect()).strokeSpeed>0);
-        await page.mouse.up();await page.waitForTimeout(550);assert.equal((await inspect()).strokeAudio,false,'release must free the continuous sound graph');
+        await page.mouse.up();await page.waitForTimeout(800);assert.equal((await inspect()).strokeAudio,false,'release must free the continuous sound graph after its fade');
         await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+25,y);await page.waitForTimeout(40);
-        await page.mouse.up();await page.locator('#sound').click();assert.equal((await inspect()).strokeAudio,false,'muting must release the fading stroke audio immediately');
+        await page.mouse.up();await page.locator('#sound').click();assert.equal((await inspect()).strokeAudioFading,true,'mute retains the soft tail');
+        await page.waitForFunction(()=>WaterGarden.inspect().audioState==='suspended');assert.equal((await inspect()).strokeAudio,false,'mute releases the stroke graph after fading');
         reports.push({scenario:'continuous swipe sound follows motion, fades at rest and releases on mute',result:'passed'});
       }
       await page.locator('#light').click(); assert.equal((await inspect()).light, 1); await page.locator('#light').click(); assert.equal((await inspect()).light, 2);

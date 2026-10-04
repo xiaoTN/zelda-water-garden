@@ -100,7 +100,7 @@
   };
   // Cached procedural buffers keep weather audio offline and avoid per-impact allocations.
   function WeatherAudio(context, output) {
-    this.context = context; this.output = output; this.rain = null; this.nodes = []; this.played = 0;
+    this.context = context; this.output = output; this.rain = null; this.nodes = []; this.played = 0; this.level = 0; this.rainEnd = 0;
     this.rainBuffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
     this.thunderBuffer = context.createBuffer(1, Math.floor(context.sampleRate * 3.4), context.sampleRate);
     var values = this.rainBuffer.getChannelData(0), i;
@@ -111,14 +111,15 @@
   WeatherAudio.prototype.setLevel = function (level) {
     if (!level) { this.stopRain(); return; }
     var c = this.context;
+    this.level = level; this.rainEnd = 0;
     if (!this.rain) {
       var source = c.createBufferSource(), filter = c.createBiquadFilter(), gain = c.createGain();
       source.buffer = this.rainBuffer; source.loop = true; filter.type = 'lowpass'; gain.gain.value = 0;
       source.connect(filter); filter.connect(gain); gain.connect(this.output); source.start();
       this.rain = { source: source, filter: filter, gain: gain };
     }
-    this.rain.filter.frequency.setTargetAtTime(1100 + level * 700, c.currentTime, .2);
-    this.rain.gain.gain.setTargetAtTime(.025 + level * .022, c.currentTime, .2);
+    this.rain.filter.frequency.setTargetAtTime(1100 + level * 700, c.currentTime, .3);
+    this.rain.gain.gain.setTargetAtTime(.025 + level * .022, c.currentTime, .3);
   };
   WeatherAudio.prototype.thunder = function (strength) {
     var c = this.context; if (c.state !== 'running' || this.nodes.length >= 2) return;
@@ -130,13 +131,37 @@
     var node = { source: source, filter: filter, gain: gain }, owner = this; this.nodes.push(node); this.played++;
     source.onended = function () { source.disconnect(); filter.disconnect(); gain.disconnect(); var index = owner.nodes.indexOf(node); if (index >= 0) owner.nodes.splice(index, 1); };
   };
-  WeatherAudio.prototype.stopRain = function () {
+  WeatherAudio.prototype.stopRain = function (immediate) {
+    this.level = 0;
     if (!this.rain) return;
+    if (!immediate && this.context.state === 'running') {
+      if (!this.rainEnd) {
+        this.rain.gain.gain.setTargetAtTime(0, this.context.currentTime, .13);
+        this.rainEnd = this.context.currentTime + .7;
+      }
+      return;
+    }
+    this.rainEnd = 0;
     var node = this.rain; this.rain = null; try { node.source.stop(); } catch (error) {}
     node.source.disconnect(); node.filter.disconnect(); node.gain.disconnect();
   };
-  WeatherAudio.prototype.stop = function () {
-    this.stopRain();
+  WeatherAudio.prototype.update = function () {
+    if (this.rainEnd && this.context.currentTime >= this.rainEnd) this.stopRain(true);
+  };
+  WeatherAudio.prototype.stop = function (immediate) {
+    this.stopRain(immediate);
+    if (!immediate && this.context.state === 'running') {
+      for (var j = 0; j < this.nodes.length; j++) {
+        var fading = this.nodes[j]; if (fading.stopping) continue;
+        fading.stopping = true;
+        var t = this.context.currentTime, param = fading.gain.gain;
+        // Preserve the current rumble level when cancelling its natural envelope.
+        if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(t);
+        else { var value = param.value; param.cancelScheduledValues(t); param.setValueAtTime(value, t); }
+        param.setTargetAtTime(0, t, .13); fading.source.stop(t + .7);
+      }
+      return;
+    }
     // A suspended context may defer onended indefinitely, so release stopped nodes now.
     for (var i = 0; i < this.nodes.length; i++) {
       var node = this.nodes[i]; node.source.onended = null;

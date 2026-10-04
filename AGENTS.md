@@ -9,6 +9,7 @@ This is an independent Xiaohongshu offline H5 mini-tool repository. It can be cl
 - Use this repository's package.json as the source of truth for development and validation commands. Install its dependencies locally when required.
 - Keep source in src/, tests in tests/, build helpers in scripts/, original images and media in assets-source/, and release notes and validation evidence in docs/.
 - User-provided assets: the user authorizes descriptive renaming and placement in the appropriate project directories without reconfirmation. Preserve original media in assets-source/ and record its origin and any generated runtime asset.
+- Audio transitions: give long sounds gentle fade-ins, fade-outs and smooth level changes; play short effects directly with their original attack and decay.
 - Keep upload ZIPs in artifacts/ and temporary files in tmp/. These directories stay local and are ignored by Git.
 - For icon-heavy tools, preserve individual source images in assets-source/, package atlases in src/, and verify the ZIP entry count in package checks.
 - Commit tool changes in this repository. When used as a submodule, the collection records a separate pinned commit; push the tool commit before publishing an updated collection pointer.

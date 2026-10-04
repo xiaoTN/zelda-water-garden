@@ -1,0 +1,1088 @@
+{
+  "browser": "154.0.4258.53",
+  "date": "2026-10-04",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "supplied swipe sample renders continuously across two loop seams",
+      "duration": 6.5,
+      "loopDuration": 6.38,
+      "channels": 1,
+      "peak": 0.43821054697036743,
+      "afterLoop": 0.43821054697036743,
+      "seam": 0.027246478013694286,
+      "adjacent": 0.027246478013694286,
+      "bytes": 52763,
+      "result": "passed"
+    },
+    {
+      "scenario": "real WebAudio PCM validates long-sound fades, continuous rain level changes and swipe fade reversal",
+      "swipe": {
+        "sameVoice": true,
+        "early": 0.15280450815334917,
+        "settled": 0.8999999761581421,
+        "tail": 0.24753186907619237,
+        "end": 0.004171219019917771,
+        "resumed": 0.0010995209668180905,
+        "switchJump": 0,
+        "stopJump": 0
+      },
+      "resumed": {
+        "sameVoice": true,
+        "early": 0.15280450815334917,
+        "settled": 0.8999999761581421,
+        "tail": 0.24753186907619237,
+        "end": 0.8943412631750107,
+        "resumed": 0.8992340981960296,
+        "switchJump": 2.2351741790771484e-8,
+        "stopJump": 0
+      },
+      "rain": {
+        "sameVoice": true,
+        "early": 0.002280833659460768,
+        "settled": 0.04378741742111743,
+        "tail": 0.0228646989678964,
+        "end": 0.0005274848379485774,
+        "resumed": 0.1083740834146738,
+        "switchJump": 0,
+        "stopJump": 0.0000010058283805847168
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "supplied tap sample decodes, plays on taps, stays out of swipes and stops on mute/reset",
+      "duration": 0.6083900226757369,
+      "channels": 2,
+      "peak": 0.10975364595651627,
+      "bytes": 5686,
+      "result": "passed"
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "u": 0.36896791915223887,
+        "v": 0.39033170024557606,
+        "y": -0.07337196687546509,
+        "angle": 0.6320806930889591,
+        "fear": 0,
+        "speed": 0.02441013207962377,
+        "swim": 2.404667327373553,
+        "flowX": 0,
+        "flowZ": 0
+      },
+      "alarm": {
+        "u": 0.3769212150783313,
+        "v": 0.39105620287555926,
+        "y": -0.08144942445740225,
+        "angle": 0.11363424951336237,
+        "fear": 0.7286286902676569,
+        "speed": 0.12259921305525423,
+        "swim": 2.6745604120258495,
+        "flowX": -0.000253629250123242,
+        "flowZ": -0.008082180793079425
+      },
+      "fleeing": {
+        "u": 0.4354364034788514,
+        "v": 0.37791740665330953,
+        "y": -0.09816870218366568,
+        "angle": -0.5416917302861601,
+        "fear": 0.5952144952561585,
+        "speed": 0.17710745873802172,
+        "swim": 4.254097188546488,
+        "flowX": -0.011644184917882355,
+        "flowZ": 0.011633241966064165
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "Blender fish animation, underwater visibility and occlusion",
+      "visible": 3175,
+      "shallowWater": 2900,
+      "animated": 3647,
+      "occluded": 0,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "smooth wave reconstruction",
+      "linear": {
+        "kink": 6,
+        "peak": 151
+      },
+      "smooth": {
+        "kink": 2,
+        "peak": 102
+      },
+      "antialias": true,
+      "result": "passed"
+    },
+    {
+      "scenario": "isolated coastal foam coupling",
+      "changed": 271,
+      "remote": 0,
+      "resetDifference": 1,
+      "result": "passed"
+    },
+    {
+      "scenario": "3D stone and water depth occlusion",
+      "dry": 17098,
+      "dryCovered": 0,
+      "wet": 1337,
+      "wetTinted": 1337,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "geometry-derived water material depth",
+      "shallowerPixels": 872,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 16,
+          "energy": 26.33591436038672
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 64,
+          "energy": 17.369918121008723
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 219,
+          "energy": 12.174380249701452
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 574,
+          "energy": 20.245554770348555
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "dense overhead storm and manual swipe share simulated water",
+      "rainWaves": {
+        "hits": 1153,
+        "impulses": 1153,
+        "fields": 1,
+        "scales": [
+          2
+        ]
+      },
+      "shared": {
+        "fields": 1,
+        "strokes": 18,
+        "energy": 56.215246007667645,
+        "finite": true
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "visible rain streaks and repeated storm lightning with delayed WebAudio thunder",
+      "streakPixels": [
+        262,
+        1100,
+        3334,
+        9267
+      ],
+      "state": {
+        "fishTime": 19.213400000000025,
+        "fish": [
+          {
+            "u": 0.6320838750287443,
+            "v": 0.29085150401807985,
+            "y": -0.07145778529596732,
+            "angle": -2.672823557087352,
+            "fear": 0,
+            "speed": 0.014853437416325542,
+            "swim": 23.7271934612709,
+            "flowX": -0.015447455769742479,
+            "flowZ": -0.013036141031653119
+          },
+          {
+            "u": 0.6422532292395798,
+            "v": 0.3124883467628128,
+            "y": -0.10099408465603726,
+            "angle": -1.6013037445675062,
+            "fear": 0.015232758998237823,
+            "speed": 0.029293750248552842,
+            "swim": 26.62980605486607,
+            "flowX": -0.00253551848324683,
+            "flowZ": 0.002440294850618037
+          },
+          {
+            "u": 0.2670923801049841,
+            "v": 0.644053409987818,
+            "y": -0.10186476481432483,
+            "angle": -4.7205841121645795,
+            "fear": 0.011243413644161999,
+            "speed": 0.03067457895397825,
+            "swim": 24.98139023459457,
+            "flowX": -0.002409969588770997,
+            "flowZ": -0.007609148056186463
+          },
+          {
+            "u": 0.7930439421368071,
+            "v": 0.5570498395529845,
+            "y": -0.08125495288563186,
+            "angle": 4.854187831506492,
+            "fear": 0.0006833417900090878,
+            "speed": 0.01989962742947063,
+            "swim": 24.205287594151518,
+            "flowX": -0.012130652635468218,
+            "flowZ": -0.006099036753302176
+          },
+          {
+            "u": 0.5257624055598407,
+            "v": 0.3159833126035622,
+            "y": -0.09523585684181997,
+            "angle": -3.5426365239393767,
+            "fear": 0,
+            "speed": 0.022859383276389977,
+            "swim": 24.576919334876443,
+            "flowX": -0.014000970282490144,
+            "flowZ": -0.009080005123623615
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": true,
+        "rainLevel": 4,
+        "rainStreaks": 840,
+        "rainImpacts": 5022,
+        "lightningCount": 2,
+        "lightningFlash": 0,
+        "lightningNext": 4.095059435935959,
+        "thunderPending": true,
+        "thunderPlayed": 1,
+        "rainAudio": true,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 3,
+        "muted": false,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.45220335815233415,
+            "v": 0.4887852076944444
+          },
+          {
+            "u": 0.9572574450831052,
+            "v": 0.566137226106229
+          },
+          {
+            "u": 0.7034303208759699,
+            "v": 0.2942966443082355
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 18.64938246775687,
+        "steps": 1147,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 585,
+        "bufferHeight": 1266,
+        "activePointers": 0
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "rapid mute/unmute cancels suspension and rain intensity changes retain continuous playback",
+      "result": "passed"
+    },
+    {
+      "scenario": "continuous swipe sound follows motion, fades at rest and releases on mute",
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "readyAndSettleMs": 5431,
+      "result": "passed",
+      "state": {
+        "fishTime": 39.96010000000014,
+        "fish": [
+          {
+            "u": 0.4124617024151212,
+            "v": 0.35914681001422377,
+            "y": -0.09933924921972778,
+            "angle": -8.191631985819095,
+            "fear": 0,
+            "speed": 0.020393057084487964,
+            "swim": 52.61157284798098,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.6299918499044044,
+            "v": 0.4163445433911243,
+            "y": -0.07974046577985885,
+            "angle": -5.151834479001911,
+            "fear": 0,
+            "speed": 0.021752594223453832,
+            "swim": 57.284829280317076,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.6369791081849923,
+            "v": 0.6585673489996272,
+            "y": -0.08299292335346835,
+            "angle": -0.48212918297292157,
+            "fear": 0,
+            "speed": 0.023112131362419696,
+            "swim": 60.05892364594689,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.49860899020387495,
+            "v": 0.5965085262177302,
+            "y": -0.11186277260383796,
+            "angle": 7.450991541473883,
+            "fear": 0,
+            "speed": 0.024471668501385557,
+            "swim": 57.64832843214168,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.5518355322600315,
+            "v": 0.4166966629332837,
+            "y": -0.10798087559894844,
+            "angle": -5.749216070894457,
+            "fear": 0,
+            "speed": 0.02583120564035142,
+            "swim": 58.52974656112734,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 1,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "suspended",
+        "strokeAudioFading": false,
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 3,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 84,
+        "quality": "low",
+        "renderer": "webgl",
+        "surfaceVertices": 2145,
+        "surfaceTriangles": 4096,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 390,
+        "bufferHeight": 844,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "before": {
+        "u": 0.3317302635604878,
+        "v": 0.38695737042672596,
+        "y": -0.07870749686136003,
+        "angle": 0.47443555126567244,
+        "fear": 0,
+        "speed": 0.035186856567024055,
+        "swim": 1.2959374017812078,
+        "flowX": -0.0005437142764731556,
+        "flowZ": -0.00021941272549794524
+      },
+      "alarm": {
+        "u": 0.3361190518256644,
+        "v": 0.38690501009770817,
+        "y": -0.08795753828365103,
+        "angle": -0.11750656769139739,
+        "fear": 0.845275444230886,
+        "speed": 0.2110465106050825,
+        "swim": 1.5964459226731451,
+        "flowX": 0.012520265273294242,
+        "flowZ": -0.01531191465266803
+      },
+      "fleeing": {
+        "u": 0.3631989727473426,
+        "v": 0.3625223098779602,
+        "y": -0.10905882797241347,
+        "angle": -0.6140773632428683,
+        "fear": 0.6905028632697596,
+        "speed": 0.29447721869793086,
+        "swim": 3.3761324160060022,
+        "flowX": -0.028261042657091638,
+        "flowZ": 0.017976542751036932
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 16,
+          "energy": 7.768611490915772
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 63,
+          "energy": 5.508006186592413
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 193,
+          "energy": 5.485379511351161
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 480,
+          "energy": 8.388995971986562
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "readyAndSettleMs": 1843,
+      "result": "passed",
+      "state": {
+        "fishTime": 18.778800000000025,
+        "fish": [
+          {
+            "u": 0.33775436864485026,
+            "v": 0.46914373164223117,
+            "y": -0.0709675677214347,
+            "angle": -5.588084937806038,
+            "fear": 0,
+            "speed": 0.03,
+            "swim": 34.531732671661686,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.8225624641535604,
+            "v": 0.42909658163616043,
+            "y": -0.09812266927918507,
+            "angle": 7.5740590643067,
+            "fear": 0,
+            "speed": 0.032,
+            "swim": 28.151234140485595,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.27003469509744743,
+            "v": 0.4469219799995665,
+            "y": -0.10434634807362762,
+            "angle": -0.4541959231288522,
+            "fear": 0,
+            "speed": 0.034,
+            "swim": 35.483843814379796,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.8095052296663977,
+            "v": 0.5487479473041691,
+            "y": -0.08429101194981908,
+            "angle": -1.4348632365070606,
+            "fear": 0,
+            "speed": 0.036,
+            "swim": 27.469861967498392,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.7916929232306704,
+            "v": 0.3969821610720487,
+            "y": -0.09371195265992577,
+            "angle": 0.6084680330240155,
+            "fear": 0,
+            "speed": 0.038,
+            "swim": 31.339030727011558,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "suspended",
+        "strokeAudioFading": false,
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 1,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1122,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 11094,
+        "surfaceTriangles": 21760,
+        "waterMaps": 2,
+        "width": 1440,
+        "height": 960,
+        "bufferWidth": 1732,
+        "bufferHeight": 1154,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "before": {
+        "u": 0.34431393179316727,
+        "v": 0.38541561617701753,
+        "y": -0.07870784105545017,
+        "angle": 0.47443555875238974,
+        "fear": 0,
+        "speed": 0.026428024448401213,
+        "swim": 1.3185461445870224,
+        "flowX": -0.00044635601210640303,
+        "flowZ": -0.0002462680617782097
+      },
+      "alarm": {
+        "u": 0.35093794308005644,
+        "v": 0.38566641494672715,
+        "y": -0.0857561128282458,
+        "angle": -0.001627401374408366,
+        "fear": 0.6529956226376524,
+        "speed": 0.11915265386246485,
+        "swim": 1.5668605833607236,
+        "flowX": 0.002671295159513782,
+        "flowZ": -0.010800037246947811
+      },
+      "fleeing": {
+        "u": 0.3990386736224949,
+        "v": 0.3728966273526157,
+        "y": -0.0993121650809678,
+        "angle": -0.4722194057167127,
+        "fear": 0.533462409242297,
+        "speed": 0.1768606256107223,
+        "swim": 3.0033894738105555,
+        "flowX": 0.005315629763102523,
+        "flowZ": 0.006411546647955593
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 17,
+          "energy": 25.00572920411515
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 61,
+          "energy": 17.79422244536412
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 192,
+          "energy": 15.157134988877196
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 491,
+          "energy": 26.187419391450742
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "readyAndSettleMs": 1806,
+      "result": "passed",
+      "state": {
+        "fishTime": 13.093300000000019,
+        "fish": [
+          {
+            "u": 0.6255454792448716,
+            "v": 0.3060752971589949,
+            "y": -0.09344520412628807,
+            "angle": 1.6513835541190598,
+            "fear": 0,
+            "speed": 0.02355656130859686,
+            "swim": 25.608068568163283,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.3853428925309368,
+            "v": 0.27483553366789276,
+            "y": -0.0745608927167294,
+            "angle": 2.0484814411538284,
+            "fear": 0,
+            "speed": 0.023852013214591124,
+            "swim": 23.310476688726446,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.5951224057120752,
+            "v": 0.6826369765564062,
+            "y": -0.09020286745415947,
+            "angle": -6.258427088915291,
+            "fear": 0,
+            "speed": 0.024533855902180143,
+            "swim": 25.60108319839933,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.5364460064738966,
+            "v": 0.6887913175249332,
+            "y": -0.11337457501787311,
+            "angle": -0.9788817021564222,
+            "fear": 0,
+            "speed": 0.027500530722870852,
+            "swim": 23.299507142514482,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.6039055137163029,
+            "v": 0.34003085329108423,
+            "y": -0.09978437607782352,
+            "angle": 13.99784965378269,
+            "fear": 0,
+            "speed": 0.029356376743573293,
+            "swim": 28.518886077803636,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "suspended",
+        "strokeAudioFading": false,
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 1,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.2199723184615584,
+            "v": 0.48002338
+          },
+          {
+            "u": 0.7599606534395559,
+            "v": 0.5600233800000001
+          },
+          {
+            "u": 0.6999851634637697,
+            "v": 0.29002338
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 780,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 9417,
+        "surfaceTriangles": 18432,
+        "waterMaps": 2,
+        "width": 320,
+        "height": 568,
+        "bufferWidth": 480,
+        "bufferHeight": 852,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "before": {
+        "u": 0.3282406376324993,
+        "v": 0.3870424657640986,
+        "y": -0.0787066059115911,
+        "angle": 0.4744476376322065,
+        "fear": 0,
+        "speed": 0.03518728905119701,
+        "swim": 1.296047908344037,
+        "flowX": -0.00009335710848916467,
+        "flowZ": -0.00005485048121042884
+      },
+      "alarm": {
+        "u": 0.330246945158829,
+        "v": 0.3873100167585156,
+        "y": -0.08593314585827785,
+        "angle": 0.00031086198783694674,
+        "fear": 0.6443660105065095,
+        "speed": 0.1562583913719225,
+        "swim": 1.5046977487756785,
+        "flowX": -0.000044393845492919485,
+        "flowZ": -0.006469513853609977
+      },
+      "fleeing": {
+        "u": 0.348684258812661,
+        "v": 0.3745252819484002,
+        "y": -0.10228186121687251,
+        "angle": -0.33756123944177735,
+        "fear": 0.5158324768346159,
+        "speed": 0.2301991437274179,
+        "swim": 3.066987416954321,
+        "flowX": -0.006595049484004615,
+        "flowZ": -0.00041644677914561066
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 18,
+          "energy": 2.926059404719562
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 64,
+          "energy": 2.002224336869747
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 189,
+          "energy": 1.7779401274059665
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 497,
+          "energy": 3.426246615457828
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "readyAndSettleMs": 1788,
+      "result": "passed",
+      "state": {
+        "fishTime": 14.628200000000039,
+        "fish": [
+          {
+            "u": 0.4932469692791324,
+            "v": 0.3067605518220072,
+            "y": -0.08310879104810871,
+            "angle": -1.3772505953441174,
+            "fear": 0,
+            "speed": 0.03,
+            "swim": 27.071730358626166,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.49850306347034007,
+            "v": 0.27478767239873586,
+            "y": -0.07412395461860907,
+            "angle": 2.978741557960487,
+            "fear": 0,
+            "speed": 0.032,
+            "swim": 23.550180499105895,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.24772816250935834,
+            "v": 0.43983836855043107,
+            "y": -0.10051439228685406,
+            "angle": -2.4004582651819266,
+            "fear": 0,
+            "speed": 0.034,
+            "swim": 28.606546295666043,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.5719148869235756,
+            "v": 0.4715683218502032,
+            "y": -0.11007159721910045,
+            "angle": 4.7432289230174405,
+            "fear": 0,
+            "speed": 0.036,
+            "swim": 20.21268045664452,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.24016454084257316,
+            "v": 0.3165565969890638,
+            "y": -0.0898412890365564,
+            "angle": 2.643319284092068,
+            "fear": 0,
+            "speed": 0.038,
+            "swim": 30.58481964101551,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "suspended",
+        "strokeAudioFading": false,
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 1,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 872,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 844,
+        "height": 390,
+        "bufferWidth": 1266,
+        "bufferHeight": 585,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "shoreline without derivatives or fragment highp",
+      "result": "passed"
+    },
+    {
+      "scenario": "no WebGL with falling stone",
+      "result": "passed"
+    },
+    {
+      "scenario": "Canvas rain and stop",
+      "result": "passed"
+    },
+    {
+      "scenario": "file URL offline",
+      "networkRequests": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "reduced motion swipes and rain",
+      "result": "passed"
+    },
+    {
+      "scenario": "synthetic slow timing normal → low → Canvas 2D",
+      "result": "passed"
+    }
+  ]
+}

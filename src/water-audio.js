@@ -47,7 +47,7 @@
     return buffer;
   }
   function StrokeAudio(context, output, asset) {
-    this.context=context;this.output=output;this.buffer=null;this.node=null;this.lastMove=-10;this.speed=0;this.failed=false;
+    this.context=context;this.output=output;this.buffer=null;this.node=null;this.lastMove=-10;this.speed=0;this.failed=false;this.fadeEnd=0;
     var self=this;
     function fail(){self.failed=true;self.speed=0;}
     try {
@@ -62,6 +62,7 @@
   }
   StrokeAudio.prototype.stroke=function(speed){
     var c=this.context;if(c.state!=='running'||this.failed)return;
+    this.fadeEnd=0;
     this.lastMove=c.currentTime;this.speed=Math.max(0,Math.min(2.5,speed));
     if(!this.buffer)return;
     if(!this.node){
@@ -70,19 +71,24 @@
       source.connect(gain);gain.connect(this.output);source.start();
       this.node={source:source,gain:gain};
     }
-    this.node.gain.gain.setTargetAtTime(.10+Math.min(1,this.speed/1.4)*.8,c.currentTime,.035);
+    this.node.gain.gain.setTargetAtTime(.10+Math.min(1,this.speed/1.4)*.8,c.currentTime,.08);
   };
   StrokeAudio.prototype.release=function(){
     this.speed=0;
-    if(this.node)this.node.gain.gain.setTargetAtTime(0,this.context.currentTime,.055);
+    if(this.node&&!this.fadeEnd){
+      this.node.gain.gain.setTargetAtTime(0,this.context.currentTime,.12);
+      this.fadeEnd=this.context.currentTime+.65;
+    }
   };
   StrokeAudio.prototype.update=function(){
     var idle=this.context.currentTime-this.lastMove;
     if(idle>.09&&this.speed>0)this.release();
-    if(idle>.4)this.stop();
+    if(this.fadeEnd&&this.context.currentTime>=this.fadeEnd)this.stop(true);
   };
-  StrokeAudio.prototype.stop=function(){
+  StrokeAudio.prototype.stop=function(immediate){
     this.speed=0;this.lastMove=-10;
+    if(!immediate&&this.context.state==='running'){this.release();return;}
+    this.fadeEnd=0;
     if(!this.node)return;
     var n=this.node;this.node=null;
     try{n.source.stop();}catch(error){}
