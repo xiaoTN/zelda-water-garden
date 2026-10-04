@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-04",
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "closed 3D cloud volume, 12 sphere meshes, ray picking, depth and both GPU budgets",
+      "result": "passed",
+      "geometry": {
+        "closed": true,
+        "budgets": [
+          {
+            "low": false,
+            "snow": 99184,
+            "calls": 15,
+            "flakes": 360,
+            "picked": true,
+            "depth": true,
+            "pixels": 740610,
+            "reducedHidesFlakes": true,
+            "cloud": 98592
+          },
+          {
+            "low": true,
+            "snow": 39032,
+            "calls": 15,
+            "flakes": 150,
+            "picked": true,
+            "depth": true,
+            "pixels": 329160,
+            "reducedHidesFlakes": true,
+            "cloud": 49280
+          }
+        ]
+      }
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "offline WebGL, touch fallback, reduced motion",
+      "result": "passed",
+      "networkRequests": 0
+    },
+    {
+      "scenario": "unsupported hardware shows explicit 3D unavailable state",
+      "result": "passed"
+    }
+  ]
+}

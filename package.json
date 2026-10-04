@@ -1,20 +1,23 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.9.13",
+  "version": "1.11.13",
   "private": true,
-  "description": "海拉鲁水之庭：塞尔达风格的离线交互水面",
+  "description": "海拉鲁自然交互：离线体验水面、雪地与云层",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
     "start": "node scripts/serve.cjs",
     "assets": "node scripts/generate-water-maps.cjs",
+    "assets:snow": "node scripts/prepare-snow-textures.cjs",
+    "assets:land": "node scripts/prepare-hyrule-background.cjs",
     "physics": "node scripts/bundle-physics.cjs",
     "audio": "node scripts/bundle-audio.cjs",
-    "test": "node --test tests/water.test.cjs",
+    "test": "node --test tests/water.test.cjs tests/nature.test.cjs tests/nature-3d.test.cjs",
     "check": "node scripts/verify-package.cjs",
     "build": "node scripts/build.cjs",
-    "test:browser": "node scripts/browser-check.cjs"
+    "test:browser": "node scripts/render-recovery-check.cjs && node scripts/browser-check.cjs && node scripts/nature-browser-check.cjs && node scripts/displacement-browser-check.cjs",
+    "test:nature-browser": "node scripts/nature-browser-check.cjs"
   },
   "dependencies": {
     "cannon-es": "0.20.0"

@@ -406,6 +406,17 @@ async function run() {
         await page.mouse.up();await page.locator('#sound').click();assert.equal((await inspect()).strokeAudioFading,true,'mute retains the soft tail');
         await page.waitForFunction(()=>WaterGarden.inspect().audioState==='suspended');assert.equal((await inspect()).strokeAudio,false,'mute releases the stroke graph after fading');
         reports.push({scenario:'continuous swipe sound follows motion, fades at rest and releases on mute',result:'passed'});
+        // Scene switches keep the same soft water tails, then release them while water physics pauses.
+        await page.locator('#sound').click();await page.locator('#rain').click();
+        await page.mouse.move(x-25,y);await page.mouse.down();await page.mouse.move(x+25,y,{steps:8});
+        assert((await inspect()).strokeAudio);await page.mouse.up();
+        await page.locator('button[data-scene="snow"]').click();assert.equal(await page.evaluate(()=>NatureGarden.inspect().scene),'snow');
+        assert((await inspect()).rainAudioFading);
+        await page.waitForFunction(()=>!WaterGarden.inspect().strokeAudio&&!WaterGarden.inspect().rainAudioFading);
+        assert.equal((await inspect()).audioState,'running','scene changes keep unmuted audio available');
+        await page.locator('button[data-scene="cloud"]').click();await page.locator('button[data-scene="water"]').click();assert((await inspect()).rainAudio);
+        await page.locator('#sound').click();await page.locator('#reset').click();
+        reports.push({scenario:'water audio tails fade and release across snow/cloud scene switches, then resume on return',result:'passed'});
       }
       await page.locator('#light').click(); assert.equal((await inspect()).light, 1); await page.locator('#light').click(); assert.equal((await inspect()).light, 2);
       if (viewport.width === 390) await page.screenshot({ path: path.join(out, 'mobile-moon-rain.png') });
@@ -431,12 +442,12 @@ async function run() {
         await page.waitForTimeout(170); assert((await inspect()).steps > paused);
         assert((await inspect()).rainAudio);assert.equal((await inspect()).rainLevel,4);
         await page.locator('#sound').click();await page.locator('#reset').click();
-        // Lose the actual GL context, then restore it once and verify the usable fallback.
+        // Lose the actual GL context, then restore it once and verify pause and recovery.
         await page.evaluate(() => { window.testLostContext = document.getElementById('water').getContext('webgl').getExtension('WEBGL_lose_context'); window.testLostContext.loseContext(); });
-        await page.waitForTimeout(180); assert.equal((await inspect()).renderer, 'canvas2d');
-        await page.touchscreen.tap(x,y); assert((await inspect()).energy > .001);
+        await page.waitForTimeout(180); assert.equal((await inspect()).renderer, 'unavailable');
+        assert(await page.locator('#render-status').isVisible());const pausedSteps=(await inspect()).steps;await page.waitForTimeout(150);assert.equal((await inspect()).steps,pausedSteps);
         await page.evaluate(() => window.testLostContext.restoreContext()); await page.waitForTimeout(500); assert.equal((await inspect()).renderer,'webgl');
-        await page.touchscreen.tap(x,y); assert((await inspect()).energy > .001);
+        await page.touchscreen.tap(x,y); assert((await inspect()).energy > .001,'restored 3D water remains interactive');
         await page.locator('[data-mode="touch"]').click(); await page.locator('#reset').click();
         const cdp = await context.newCDPSession(page);
         await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:130,y:380,id:1},{x:260,y:460,id:2}]});
@@ -521,26 +532,13 @@ async function run() {
     await edgePage.mouse.click(380,440); assert(await edgePage.evaluate(() => WaterGarden.inspect().energy > .001));
     await edgePage.screenshot({path:path.join(out,'shoreline-compatibility.png')});
     reports.push({scenario:'shoreline without derivatives or fragment highp',result:'passed'}); await edgeContext.close();
-    // Failure to create WebGL must still produce an interactive water scene.
-    const fallbackContext = await browser.newContext({ viewport:{width:390,height:844} });
-    const fallbackPage = await fallbackContext.newPage(); fallbackPage.on('pageerror', e => errors.push(e.message));
-    await fallbackPage.addInitScript(() => { const original = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function(type) { if(type === 'webgl') return null; return original.apply(this,arguments); }; });
-    await fallbackPage.goto(url); await fallbackPage.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 5);
-    assert.equal(await fallbackPage.evaluate(() => WaterGarden.inspect().renderer), 'canvas2d');
-    await fallbackPage.mouse.click(190,410); await fallbackPage.waitForTimeout(150); assert(await fallbackPage.evaluate(() => WaterGarden.inspect().energy > .001));
-    await fallbackPage.mouse.move(120,410); await fallbackPage.mouse.down(); await fallbackPage.mouse.move(270,420,{steps:12}); await fallbackPage.mouse.up();
-    assert(await fallbackPage.evaluate(() => WaterGarden.inspect().drops === 0 && WaterGarden.inspect().energy > .01));
-    await fallbackPage.locator('#reset').click();await fallbackPage.locator('[data-mode="stone"]').click();await fallbackPage.mouse.click(195,405);
-    assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().stones[0].y>1));await fallbackPage.waitForFunction(()=>WaterGarden.inspect().stones[0].settled);
-    assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().stoneImpacts),1);
-    await fallbackPage.screenshot({path:path.join(out,'mobile-fallback.png')}); reports.push({scenario:'no WebGL with falling stone',result:'passed'});
-    await fallbackPage.locator('#reset').click();
-    await fallbackPage.locator('#rain').click();await fallbackPage.locator('[data-rain="4"]').click();await fallbackPage.waitForTimeout(700);
-    assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainImpacts>0),'rain must create water ripples');
-    assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0),'airborne rain stays visible');
-    await fallbackPage.screenshot({path:path.join(out,'mobile-fallback-storm.png')});
-    await fallbackPage.locator('[data-rain="0"]').click();assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().rain),false);
-    reports.push({scenario:'Canvas rain and stop',result:'passed'});await fallbackContext.close();
+    // Missing WebGL must explain unavailability and stop the game, never paint a 2D substitute.
+    const fallbackContext=await browser.newContext({viewport:{width:390,height:844}}),fallbackPage=await fallbackContext.newPage();fallbackPage.on('pageerror',e=>errors.push(e.message));
+    await fallbackPage.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type){return type==='webgl'?null:original.apply(this,arguments);};});
+    await fallbackPage.goto(url);await fallbackPage.waitForFunction(()=>window.WaterGarden&&WaterGarden.inspect().ready);
+    assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().renderer),'unavailable');assert(await fallbackPage.locator('#render-status').isVisible());
+    await fallbackPage.waitForTimeout(200);assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().steps),0);
+    await fallbackPage.screenshot({path:path.join(out,'3d-unavailable.png')});reports.push({scenario:'missing WebGL explicit unavailable state',result:'passed'});await fallbackContext.close();
     // A file URL needs no HTTP server, network permission, module loader or external asset.
     const offlineContext = await browser.newContext({viewport:{width:390,height:844}}), offlinePage = await offlineContext.newPage();
     let networkRequests = 0; offlinePage.on('request',request => { if (/^https?:/.test(request.url())) networkRequests++; });
@@ -565,17 +563,9 @@ async function run() {
     await reducedPage.locator('#rain').click();await reducedPage.locator('[data-rain="4"]').click();await reducedPage.waitForTimeout(300);
     assert(await reducedPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0&&WaterGarden.inspect().rainStreaks<=378));
     reports.push({scenario:'reduced motion swipes and rain',result:'passed'}); await reducedContext.close();
-    // Simulated slow timing verifies both downgrade thresholds, without claiming real-device FPS.
-    const slowContext = await browser.newContext({viewport:{width:390,height:844}}), slowPage = await slowContext.newPage();
-    slowPage.on('pageerror', e => errors.push(e.message));
-    await slowPage.addInitScript(() => { const original=requestAnimationFrame; let clock=0; window.requestAnimationFrame=callback=>original(()=>callback(clock+=60)); });
-    await slowPage.goto(url); await slowPage.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().quality === 'low', null, {timeout:15000});
-    await slowPage.waitForFunction(() => WaterGarden.inspect().renderer === 'canvas2d', null, {timeout:15000});
-    await slowPage.mouse.click(195,410); assert(await slowPage.evaluate(() => WaterGarden.inspect().energy > .001));
-    reports.push({scenario:'synthetic slow timing normal → low → Canvas 2D',result:'passed'}); await slowContext.close();
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-04',errors,reports},null,2)+'\n');
-    console.log('Browser checks passed: four viewports, four rain levels, airborne streak pixels, repeated lightning, delayed thunder, rain audio lifecycle, touch, broad stone waves, oldest-stone recycling, reset, safe areas, context recovery, Canvas fallback and offline file URL.');
+    fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'}),errors,reports},null,2)+'\n');
+    console.log('Browser checks passed: four viewports, rain transitions, recorded audio, falling stones, lifecycle, context recovery, unavailable state and offline file URL.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }
 run().catch(error => {console.error(error);process.exitCode=1;});

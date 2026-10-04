@@ -12,15 +12,20 @@
     <canvas id="water" aria-label="交互水池，轻点起涟漪，滑动拨水" tabindex="0"></canvas>
     <canvas id="fallback" aria-hidden="true"></canvas>
     <canvas id="life" aria-hidden="true"></canvas>
+    <canvas id="nature" aria-hidden="true" tabindex="-1"></canvas>
     <div class="vignette" aria-hidden="true"></div>
     <header class="topbar">
       <div class="brand">
         <svg class="emblem" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C24 3 9 20 9 30a15 15 0 0 0 30 0C39 20 24 3 24 3Z"/><path d="M24 13v26M16 29l8 8 8-8M18 23l6 6 6-6"/></svg>
-        <div><h1>海拉鲁 <span>·</span> 水之庭</h1><p>HYRULE WATER GARDEN</p></div>
+        <div><h1>海拉鲁 <span>·</span> <span id="scene-title">水之庭</span></h1><p id="scene-subtitle">HYRULE WATER GARDEN</p></div>
       </div>
       <button id="light" class="light-button" aria-label="切换光照，当前晨光"><span class="sun-icon" aria-hidden="true">☼</span><span id="light-label">晨光</span><span class="cycle" aria-hidden="true">↻</span></button>
     </header>
-    <div class="intro" aria-hidden="true"><span class="intro-line"></span><p>在旷野，留一刻给自己</p><span class="intro-line"></span></div>
+    <nav class="scene-switch" aria-label="选择自然场景">
+      <button data-scene="water" class="selected" aria-pressed="true"><span aria-hidden="true">≈</span> 水面</button>
+      <button data-scene="snow" aria-pressed="false"><span aria-hidden="true">❄</span> 雪地</button>
+      <button data-scene="cloud" aria-pressed="false"><span aria-hidden="true">☁</span> 云层</button>
+    </nav>
     <div id="cursor" aria-hidden="true"><span></span></div>
     <div class="pool-caption" aria-hidden="true"><span>✧</span> 一池水，一点宁静 <span>✧</span></div>
     <footer class="bottom">
@@ -41,6 +46,11 @@
           <button class="mode" data-mode="leaf" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4S6 2 4 12s8 11 12 4 3-12 3-12Z"/><path d="m7 18 9-11M9 15l-1-5m4 2 4 1"/></svg><span>浮叶</span></button>
           <button class="mode" data-mode="stone" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v5m-5-4v3m10-3v3M5 13l5-4 7 2 3 7-6 4-9-3-2-3Z"/><path d="m10 9 3 7 7 2m-7-2 1 6"/></svg><span>落石</span></button>
         </div>
+        <div id="nature-modes" class="modes" role="group" aria-label="选择自然交互" hidden>
+          <button class="mode selected" data-nature="0" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17c3-8 5 7 9-2s5 3 9-8M4 21c3-5 5 3 8-2"/></svg><span>划雪</span></button>
+          <button class="mode" data-nature="1" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3c-4 0-4 10-1 10s4-10 1-10ZM16 8c-4 0-4 10-1 10s4-10 1-10ZM4 16v3h3v-3Zm9 5h3"/></svg><span>脚印</span></button>
+          <button class="mode" data-nature="2" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M7 11c0-3 2-4 4-4M4 21h12"/></svg><span>雪球</span></button>
+        </div>
         <span class="divider" aria-hidden="true"></span>
         <div class="extras">
           <button id="rain" class="utility" aria-label="开启小雨并选择雨势" aria-pressed="false" aria-expanded="false" aria-controls="rain-options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14a4 4 0 0 1-1-8 6 6 0 0 1 11-1 4 4 0 0 1 2 9"/><path d="m7 16-1 4m6-4-1 4m6-4-1 4"/></svg><span id="rain-label">下雨</span></button>
@@ -50,6 +60,8 @@
       </nav>
       <p class="footnote">风吹过的地方，水会记得。</p>
     </footer>
+    <button id="view-3d" hidden aria-label="切换 3D 场景视角" aria-pressed="false">视角</button>
+    <div id="render-status" role="status" hidden></div>
     <div id="notice" class="notice" role="status" aria-live="polite"></div>
     <div id="loading"><span></span><p>走进水之庭…</p></div>
   </main>
@@ -62,6 +74,12 @@
   <script src="./fish.js"></script>
   <script src="./water-maps.js"></script>
   <script src="./renderer.js"></script>
+  <script src="./nature-3d.js"></script>
+  <script src="./nature-core.js"></script>
+  <script src="./snow-textures.js"></script>
+  <script src="./hyrule-background.js"></script>
+  <script src="./nature-surface.js"></script>
+  <script src="./nature-renderer.js"></script>
   <script src="./weather.js"></script>
   <script src="./water-tap-asset.js"></script>
   <script src="./water-swipe-asset.js"></script>

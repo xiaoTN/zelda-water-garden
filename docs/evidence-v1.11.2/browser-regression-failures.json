@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-04",
+  "status": "failed",
+  "gate": "npm run test:browser",
+  "attempts": [
+    {
+      "attempt": 1,
+      "location": "scripts/browser-check.cjs:227",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "condition": "Three dropped stones all reach settled state",
+      "error": "Timeout 30000ms exceeded",
+      "unsettledSpeed": 0.004896257501176349
+    },
+    {
+      "attempt": 2,
+      "location": "scripts/browser-check.cjs:236",
+      "condition": "Stones settle after rotating the mobile viewport to 844x390",
+      "error": "Timeout 30000ms exceeded"
+    }
+  ],
+  "separatePassingChecks": [
+    "45 unit tests",
+    "package check",
+    "build and artifact audits",
+    "nature-browser-check.cjs",
+    "displacement-browser-check.cjs"
+  ]
+}
