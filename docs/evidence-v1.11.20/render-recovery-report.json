@@ -1,0 +1,32 @@
+[
+  {
+    "kind": "snow",
+    "renderer": "webgl",
+    "quality": "low",
+    "lost": false,
+    "status": "",
+    "hidden": true,
+    "available": "webgl",
+    "stepsAdvanced": false
+  },
+  {
+    "kind": "cloud",
+    "renderer": "webgl",
+    "quality": "low",
+    "lost": false,
+    "status": "",
+    "hidden": true,
+    "available": "webgl",
+    "stepsAdvanced": false
+  },
+  {
+    "kind": "water",
+    "renderer": "webgl",
+    "quality": "low",
+    "lost": false,
+    "status": "",
+    "hidden": true,
+    "available": "webgl",
+    "stepsAdvanced": true
+  }
+]

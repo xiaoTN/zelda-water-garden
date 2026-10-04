@@ -134,22 +134,22 @@
     // Small visible waves are already silent. Restart only above a higher RMS
     // threshold so residual waves cannot repeatedly reverse the fade.
     var strength=Number.isFinite(rms)?Math.max(0,rms):0,c=this.context;
-    var threshold=this.node&&!this.fadeEnd ? .004 : .006;
+    var threshold=this.node&&!this.fadeEnd ? .006 : .008;
     if(strength<=threshold||c.state!=='running'||this.failed){
       this.stop(c.state!=='running');
       if(this.fadeEnd&&c.currentTime>=this.fadeEnd)this.stop(true);
       return;
     }
-    var level=Math.min(1,(strength-.004)/.056),previous=this.level;this.level=level;this.fadeEnd=0;
+    var level=Math.min(1,(strength-.006)/.054),previous=this.level;this.level=level;this.fadeEnd=0;
     if(!this.buffer)return;
     if(!this.node)startLoop(this);
-    this.node.gain.gain.setTargetAtTime(level*.85,c.currentTime,level>previous ? .18 : .24);
+    this.node.gain.gain.setTargetAtTime(level*.85,c.currentTime,level>previous ? .18 : .14);
   };
   RippleAudio.prototype.stop=function(immediate){
     this.level=0;
     if(!this.node){this.fadeEnd=0;return;}
     if(!immediate&&this.context.state==='running'){
-      if(!this.fadeEnd){this.node.gain.gain.setTargetAtTime(0,this.context.currentTime,.12);this.fadeEnd=this.context.currentTime+.65;}
+      if(!this.fadeEnd){this.node.gain.gain.setTargetAtTime(0,this.context.currentTime,.06);this.fadeEnd=this.context.currentTime+.35;}
       return;
     }
     var n=this.node;this.node=null;this.fadeEnd=0;
