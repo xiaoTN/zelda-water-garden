@@ -77,10 +77,12 @@ async function run() {
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.move(x+70,y,{steps:15}); await page.mouse.up();
       s = await state(); assert(s.cloud.opacity <= opacity);
       assert(s.cloudCarve>10,'parting must deform the actual cloud surface');
+      assert(await page.evaluate(()=>testSurface3D.clouds.field.depth.every(d=>d>=0)),'actual pointer swipes must not pile clouds around the finger');
       if (viewport.width === 390 || viewport.width === 1440) await page.screenshot({path:path.join(out,viewport.width===390?'cloud-mobile.png':'cloud-desktop.png')});
       const openDepth=(await state()).cloudCarve;
       await page.waitForTimeout(650);
       assert((await state()).cloudCarve<openDepth*.8,'released cloud gaps close quickly');
+      assert(await page.evaluate(()=>testSurface3D.clouds.field.renderDepth().every(d=>d>=0)),'cloud recovery stays below the original surface');
       if(viewport.width===390)await page.screenshot({path:path.join(out,'cloud-refilling.png')});
       const stationary=await page.evaluate(({x,y})=>{
         window.cloudGestureCalls=[];const touch=GardenNature.Clouds.prototype.touch;

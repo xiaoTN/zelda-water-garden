@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-04",
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "cloud toolbar removed; taps, stationary movement, holds and hidden controls do not interact; swipes alone part the cloud",
+      "stationary": {
+        "before": 60.133070225827396,
+        "after": 60.133070225827396,
+        "calls": 0,
+        "mode": "swipe"
+      },
+      "swipeCalls": 15,
+      "result": "passed"
+    },
+    {
+      "scenario": "closed 3D cloud volume, single sphere mesh, ray picking, depth and both GPU budgets",
+      "result": "passed",
+      "geometry": {
+        "closed": true,
+        "budgets": [
+          {
+            "low": false,
+            "snow": 87536,
+            "calls": 3,
+            "flakes": 720,
+            "picked": true,
+            "depth": true,
+            "pixels": 740610,
+            "reducedHidesFlakes": true,
+            "cloud": 98594
+          },
+          {
+            "low": true,
+            "snow": 32312,
+            "calls": 3,
+            "flakes": 300,
+            "picked": true,
+            "depth": true,
+            "pixels": 329160,
+            "reducedHidesFlakes": true,
+            "cloud": 49282
+          }
+        ]
+      }
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "offline WebGL, touch fallback, reduced motion",
+      "result": "passed",
+      "networkRequests": 0
+    },
+    {
+      "scenario": "unsupported hardware shows explicit 3D unavailable state",
+      "result": "passed"
+    }
+  ]
+}

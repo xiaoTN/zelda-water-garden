@@ -23,10 +23,26 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
           for(let i=0;i<field.depth.length;i++){const v=field.depth[i];total+=v;if(v>0)dug+=v;else piled-=v;if(v>field.depth[low])low=i;if(v<field.depth[high])high=i;}
           function delta(i){const x=(field.origin+(i%field.size+.5)/field.size*field.span-.5)*12*s.aspect,z=(field.origin+(Math.floor(i/field.size)+.5)/field.size*field.span-.5)*12;return s.height(x,z,kind,field,s.clouds)-s.height(x,z,kind,empty,s.clouds);}
           s.draw(kind,0,s.snow,s.clouds,0,false,true);
-          return {kind,sweep,total,dug,piled,lower:delta(low),raised:delta(high),triangles:s.count/3};
+          const tiers=[];
+          if(kind==='cloud'){
+            const width=s.canvas.width,height=s.canvas.height,quality=s.low;
+            for(const lowTier of [false,true]){
+              s.resize(width,height,lowTier);s.draw(kind,0,s.snow,s.clouds,0,false,true);
+              let raisedTexture=0;for(let i=1;i<s.pixels.length;i+=4)raisedTexture=Math.max(raisedTexture,s.pixels[i]);
+              tiers.push({low:lowTier,raisedTexture,triangles:s.count/3});
+            }
+            s.resize(width,height,quality);s.draw(kind,0,s.snow,s.clouds,0,false,true);
+          }
+          return {kind,sweep,total,dug,piled,lower:delta(low),raised:delta(high),triangles:s.count/3,tiers};
         },{kind,sweep});
-        assert(Math.abs(report.total)<.02);assert(report.dug>100&&report.piled>100);assert(report.lower<(kind==='cloud'?-.06:-.15)&&report.raised>(kind==='cloud'?.02:.08),'real world mesh is depressed AND raised');
-        await page.screenshot({path:path.join(out,kind+(sweep?'-fully-swept':'-raised-banks')+'.png')});reports.push(report);
+        assert(report.dug>100&&report.lower<(kind==='cloud'?-.06:-.15));
+        if(kind==='cloud'){
+          assert.equal(report.piled,0);assert(report.raised<=1e-8,'cloud world heights never rise above the undisturbed surface');
+          assert(report.tiers.every(t=>t.raisedTexture===0&&t.triangles<=(t.low?50000:100000)),'both GPU tiers upload no raised-cloud displacement');
+        }else{
+          assert(Math.abs(report.total)<.02&&report.piled>100&&report.raised>.08,'snow keeps its displaced banks');
+        }
+        await page.screenshot({path:path.join(out,kind+(sweep?'-fully-swept':kind==='cloud'?'-no-raised-banks':'-raised-banks')+'.png')});reports.push(report);
       }
     }
     for(const viewport of [{width:390,height:844},{width:844,height:390}]){
@@ -57,6 +73,6 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
       }
     }
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'displacement-report.json'),JSON.stringify({browser:await browser.version(),errors,reports},null,2)+'\n');
-    console.log('Displacement browser checks passed: both world-space height directions, conserved material, complete repeated sweeps for snow and clouds.');
+    console.log('Displacement browser checks passed: snow retains conserved banks; cloud strokes and repeated sweeps have no raised world heights or GPU displacement in either tier; camera picking and edge swipes pass.');
   }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

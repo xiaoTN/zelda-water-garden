@@ -9,17 +9,16 @@ test('fast cloud gestures open deeper gaps without widening the brush',()=>{
   assert(fast.field.depth[center]>slow.field.depth[center]*3);
   assert.equal(fast.field.depth.filter(v=>v!==0).length,slow.field.depth.filter(v=>v!==0).length);
 });
-test('cloud shoulders flow inward, with fast closure then a slower wispy tail',()=>{
+test('cloud openings recover quickly then leave a wispy tail without rising above the base surface',()=>{
   const cloud=new Clouds();cloud.touch(.5,.5,'part',.01,0,.06,.8);
-  const field=cloud.field,center=field.index(.5,.5),side=field.index(.5,.53),start=field.depth[center],edge=field.depth[side];
+  const field=cloud.field,center=field.index(.5,.5),start=field.depth[center];
   for(let i=0;i<30;i++)cloud.update(1/60,true,false);
   const half=field.depth[center];
   assert(half<start*.6,'fresh gaps close visibly within half a second');
-  assert(edge>0&&field.depth[side]<0,'raised shoulders advance into the former opening');
+  assert(field.depth.every(v=>v>=0)&&field.renderDepth().every(v=>v>=0),'recovery and render smoothing create no raised cloud');
   for(let i=0;i<30;i++)cloud.update(1/60,true,false);
   assert(field.depth[center]/half>half/start,'late recovery is slower');
-  assert(Math.abs(field.depth.reduce((sum,d)=>sum+d,0))<.001,'transport conserves signed displacement');
-  assert(field.depth.every(v=>Number.isFinite(v)&&v>=-1&&v<=1));
+  assert(field.depth.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
 });
 
 test('parting clouds builds a soft depression over time instead of cutting to full depth on contact', () => {
@@ -28,7 +27,7 @@ test('parting clouds builds a soft depression over time instead of cutting to fu
   const first=field.depth[field.index(.5,.5)];assert(first>0&&first<.15);
   for(let i=0;i<30;i++)cloud.touch(.5,.5,'part',0,0,.016);
   assert(field.depth[field.index(.5,.5)]>first*3);
-  assert(Math.abs(field.depth.reduce((sum,d)=>sum+d,0))<.001);
+  assert(field.depth.every(v=>v>=0),'a soft opening has no surrounding snow-like banks');
 });
 
 test('snowfall fills depressions and smooths banks at twice the previous rate, without overshooting', () => {
@@ -94,23 +93,20 @@ test('parting clouds opens a local gap which recovers over time', () => {
   for (let i = 0; i < 300; i++) clouds.update(1 / 30, false, false);
   assert(clouds.inspect().opacity > gap); assert.equal(clouds.items.length, 72);
 });
-test('gather pulls nearby clouds inward', () => {
+test('cloud gathering is unsupported and cannot create raised material', () => {
   const clouds = new Clouds(); clouds.items = [{ u: .53, v: .5, homeV: .5, vx: 0, vy: 0, opacity: .2 }];
-  clouds.touch(.5, .5, 'gather', 0, 0, .2); clouds.update(.08, false, true);
-  assert(clouds.items[0].u < .53); assert(clouds.items[0].opacity > .2);
+  const before=clouds.inspect();clouds.touch(.5,.5,'gather',0,0,.2);
+  assert.deepEqual(clouds.inspect(),before);assert(clouds.field.depth.every(v=>v===0));
 });
 
-test('cloud brush reaches one third as far and gathering moves twice the material per second', () => {
+test('cloud thinning stays inside the narrow brush and leaves its surroundings unchanged', () => {
   const cloud=new Clouds();cloud.touch(.5,.5,'part',0,0,.01);
-  const field=cloud.field,reach=.32/3*.27*1.8;
+  const field=cloud.field,reach=.32/3*.27;
   for(let y=0;y<field.size;y++)for(let x=0;x<field.size;x++){
     if(field.depth[y*field.size+x]!==0)assert(Math.hypot(field.origin+x/field.size*field.span-.5,field.origin+y/field.size*field.span-.5)<=reach+1e-6);
   }
-  cloud.clear();const previousRate=new Snow();
-  previousRate.soft=true;previousRate.stamp(.5,.5,.32/3*.36,.65,0,1,true,.01*3);
-  cloud.touch(.5,.5,'gather',0,0,.01);
-  const raised=s=>s.depth.reduce((sum,d)=>sum+Math.max(0,-d),0);
-  assert(Math.abs(raised(cloud.field)/raised(previousRate)-2)<.001);
+  assert(field.depth[field.index(.5,.5)]>0);assert.equal(field.depth[field.index(.5,.54)],0);
+  assert(field.depth.every(v=>v>=0));
 });
 test('reduced motion suppresses ambient drift while direct cloud interaction still works', () => {
   const clouds = new Clouds(), first = clouds.items[0].u;
@@ -119,14 +115,14 @@ test('reduced motion suppresses ambient drift while direct cloud interaction sti
   clouds.update(.05, false, true); assert(clouds.items[0].u > first);
   clouds.clear(); assert.equal(clouds.inspect().motion, 0); assert.equal(clouds.inspect().opacity, 72);
 });
-test('cloud sea channels retain displaced rims and refill while snow channels persist', () => {
+test('cloud channels have no displaced rims and refill while snow channels retain their banks', () => {
   const cloud=new Clouds(),snow=new Snow();cloud.aspect=.46;snow.aspect=.46;
   cloud.touch(.5,.5,'part',0,0,.2);snow.stamp(.5,.5,.03,.8);
-  assert(cloud.field.depth.some(d=>d<0),'a cloud channel has displaced material at its edge');
+  assert(cloud.field.depth.every(d=>d>=0));assert(snow.depth.some(d=>d<0),'snow still builds banks');
   const before=cloud.field.inspect().depth, snowBefore=snow.inspect().depth;
   cloud.update(2,false,true);snow.update(2,false);
   assert(cloud.field.inspect().depth<before);assert.equal(snow.inspect().depth,snowBefore);
-  cloud.touch(.5,.5,'gather',0,0,.6);assert(cloud.field.depth[cloud.field.index(.5,.5)]<0,'gather raises the center using surrounding material');
+  assert(cloud.field.depth.every(d=>d>=0));
   cloud.clear();assert.equal(cloud.field.inspect().depth,0);assert.equal(cloud.flowX,0);
 });
 test('ambient breeze moves the continuous cloud material',()=>{
@@ -158,20 +154,23 @@ test('crossing an old trench refills it locally and moves its old banks without 
   assert(snow.depth[snow.index(.5625,.5)]<old,'a new shoulder can refill a previously carved cell');
   assert(Math.abs(volume(snow).balance)<.003);
 });
-test('cloud part, gather and relaxation preserve displaced volume across a full-field sweep',()=>{
+test('repeated full-field cloud sweeps and relaxation never build raised banks',()=>{
   const clouds=new Clouds();clouds.aspect=.46;
-  for(let y=.3;y<.86;y+=.045)for(let x=0;x<=1;x+=.035)clouds.touch(x,y,'part',0,0,.1);
-  let v=volume(clouds.field);assert(v.dug>500&&v.piled>500);assert(Math.abs(v.balance)<.01);
-  const center=clouds.field.index(.5,.5);for(let i=0;i<60;i++)clouds.touch(.5,.5,'gather',0,0,1/30);
-  assert(clouds.field.depth[center]<-.5);v=volume(clouds.field);assert(Math.abs(v.balance)<.01);
-  clouds.update(4,false,true);const relaxed=volume(clouds.field);assert(relaxed.dug<v.dug&&relaxed.piled<v.piled);assert(Math.abs(relaxed.balance)<.01);
+  for(let pass=0;pass<3;pass++)for(let y=.3;y<.86;y+=.045)for(let x=0;x<=1;x+=.035)clouds.touch(x,y,'part',0,0,.1);
+  const v=volume(clouds.field);assert(v.dug>500);assert.equal(v.piled,0);
+  assert(clouds.field.renderDepth().every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+  for(const reduced of [false,true])for(const dt of [1/60,.2,4]){
+    clouds.update(dt,true,reduced);assert(clouds.field.depth.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+    assert(clouds.field.renderDepth().every(v=>v>=0));
+  }
+  assert(volume(clouds.field).dug<v.dug);
 });
 test('snow and cloud carving crosses all old rectangle limits and extends beyond the viewport coordinates',()=>{
   for(const field of [new Snow(),new Clouds().field]){
     for(const [u,v] of [[-.15,.5],[1.15,.5],[.5,-.35],[.5,1.1],[.5,.28],[.5,.87]]){
       field.stamp(u,v,.035,.8);assert(field.depth[field.index(u,v)]>.7);
     }
-    assert(Math.abs(volume(field).balance)<.003);
+    if(field.soft)assert.equal(volume(field).piled,0);else assert(Math.abs(volume(field).balance)<.003);
   }
 });
 test('render smoothing removes one-cell teeth while preserving volume and untouched terrain',()=>{

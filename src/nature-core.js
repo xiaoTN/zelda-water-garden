@@ -30,6 +30,7 @@
   var bankIndices=new Int32Array(640*640),bankWeights=new Float32Array(640*640);
   Snow.prototype.stamp = function (u, v, radius, strength, angle, narrow, gather, rate, flowAngle, footSide) {
     if (!(radius > 0) || !isFinite(u+v+radius+strength)) return;
+    if(this.soft&&gather)return;
     var n=this.size,origin=this.origin,scale=n/this.span,aspect=this.aspect,reach=radius*1.8,direction=gather?-1:1;
     var x0=Math.max(0,Math.floor((u-reach/aspect-origin)*scale)),x1=Math.min(n-1,Math.ceil((u+reach/aspect-origin)*scale));
     var y0=Math.max(0,Math.floor((v-reach-origin)*scale)),y1=Math.min(n-1,Math.ceil((v+reach-origin)*scale));
@@ -52,13 +53,18 @@
         if(footSide)target=strength*(1-Math.pow(clamp((d-.55)/.45,0,1),2));
         if(this.soft)target=strength*Math.pow(1-d*d,2);
         var amount=Math.max(0,target-direction*this.depth[at])*clamp(rate===undefined?1:rate,0,1);
-        if(amount>0){cutIndices[cuts]=at;cutAmounts[cuts++]=amount;removed+=amount;}
-      }else if(d<1.8){
+        if(amount>0){
+          if(this.soft){this.depth[at]=clamp(this.depth[at]+amount,0,1);cuts++;}
+          else {cutIndices[cuts]=at;cutAmounts[cuts++]=amount;removed+=amount;}
+        }
+      }else if(d<1.8&&!this.soft){
         var weight=Math.pow(Math.sin((d-1)/.8*Math.PI),2),room=1+direction*this.depth[at];
         if(flowAngle!==undefined){var side=(dx*Math.sin(flowAngle)-dy*Math.cos(flowAngle))/Math.max(1e-8,Math.hypot(dx,dy));weight*=.02+.98*side*side;}
         if(weight>1e-5&&room>0){bankIndices[banks]=at;bankWeights[banks++]=weight;capacity+=room;}
       }
     }
+    // Clouds thin locally and recover; only solid snow is displaced into raised banks.
+    if(this.soft){if(cuts){this.active=true;this.revision++;}return;}
     if(!cuts||!banks||capacity<1e-7)return;
     // A full berm limits further excavation instead of deleting excess material.
     var fraction=Math.min(1,capacity/removed),volume=0,i;
@@ -137,23 +143,17 @@
     }
   };
   Clouds.prototype.touch = function (u, v, mode, dx, dy, dt, speed) {
-    if(mode!=='part'&&mode!=='gather')return;
+    if(mode!=='part')return;
     var radius = Math.min(this.aspect, 1) * .32 / 3;
     this.field.aspect = this.aspect;
     var rush=clamp((speed===undefined?Math.hypot(dx*this.aspect,dy)/Math.max(.008,dt):speed)/.65,0,1);
-    if (mode === 'part') this.field.stamp(u, v, radius * .27, .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)),Math.hypot(dx,dy)>1e-5?Math.atan2(dy,dx*this.aspect):undefined);
-    else this.field.stamp(u,v,radius*.36,.65,0,1,true,dt*6);
+    this.field.stamp(u, v, radius * .27, .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)));
     for (var i = 0; i < this.items.length; i++) {
       var p = this.items[i], x = (p.u - u) * this.aspect, y = p.v - v, d = Math.hypot(x, y);
       if (d > radius) continue;
       var force = Math.pow(1 - d / radius, 2), safe = Math.max(.008, d);
-      if (mode === 'part') {
-        p.vx += x / safe * force * dt * .6; p.vy += y / safe * force * dt * .6;
-        p.opacity = Math.max(.08, p.opacity - force * dt * 3.5);
-      } else if (mode === 'gather') {
-        p.vx -= x * force * dt * 12; p.vy -= y * force * dt * 12;
-        p.opacity = Math.min(1, p.opacity + dt * force * 6);
-      }
+      p.vx += x / safe * force * dt * .6; p.vy += y / safe * force * dt * .6;
+      p.opacity = Math.max(.08, p.opacity - force * dt * 3.5);
       p.vx = clamp(p.vx, -.32, .32); p.vy = clamp(p.vy, -.32, .32);
     }
   };
@@ -177,7 +177,7 @@
   };
   Clouds.prototype.refill=function(dt,reduced){
     var field=this.field,d=field.depth,out=this.transport,n=field.size,peak=0,k,x,y;
-    // Conservative neighbour flux lets the raised shoulders flow into the opening.
+    // Thin openings diffuse and fade back to the undisturbed cloud surface.
     // The bounded coefficients keep this explicit transport stable even after a long pause.
     var step=Math.min(Math.max(dt,0),.04),diffusion=Math.min(.20,step*9),turn=reduced?0:step*.65;
     for(k=0;k<d.length;k++)peak=Math.max(peak,Math.abs(d[k]));
@@ -190,7 +190,7 @@
     }
     // Deep fresh gaps close quickly; the remaining wisps settle more slowly.
     var decay=Math.exp(-dt*(.30+1.7*peak));
-    for(k=0;k<d.length;k++)d[k]=out[k]*decay;
+    for(k=0;k<d.length;k++)d[k]=clamp(out[k],0,1)*decay;
     if(peak*decay<1e-5){d.fill(0);field.active=false;}
     field.revision++;
   };
