@@ -17,4 +17,4 @@ Output #0, mp3, to 'D:\Projects\guardian-parry\tools\zelda-water-garden\assets-s
     Metadata:
       encoder         : Lavc63.1.101 libmp3lame
 [out#0/mp3 @ 000001667d332240] video:0KiB audio:59KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.374526%
-size=      59KiB time=00:00:10.00 bitrate=  48.5kbits/s speed= 339x elapsed=0:00:00.02    
+size=      59KiB time=00:00:10.00 bitrate=  48.5kbits/s speed= 339x elapsed=0:00:00.02
