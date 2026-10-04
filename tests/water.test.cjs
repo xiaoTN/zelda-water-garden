@@ -3,7 +3,30 @@ const assert = require('node:assert/strict');
 const { WaveField, IceField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = require('../src/water-core.js');
 const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
-const {System: Weather}=require('../src/weather.js');
+const {System: Weather,project:projectRain}=require('../src/weather.js');
+
+test('overhead rain converges to its own ground point from every side of the optical center',()=>{
+  for(const [u,v] of [[.15,.2],[.85,.2],[.15,.8],[.85,.8],[.5,.49]]){
+    const near=projectRain(u,v,.7,0,{}),far=projectRain(u,v,.1,0,{}),landed=projectRain(u,v,0,.07,{});
+    assert(Math.hypot(landed.u-u,landed.v-v)<1e-12,'the rain ray must meet the ripple origin within floating-point precision');
+    if(u===.5){assert.deepEqual(near,landed);continue;}
+    assert(Math.hypot(near.u-u,near.v-v)>Math.hypot(far.u-u,far.v-v));
+    assert.equal(Math.sign(near.u-far.u),Math.sign(u-.5));
+    assert.equal(Math.sign(near.v-far.v),Math.sign(v-.49));
+  }
+});
+
+test('storm surface impacts stay dense at 60, 30 and 12.5 updates per second',()=>{
+  for(const dt of [1/60,1/30,.08]){
+    const w=new Weather(seededRandom(87));w.setLevel(4);
+    for(let elapsed=0;elapsed<8;elapsed+=dt)w.update(dt,false,false,(u,v)=>shore(u,v)<-.015);
+    assert(w.hits>2000,'storm must land hundreds of water drops per second, not two per frame');
+    assert(w.rippleCount>250&&w.rippleCount<=384,'dense surface rings have their own bounded pool');
+    const count=w.rippleCount;w.setLevel(0);assert.equal(w.rippleCount,count,'stopping rain lets existing rings fade');
+    for(let i=0;i<90;i++)w.update(1/60,false,false);
+    assert.equal(w.rippleCount,0);w.clear();assert(w.ripples.every(r=>r.life===0));
+  }
+});
 
 test('larger rain presets visibly populate more streaks, land more drops and strike more often',()=>{
   const results=[];
@@ -31,8 +54,8 @@ test('rain impacts occur at streak landing, never during initial population',()=
   const w=new Weather(seededRandom(41));let hits=0;
   w.setLevel(4);w.update(0,false,false,()=>{hits++;return true;});assert.equal(hits,0);
   for(let i=0;i<120;i++)w.update(1/60,false,false,()=>{hits++;return true;});
-  assert(hits>40);assert(hits<=138,'wave disturbances have a fixed budget');
-  assert(w.particles.slice(0,w.count).every(p=>p.y<p.v),'landed particles recycle above their next target');
+  assert(hits>500);assert(hits<=642,'surface impacts have a fixed per-second budget');
+  assert(w.particles.slice(0,w.count).every(p=>p.altitude>0),'landed particles recycle above their next target');
 });
 
 test('stopping or clearing rain cancels queued thunder, flashes and falling streaks',()=>{
@@ -49,7 +72,7 @@ test('stopping or clearing rain cancels queued thunder, flashes and falling stre
 test('low quality reduces rain work while keeping storms and rain visible',()=>{
   const w=new Weather(seededRandom(4));w.setLevel(4);let hits=0;
   for(let i=0;i<1800;i++)w.update(1/60,true,false,()=>{hits++;return true;});
-  assert(w.count>50&&w.count<130);assert(hits<=1022);assert(w.strikes>=5);
+  assert(w.count>100&&w.count<180);assert(hits<=3842);assert(w.rippleCount<=144);assert(w.strikes>=5);
   w.update(1/60,true,true);assert(w.count<100);
 });
 

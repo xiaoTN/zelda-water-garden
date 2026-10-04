@@ -3,23 +3,35 @@
   // Visual presets, not meteorological rainfall measurements. Timing uses simulation time.
   var profiles = [
     { name: '停雨', count: 0, speed: 0, length: 0, wind: 0, cloud: 0, impacts: 0, thunder: 0 },
-    { name: '小雨', count: 48, speed: .85, length: .8, wind: .06, cloud: .035, impacts: 14, thunder: 0 },
-    { name: '中雨', count: 95, speed: 1.1, length: 1, wind: .10, cloud: .075, impacts: 28, thunder: .38, interval: [18, 30] },
-    { name: '大雨', count: 165, speed: 1.45, length: 1.35, wind: .16, cloud: .14, impacts: 46, thunder: .68, interval: [8, 14] },
-    { name: '暴雨', count: 260, speed: 1.85, length: 1.7, wind: .24, cloud: .23, impacts: 68, thunder: 1, interval: [2.8, 5.6] }
+    { name: '小雨', count: 48, speed: .85, length: .8, wind: .02, cloud: .035, impacts: 20, thunder: 0 },
+    { name: '中雨', count: 112, speed: 1.1, length: 1, wind: .035, cloud: .075, impacts: 65, thunder: .38, interval: [18, 30] },
+    { name: '大雨', count: 240, speed: 1.45, length: 1.2, wind: .05, cloud: .14, impacts: 160, thunder: .68, interval: [8, 14] },
+    { name: '暴雨', count: 420, speed: 1.85, length: 1.4, wind: .07, cloud: .23, impacts: 320, thunder: 1, interval: [2.8, 5.6] }
   ];
   function Weather(random) {
     this.random = random || Math.random; this.level = 0; this.count = 0; this.cloud = 0; this.credit = 0;
     this.flashAge = 10; this.flash = 0; this.nextStrike = Infinity; this.pendingThunder = -1;
-    this.hits = 0; this.strikes = 0; this.thunders = 0; this.particles = []; this.bolt = []; this.branch = [];
-    for (var i = 0; i < 260; i++) this.particles.push({ u: 0, v: 0, y: 0, span: 0, speed: 0, depth: 0 });
-    for (i = 0; i < 11; i++) this.bolt.push({ u: 0, v: 0 });
-    for (i = 0; i < 5; i++) this.branch.push({ u: 0, v: 0 });
+    this.hits = 0; this.strikes = 0; this.thunders = 0; this.particles = []; this.ripples = [];
+    this.rippleCursor = 0; this.rippleCount = 0; this.rippleLimit = 384;
+    for (var i = 0; i < 420; i++) this.particles.push({ u: 0, v: 0, altitude: 0, span: 0, speed: 0, depth: 0 });
+    for (i = 0; i < 384; i++) this.ripples.push({ u: 0, v: 0, age: 0, life: 0, size: 0, phase: 0 });
   }
   Weather.prototype.seed = function (p, warm) {
     var r = this.random, profile = profiles[this.level];
-    p.u = r() * 1.2 - .1; p.v = r() * 1.12 - .06; p.depth = r(); p.span = .22 + r() * .5;
-    p.y = p.v - p.span + (warm ? r() * p.span : 0); p.speed = profile.speed * (.6 + p.depth * .85);
+    p.u = r() * 1.08 - .04; p.v = r() * 1.08 - .04; p.depth = r(); p.span = .3 + r() * .4;
+    p.altitude = p.span * (warm ? r() : 1); p.speed = profile.speed * (.8 + p.depth * .6);
+  };
+  // Looking down: height magnifies distance from the optical center. At height zero,
+  // every ray meets its exact water-space landing coordinate, in any viewport aspect.
+  function project(u, v, altitude, wind, out) {
+    var perspective = 1 / (1 - Math.min(.88, Math.max(0, altitude)) * .58);
+    out.u = .5 + (u - .5) * perspective + wind * altitude;
+    out.v = .49 + (v - .49) * perspective;
+    return out;
+  }
+  Weather.prototype.clearRipples = function () {
+    for (var i = 0; i < this.ripples.length; i++) this.ripples[i].life = 0;
+    this.rippleCount = 0; this.rippleCursor = 0;
   };
   Weather.prototype.setLevel = function (level) {
     if (level !== Math.floor(level) || level < 0 || level > 4) return;
@@ -28,34 +40,39 @@
     this.nextStrike = profile.thunder ? (profile.interval[0] + (profile.interval[1] - profile.interval[0]) * this.random()) * .45 : Infinity;
   };
   Weather.prototype.clear = function () {
-    this.setLevel(0); this.cloud = 0; this.hits = 0; this.strikes = 0; this.thunders = 0;
+    this.setLevel(0); this.clearRipples(); this.cloud = 0; this.hits = 0; this.strikes = 0; this.thunders = 0;
   };
   Weather.prototype.cancelThunder = function () { this.pendingThunder = -1; };
   Weather.prototype.strike = function () {
-    var r = this.random, profile = profiles[this.level], u = .2 + r() * .6;
+    var r = this.random, profile = profiles[this.level];
     this.strikes++; this.flashAge = 0;
     this.pendingThunder = .3 + r() * (this.level === 4 ? .45 : 1.3);
     this.nextStrike = profile.interval[0] + (profile.interval[1] - profile.interval[0]) * r();
-    for (var i = 0; i < this.bolt.length; i++) {
-      u += (r() - .5) * .085; this.bolt[i].u = u; this.bolt[i].v = -.02 + i * .028;
-    }
-    for (i = 0; i < this.branch.length; i++) {
-      this.branch[i].u = this.bolt[4].u + i * .03 + (r() - .5) * .025;
-      this.branch[i].v = this.bolt[4].v + i * .018;
-    }
   };
   Weather.prototype.update = function (dt, low, reduced, impact, thunder) {
     dt = Math.max(0, Math.min(.08, dt));
-    var profile = profiles[this.level], count = Math.round(profile.count * (low ? .45 : 1) * (reduced ? .65 : 1));
+    var profile = profiles[this.level], count = Math.round(profile.count * (low ? .4 : 1) * (reduced ? .45 : 1));
+    this.rippleLimit = low ? 144 : 384; this.rippleCount = 0;
+    for (var ri = 0; ri < this.ripples.length; ri++) {
+      var ripple = this.ripples[ri]; ripple.age += dt;
+      if (ri >= this.rippleLimit || ripple.age >= ripple.life) ripple.life = 0;
+      if (ripple.life > 0) this.rippleCount++;
+    }
     this.cloud += (profile.cloud - this.cloud) * Math.min(1, dt * 3);
     for (var i = this.count; i < count; i++) this.seed(this.particles[i], true);
-    this.count = count; this.credit = Math.min(2, this.credit + profile.impacts * (low ? .5 : 1) * dt);
+    this.count = count; this.credit = Math.min(low ? 12 : 28, this.credit + profile.impacts * (low ? .4 : 1) * dt);
     for (i = 0; i < count; i++) {
-      var p = this.particles[i]; p.y += p.speed * dt;
-      if (p.y >= p.v) {
-        // Disturb the wave grid only when a visible streak lands, within a fixed CPU budget.
+      var p = this.particles[i]; p.altitude -= p.speed * dt;
+      if (p.altitude <= 0) {
+        // Spend the surface-detail budget on actual water, not rain landing on the banks.
         if (this.credit >= 1 && impact) {
-          this.credit--; if (impact(p.u, p.v, .065 + this.level * .018)) this.hits++;
+          if (impact(p.u, p.v, .035 + this.level * .009)) {
+            this.credit--; this.hits++;
+            var index = this.rippleCursor++ % this.rippleLimit, ring = this.ripples[index];
+            if (!ring.life) this.rippleCount++;
+            ring.u = p.u; ring.v = p.v; ring.age = 0; ring.life = .9 + p.depth * .3;
+            ring.size = 5 + p.depth * 5; ring.phase = p.depth * Math.PI * 2;
+          }
         }
         this.seed(p, false);
       }
@@ -70,6 +87,30 @@
     if (profile.thunder) { this.nextStrike -= dt; if (this.nextStrike <= 0) this.strike(); }
     else this.flash = 0;
   };
+  Weather.prototype.drawRipples = function (ctx, width, height, ice) {
+    var scale = Math.min(1.5, Math.max(.7, Math.min(width, height) / 390));
+    ctx.save(); ctx.lineWidth = .7 * scale;
+    // Batch hundreds of small overlapping impact rings by age; no large finger-ring limit.
+    for (var band = 0; band < 4; band++) {
+      ctx.beginPath();
+      for (var i = 0; i < this.rippleLimit; i++) {
+        var ring = this.ripples[i]; if (!ring.life) continue;
+        var t = ring.age / ring.life;
+        if (Math.min(3, Math.floor(t * 4)) !== band || (ice && ice.sample(ring.u, ring.v) > .35)) continue;
+        var radius = (.8 + Math.sqrt(t) * ring.size) * scale, x = ring.u * width, y = ring.v * height;
+        ctx.moveTo(x + Math.cos(ring.phase) * radius, y + Math.sin(ring.phase) * radius * .9);
+        ctx.ellipse(x, y, radius, radius * .9, 0, ring.phase, ring.phase + 6.1);
+        if (t < .16) {
+          radius *= .38;
+          ctx.moveTo(x + Math.cos(ring.phase + 2) * radius, y + Math.sin(ring.phase + 2) * radius * .9);
+          ctx.ellipse(x, y, radius, radius * .9, 0, ring.phase + 2, ring.phase + 6.6);
+        }
+      }
+      ctx.strokeStyle = 'rgba(221,247,248,' + (.44 * Math.pow(1 - band / 4, 1.4)) + ')'; ctx.stroke();
+    }
+    ctx.restore();
+  };
+  var head = { u: 0, v: 0 }, tail = { u: 0, v: 0 };
   Weather.prototype.draw = function (ctx, width, height, reduced) {
     var profile = profiles[this.level];
     ctx.save(); ctx.shadowBlur = 0;
@@ -80,24 +121,18 @@
       ctx.beginPath();
       for (var i = 0; i < this.count; i++) {
         var p = this.particles[i]; if (Math.min(2, Math.floor(p.depth * 3)) !== layer) continue;
-        var x = p.u * width + (p.y - p.v) * height * profile.wind, y = p.y * height;
-        var length = Math.min((12 + p.depth * 17) * profile.length * scale, (p.v - p.y) * height);
-        ctx.moveTo(x, y); ctx.lineTo(x - length * profile.wind, y - length);
+        project(p.u, p.v, p.altitude, profile.wind, head);
+        project(p.u, p.v, p.altitude + p.speed * .022 * profile.length, profile.wind, tail);
+        var x = head.u * width, y = head.v * height, tx = tail.u * width, ty = tail.v * height;
+        // Near the optical center, a vertically falling drop is a bead rather than a side-view line.
+        if (Math.abs(tx - x) + Math.abs(ty - y) < 1.4) { ctx.moveTo(x + .55 * scale, y); ctx.arc(x, y, .55 * scale, 0, Math.PI * 2); }
+        else { ctx.moveTo(x, y); ctx.lineTo(tx, ty); }
       }
       ctx.lineWidth = (.65 + layer * .35) * scale; ctx.strokeStyle = 'rgba(13,46,61,.24)'; ctx.stroke();
       ctx.lineWidth *= .68; ctx.strokeStyle = 'rgba(220,242,255,' + (.34 + layer * .16) + ')'; ctx.stroke();
     }
     if (this.flash > 0) {
       ctx.fillStyle = 'rgba(222,237,255,' + this.flash * (reduced ? .035 : .12 + profile.thunder * .2) + ')'; ctx.fillRect(0, 0, width, height);
-      if (!reduced) {
-        ctx.beginPath();
-        for (var part = 0; part < 2; part++) {
-          var points = part ? this.branch : this.bolt;
-          for (i = 0; i < points.length; i++) { x = points[i].u * width; y = points[i].v * height; if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
-        }
-        ctx.strokeStyle = 'rgba(231,244,255,' + this.flash * .85 + ')'; ctx.lineWidth = 1.3 * scale;
-        ctx.shadowColor = '#bfdfff'; ctx.shadowBlur = 10; ctx.stroke();
-      }
     }
     ctx.restore();
   };
@@ -148,6 +183,6 @@
     }
     this.nodes.length = 0;
   };
-  root.WaterWeather = { System: Weather, Audio: WeatherAudio, profiles: profiles };
+  root.WaterWeather = { System: Weather, Audio: WeatherAudio, profiles: profiles, project: project };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterWeather;
 }(typeof window !== 'undefined' ? window : globalThis));

@@ -6,7 +6,7 @@
   var renderer = null, scene, field, width = 1, height = 1, mode = 'touch', light = 0, rain = false, muted = true;
   var leaves = [], drops = [], rings = [], dust = [], fingers = {}, reduced = false;
   var iceEffects = new window.WaterIce.Effects();
-  var weather = new window.WaterWeather.System(), weatherAudio = null;
+  var weather = new window.WaterWeather.System(), weatherAudio = null, rainWaveCredit = 0;
   var rainOptions = document.getElementById('rain-options'), rainButtons = document.querySelectorAll('[data-rain]');
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
@@ -76,7 +76,7 @@
       catch (error) { fallbackOn('已为你换成轻量水面'); }
     }
     if(!field.bathymetry)prepareFallbackStones();
-    fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0;
+    fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0; weather.clearRipples();
     // Three small existing leaves make the pool feel alive before the first touch.
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29);
     dust.length = 0;
@@ -107,14 +107,14 @@
     if (leaves.length >= 18) leaves.shift();
     leaves.push({ u: u, v: v, vx: 0, vy: 0, angle: Math.random() * 6.28, turn: (Math.random() - .5) * .6, size: 10 + Math.random() * 5, hue: Math.random() });
   }
-  function addRing(u, v, strength, rainDrop) {
+  function addRing(u, v, strength) {
     if (rings.length >= 48) rings.shift();
-    rings.push({ u: u, v: v, born: now, strength: strength, rainDrop: !!rainDrop });
+    rings.push({ u: u, v: v, born: now, strength: strength });
   }
-  function splash(u, v, strength, noSpray, noRing, rainDrop) {
+  function splash(u, v, strength, noSpray, noRing) {
     if (core.shore(u, v) >= -.015 || field.ice.sample(u, v) > .45) return false;
     field.disturb(u, v, strength, .015 + strength * .013);
-    if (!noRing) addRing(u, v, strength, rainDrop);
+    if (!noRing) addRing(u, v, strength);
     var count = reduced || noSpray ? 0 : Math.floor((quality === 'normal' ? 20 : 9) * strength), limit = quality === 'normal' ? 150 : 60;
     for (var i = 0; i < count && drops.length < limit; i++) {
       var a = Math.random() * Math.PI * 2, speed = 15 + Math.random() * strength * 90;
@@ -228,7 +228,7 @@
     for (var i = 0; i < buttons.length; i++) { var selected = buttons[i] === this; buttons[i].classList.toggle('selected', selected); buttons[i].setAttribute('aria-pressed', String(selected)); }
   });
   document.getElementById('freeze-all').addEventListener('click', function () {
-    fingers = {}; iceEffects.clear(); rings.length = 0; drops.length = 0;
+    fingers = {}; iceEffects.clear(); rings.length = 0; drops.length = 0; weather.clearRipples();
     field.ice.paint(.5, .49, 1, true, true); garden.classList.add('touched');
     iceEffects.freeze(.5, .49, Math.min(width, height) / height * .42, now);
     if (!muted) initAudio(); sound(.4, false, true); notice('一池薄冰，试着轻点踩碎');
@@ -271,7 +271,7 @@
   });
   document.getElementById('reset').addEventListener('click', function () {
     field.clear(); field.ice.clear(); iceEffects.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
-    setRainLevel(0); weather.clear();
+    setRainLevel(0); weather.clear(); rainWaveCredit = 0;
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29); notice('一切，归于平静');
   });
@@ -319,15 +319,14 @@
     ctx.save(); waterPath(ctx); ctx.clip();
     for (var i = rings.length - 1; i >= 0; i--) {
       var ring = rings[i], age = now - ring.born;
-      var lifetime = ring.rainDrop ? .65 : 2.5;
-      if (age > lifetime) { rings.splice(i, 1); continue; }
-      var radius = age * Math.min(width, height) * (ring.rainDrop ? .085 : .19);
+      if (age > 2.5) { rings.splice(i, 1); continue; }
+      var radius = age * Math.min(width, height) * .19;
       // Broken, irregular crests catch the light above the refracting wave field.
-      ctx.strokeStyle = 'rgba(239,247,218,' + Math.max(0, (1 - age / lifetime) * Math.sqrt(ring.strength) * (ring.rainDrop || fallbackMode ? .7 : .48)) + ')';
+      ctx.strokeStyle = 'rgba(239,247,218,' + Math.max(0, (1 - age / 2.5) * Math.sqrt(ring.strength) * (fallbackMode ? .7 : .48)) + ')';
       ctx.lineWidth = Math.max(.65, 1.4 - age * .25);
-      var segments = ring.rainDrop ? 24 : quality === 'normal' ? 72 : 36;
+      var segments = quality === 'normal' ? 72 : 36;
       for (var k = 0; k < 2; k++) {
-        var rr = radius - k * (ring.rainDrop ? 3 : 7); if (rr < 1) continue;
+        var rr = radius - k * 7; if (rr < 1) continue;
         var pen = false; ctx.beginPath();
         for (var segment = 0; segment <= segments; segment++) {
           var angle = segment / segments * Math.PI * 2;
@@ -340,6 +339,7 @@
         ctx.stroke();
       }
     }
+    weather.drawRipples(ctx, width, height, field.ice);
     if (fallbackMode) iceEffects.drawFallback(ctx, field.ice, width, height, light);
     for (i = 0; i < leaves.length; i++) {
       var leaf = leaves[i], gx = field.sample(leaf.u + .005, leaf.v) - field.sample(leaf.u - .005, leaf.v), gy = field.sample(leaf.u, leaf.v + .005) - field.sample(leaf.u, leaf.v - .005);
@@ -375,9 +375,14 @@
     weather.draw(ctx, width, height, reduced);
   }
   function rainImpact(u, v, strength) {
+    if (u < 0 || u > 1 || v < 0 || v > 1 || core.shore(u, v) >= -.015 || field.ice.sample(u, v) > .45) return false;
+    var cell = Math.round(v * (field.height - 1)) * field.width + Math.round(u * (field.width - 1));
+    if (!field.mask[cell]) return false;
     var terrain = renderer ? renderer.terrain : fallbackTerrain;
-    if (stoneDrops.blocks(u, v) || (terrain && terrain.blocks(u, v))) return false;
-    return splash(u, v, strength, true, false, true);
+    if (terrain && terrain.blocks(u, v)) return false;
+    // Dense visible impacts have their own pool; cap expensive wave-grid impulses separately.
+    if (rainWaveCredit >= 1) { rainWaveCredit--; field.disturb(u, v, strength, .01); }
+    return true;
   }
   function thunder(strength) { if (!muted && weatherAudio) weatherAudio.thunder(strength); }
   function tick(time) {
@@ -399,6 +404,7 @@
           if (now - finger.last > .28) { rings.push({u: finger.u, v: finger.v, born: now, strength: .16}); if (rings.length > 48) rings.shift(); finger.last = now; }
         }
       }
+      rainWaveCredit = Math.min(12, rainWaveCredit + dt * (quality === 'normal' ? 110 : 44));
       weather.update(dt, quality !== 'normal', reduced, rainImpact, thunder);
       var steps = 0;
       field.ice.update(dt);
@@ -437,7 +443,7 @@
     iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length,
     stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}),
     stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null,
-    mode: mode, light: light, rain: rain, rainLevel: weather.level, rainStreaks: weather.count, rainImpacts: weather.hits,
+    mode: mode, light: light, rain: rain, rainLevel: weather.level, rainStreaks: weather.count, rainImpacts: weather.hits, rainRipples: weather.rippleCount,
     lightningCount: weather.strikes, lightningFlash: weather.flash, lightningNext: isFinite(weather.nextStrike) ? weather.nextStrike : null,
     thunderPending: weather.pendingThunder >= 0, thunderPlayed: weatherAudio ? weatherAudio.played : 0,
     rainAudio: !!(weatherAudio && weatherAudio.rain), weatherAudioNodes: weatherAudio ? weatherAudio.nodes.length : 0,
