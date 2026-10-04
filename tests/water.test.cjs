@@ -6,6 +6,22 @@ const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js
 const fishAsset=require('../src/fish-asset.js');
 const {System: FishSchool}=require('../src/fish.js');
 
+test('animated fish geometry raises displayed water depth and clears old footprints without altering the solid bed',()=>{
+  for(const low of [false,true]){
+    const aspect=.6,bed=terrain.bathymetry(terrain.create(aspect,low),aspect,low),school=new FishSchool();school.attach(aspect);
+    const base=Array.from(bed.pixels),physical=Array.from(bed.heights);
+    const depth=p=>(p[0]*256+p[1])/65535*.6-.3;
+    const state=terrain.dynamicDepth(bed,school.geometry());let raised=0,max=0;
+    for(let i=0;i<base.length;i+=4){const delta=depth(state.pixels.subarray(i,i+2))-depth(base.slice(i,i+2));if(delta>.01)raised++;max=Math.max(max,delta);assert.equal(state.pixels[i+2],base[i+2]);assert.equal(state.pixels[i+3],base[i+3]);}
+    assert(raised>25&&max>.05,'real fish surfaces must affect the water depth color');
+    assert.deepEqual(Array.from(bed.pixels),base);assert.deepEqual(Array.from(bed.heights),physical);
+    const old=Array.from(state.pixels);school.items.forEach(f=>f.u+=.10);
+    assert.equal(terrain.dynamicDepth(bed,school.geometry(),state),state,'reuse depth storage');
+    assert.notDeepEqual(Array.from(state.pixels),old,'depth silhouette must follow swimming geometry');
+    terrain.dynamicDepth(bed,new Float32Array(0),state);assert.deepEqual(Array.from(state.pixels),base,'removing fish must leave no depth trails');
+  }
+});
+
 test('nearby strokes startle fish, accelerate the Blender swim cycle and then decay',()=>{
   const calm=new FishSchool(),scared=new FishSchool();calm.attach(1);scared.attach(1);
   const f=scared.items[0],u=f.u-.045,v=f.v,bed={heightAt:()=>-.22};

@@ -50,6 +50,9 @@ async function run() {
           const difference=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>6)n++;return n;};
           try{
             const visible=difference(read(true),read(false));
+            const solidDraw=renderer.drawSolid;
+            renderer.drawSolid=function(buffer,count,pass){if(pass!==5)solidDraw.call(this,buffer,count,pass);};
+            const shallowWater=difference(read(true),read(false));renderer.drawSolid=solidDraw;
             const poseA=read(true);for(let n=0;n<4;n++)school.update(.075,field.bathymetry,false);const animated=difference(poseA,read(true));
             field.ice.paint(.5,.49,1,true,true);for(let i=0;i<90;i++)field.ice.update(1/30);
             const frozen=difference(read(true),read(false));field.ice.clear();
@@ -57,10 +60,11 @@ async function run() {
             const cover=[];for(const p of [[-1,-1],[-1,1],[1,-1],[1,-1],[-1,1],[1,1]])cover.push(p[0],.05,p[1],.5+p[0]/2,.5+p[1]*.433,0,1,0,.4,.5,.3);
             renderer.terrain.stones=new Float32Array(cover);gl.bindBuffer(gl.ARRAY_BUFFER,renderer.stones);gl.bufferData(gl.ARRAY_BUFFER,renderer.terrain.stones,gl.STATIC_DRAW);
             const occluded=difference(read(true),read(false));
-            return {visible,animated,frozen,occluded,error:gl.getError()};
+            return {visible,shallowWater,animated,frozen,occluded,error:gl.getError()};
           }finally{renderer.destroy();}
         });
         assert(fishCheck.visible>100,'Blender fish must be visible underwater');
+        assert(fishCheck.shallowWater>100,'fish geometry must change the existing water material even when its color pass is hidden');
         assert(fishCheck.animated>50,'the baked tail pose must change visible pixels');
         assert.equal(fishCheck.frozen,0,'opaque ice must hide fish');assert.equal(fishCheck.occluded,0,'rocks must hide fish');assert.equal(fishCheck.error,0);
         reports.push({scenario:'Blender fish animation, underwater visibility and occlusion',...fishCheck,result:'passed'});

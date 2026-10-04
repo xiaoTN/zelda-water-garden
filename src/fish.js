@@ -134,9 +134,14 @@
       var ny=data[at+6],nz=data[at+7];if(ny*.866-nz*.5<0)continue;
       var u=(data[at+3]+data[at+14]+data[at+25])/3,v=(data[at+4]+data[at+15]+data[at+26])/3;
       if(field.bathymetry&&field.bathymetry.heightAt(u,v)>data[at+1])continue;
-      var submerged=core.clamp((-data[at+1]-.04)/.14,0,1),alpha=(.82-submerged*.20)*(1-field.ice.sample(u,v));if(alpha<.02)continue;
+      var alpha=1-field.ice.sample(u,v);if(alpha<.02)continue;
       var shade=.72+Math.max(0,-data[at+5]*.4+ny*.8-nz*.3)*.25;
-      var r=(data[at+8]*shade*.75+.04)*255,g=(data[at+9]*shade*.75+.14)*255,b=(data[at+10]*shade*.75+.16)*255;
+      // Lightweight projection of the same shallow/deep water palette over the actual fish surface.
+      var depth=Math.max(0,-(data[at+1]+data[at+12]+data[at+23])/3),t=core.clamp((depth-.012)/.063,0,1);t=t*t*(3-2*t);
+      var wr=.63+(.24-.63)*t,wg=.90+(.72-.90)*t,wb=.82+(.73-.82)*t;
+      t=core.clamp((depth-.12)/.08,0,1);t=t*t*(3-2*t);wr+=(.16-wr)*t;wg+=(.59-wg)*t;wb+=(.68-wb)*t;
+      t=core.clamp((depth-.008)/.172,0,1);t=t*t*(3-2*t);var waterAlpha=.62+.32*t;
+      var r=(data[at+8]*shade*(1-waterAlpha)+wr*waterAlpha)*255,g=(data[at+9]*shade*(1-waterAlpha)+wg*waterAlpha)*255,b=(data[at+10]*shade*(1-waterAlpha)+wb*waterAlpha)*255;
       if(light===1){r*=1.05;g*=.88;b*=.8;}if(light===2){r*=.43;g*=.63;b*=.83;}
       ctx.fillStyle='rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+','+alpha+')';ctx.beginPath();
       for(var j=0;j<3;j++){var k=at+j*11;if(!j)ctx.moveTo(data[k+3]*width,data[k+4]*height);else ctx.lineTo(data[k+3]*width,data[k+4]*height);}

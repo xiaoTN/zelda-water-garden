@@ -134,6 +134,41 @@
     }
     return {width:w,height:h,pixels:pixels,heights:heights,stone:stone,distance:distance,heightAt:function(u,v){return sample(heights,u,v);},distanceAt:function(u,v){return sample(distance,u,v);}};
   }
-  root.WaterTerrain={create:create,elevation:elevation,bathymetry:bathymetry};
+  // Composite animated geometry into the displayed water depth, retaining the solid bed for physics.
+  function dynamicDepth(bed,vertices,reuse) {
+    var w=bed.width,h=bed.height,count=w*h;
+    var state=reuse&&reuse.width===w&&reuse.height===h?reuse:{width:w,height:h,heights:new Float32Array(count),rows:new Float32Array(count),pixels:new Uint8Array(count*4)};
+    var heights=state.heights,pixels=state.pixels,rows=state.rows;heights.fill(0);rows.fill(0);pixels.set(bed.pixels);
+    var minX=w,maxX=-1,minY=h,maxY=-1;
+    for(var at=0;at<vertices.length;at+=33){
+      var ax=vertices[at+3]*w-.5,ay=vertices[at+4]*h-.5,bx=vertices[at+14]*w-.5,by=vertices[at+15]*h-.5,cx=vertices[at+25]*w-.5,cy=vertices[at+26]*h-.5;
+      var det=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);if(Math.abs(det)<1e-9)continue;
+      var x0=Math.max(0,Math.ceil(Math.min(ax,bx,cx))),x1=Math.min(w-1,Math.floor(Math.max(ax,bx,cx)));
+      var y0=Math.max(0,Math.ceil(Math.min(ay,by,cy))),y1=Math.min(h-1,Math.floor(Math.max(ay,by,cy)));
+      minX=Math.min(minX,x0);maxX=Math.max(maxX,x1);minY=Math.min(minY,y0);maxY=Math.max(maxY,y1);
+      for(var y=y0;y<=y1;y++)for(var x=x0;x<=x1;x++){
+        var a=((by-cy)*(x-cx)+(cx-bx)*(y-cy))/det,b=((cy-ay)*(x-cx)+(ax-cx)*(y-cy))/det,c=1-a-b;
+        if(a<0||b<0||c<0)continue;
+        var i=y*w+x,value=a*vertices[at+1]+b*vertices[at+12]+c*vertices[at+23];
+        var p=i*4,base=(bed.pixels[p]*256+bed.pixels[p+1])/65535*.6-.3;
+        heights[i]=Math.max(heights[i],value-base);
+      }
+    }
+    // Separable coverage/height reconstruction avoids pixel steps on the moving silhouette.
+    minX=Math.max(0,minX-2);maxX=Math.min(w-1,maxX+2);minY=Math.max(0,minY-2);maxY=Math.min(h-1,maxY+2);
+    for(y=minY;y<=maxY;y++)for(x=minX;x<=maxX;x++){
+      var row=y*w;
+      rows[row+x]=(heights[row+Math.max(0,x-2)]+4*heights[row+Math.max(0,x-1)]+6*heights[row+x]+4*heights[row+Math.min(w-1,x+1)]+heights[row+Math.min(w-1,x+2)])/16;
+    }
+    for(y=minY;y<=maxY;y++)for(x=minX;x<=maxX;x++){
+      var sum=(rows[Math.max(0,y-2)*w+x]+4*rows[Math.max(0,y-1)*w+x]+6*rows[y*w+x]+4*rows[Math.min(h-1,y+1)*w+x]+rows[Math.min(h-1,y+2)*w+x])/16;
+      if(sum===0)continue;
+      p=(y*w+x)*4;var original=(bed.pixels[p]*256+bed.pixels[p+1])/65535*.6-.3;
+      var code=Math.round(core.clamp((original+sum+.3)/.6,0,1)*65535);
+      pixels[p]=code>>8;pixels[p+1]=code&255;
+    }
+    return state;
+  }
+  root.WaterTerrain={create:create,elevation:elevation,bathymetry:bathymetry,dynamicDepth:dynamicDepth};
   if(typeof module!=='undefined'&&module.exports)module.exports=root.WaterTerrain;
 }(typeof window!=='undefined'?window:global));
