@@ -1,0 +1,5 @@
+
+> zelda-water-garden@1.9.11 test:browser
+> node scripts/browser-check.cjs
+
+Browser checks passed: four viewports, four rain levels, airborne streak pixels, repeated lightning, delayed thunder, rain audio lifecycle, touch, broad stone waves, oldest-stone recycling, reset, safe areas, context recovery, Canvas fallback and offline file URL.

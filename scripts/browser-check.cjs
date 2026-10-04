@@ -27,6 +27,22 @@ async function run() {
       assert.equal(await page.locator('#ice-actions, #freeze-all, #thaw-all').count(),0);
       let state = await inspect(); assert.equal(state.renderer, 'webgl'); assert(state.bufferWidth * state.bufferHeight <= 2000000);
       if(viewport.width===390){
+        const swipeSample=await page.evaluate(async()=>{
+          const audio=new OfflineAudioContext(1,22050*14,22050);let original;
+          await new Promise((resolve,reject)=>{
+            const decode=audio.decodeAudioData.bind(audio);audio.decodeAudioData=(bytes,done,fail)=>decode(bytes,buffer=>{original=buffer;done(buffer);resolve();},reject);
+            window.swipeSampleCheck=new WaterSound.Stroke(audio,audio.destination,WaterSwipeAsset);
+          });
+          const buffer=swipeSampleCheck.buffer,source=audio.createBufferSource();source.buffer=buffer;source.loop=true;source.connect(audio.destination);source.start();
+          const rendered=await audio.startRendering(),samples=rendered.getChannelData(0);let peak=0,afterLoop=0;
+          for(let i=0;i<samples.length;i++){peak=Math.max(peak,Math.abs(samples[i]));if(i>buffer.length)afterLoop=Math.max(afterLoop,Math.abs(samples[i]));}
+          const data=buffer.getChannelData(0),seam=Math.abs(data[0]-data[data.length-1]),input=original.getChannelData(0),overlap=original.length-buffer.length;
+          const adjacent=Math.abs(input[overlap]-input[overlap-1]);delete window.swipeSampleCheck;
+          return {duration:original.duration,loopDuration:buffer.duration,channels:original.numberOfChannels,peak,afterLoop,seam,adjacent,bytes:WaterSwipeAsset.bytes};
+        });
+        assert(swipeSample.duration>6&&swipeSample.duration<7);assert(swipeSample.peak>.01&&swipeSample.afterLoop>.01);
+        assert(Math.abs(swipeSample.duration-swipeSample.loopDuration-.12)<.001);assert(Math.abs(swipeSample.seam-swipeSample.adjacent)<1e-6,'loop boundary must retain the original adjacent-sample transition');
+        reports.push({scenario:'supplied swipe sample renders continuously across two loop seams',...swipeSample,result:'passed'});
         await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,0,'muted taps stay silent');
         await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().tapReady);
         const sample=await page.evaluate(async()=>{
@@ -316,7 +332,7 @@ async function run() {
         await page.locator('#sound').click();assert.equal((await inspect()).rainAudio,false);
         await page.waitForTimeout(80);assert.equal((await inspect()).weatherAudioNodes,0);
         await page.locator('[data-rain="0"]').click();await page.locator('#reset').click();
-        await page.locator('#sound').click();await page.waitForTimeout(120);
+        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().strokeReady);
         await page.mouse.move(x-40,y);await page.mouse.down();
         for(let i=0;i<12;i++){await page.mouse.move(x-40+i*7,y);await page.waitForTimeout(25);}
         state=await inspect();assert(state.strokeAudio&&state.strokeSpeed>0,'a real swipe must create continuous water sound');
@@ -468,8 +484,10 @@ async function run() {
     await offlinePage.goto(pathToFileURL(path.join(root, 'src/index.html')).href); await offlinePage.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 5);
     await offlinePage.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
     await offlinePage.mouse.click(195,410); assert(await offlinePage.evaluate(() => WaterGarden.inspect().energy > .001)); assert.equal(networkRequests,0);
-    await offlinePage.locator('#sound').click();await offlinePage.waitForFunction(()=>WaterGarden.inspect().tapReady);
+    await offlinePage.locator('#sound').click();await offlinePage.waitForFunction(()=>WaterGarden.inspect().tapReady&&WaterGarden.inspect().strokeReady);
     await offlinePage.mouse.click(195,410);assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapPlayed),1);
+    await offlinePage.mouse.move(120,410);await offlinePage.mouse.down();await offlinePage.mouse.move(270,410,{steps:12});
+    assert(await offlinePage.evaluate(()=>WaterGarden.inspect().strokeAudio));await offlinePage.mouse.up();
     await offlinePage.locator('#sound').click();assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapVoices),0);
     await offlinePage.locator('#rain').click();await offlinePage.locator('[data-rain="4"]').click();await offlinePage.locator('#sound').click();
     await offlinePage.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);assert.equal(networkRequests,0);

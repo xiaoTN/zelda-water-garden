@@ -33,63 +33,60 @@
     var voices=this.voices.slice();this.voices.length=0;
     for(var i=0;i<voices.length;i++){try{voices[i].source.stop();}catch(error){}voices[i].source.disconnect();voices[i].gain.disconnect();}
   };
-  // Reusable noise layers: a soft rush of water with irregular submerged bubbles.
-  // No pitched drop oscillator and no new buffer for each pointer move.
-  function StrokeAudio(context, output, random) {
-    this.context = context; this.output = output; this.node = null; this.lastMove = -10; this.speed = 0;
-    var r = random || Math.random, rate = context.sampleRate, length = Math.floor(rate * 2);
-    this.rushBuffer = context.createBuffer(1, length, rate);
-    this.bubbleBuffer = context.createBuffer(1, length, rate);
-    var rush = this.rushBuffer.getChannelData(0), bubbles = this.bubbleBuffer.getChannelData(0), brown = 0, envelope = 0, remaining = 0, duration = 0, smooth = 0;
-    for (var i = 0; i < length; i++) {
-      brown = brown * .985 + (r() * 2 - 1) * .12;
-      smooth = smooth * .997 + (r() * 2 - 1) * .003;
-      // Close both loop seams to avoid a recurring click.
-      var seam = Math.min(1, i / (rate * .025), (length - 1 - i) / (rate * .025));
-      rush[i] = (brown * .7 + (r() * 2 - 1) * .14) * (.8 + smooth * 2) * seam;
-      if (remaining <= 0 && r() < 22 / rate) { duration = Math.floor(rate * (.012 + r() * .04)); remaining = duration; }
-      envelope = remaining > 0 ? Math.sin(Math.PI * (1 - remaining / duration)) : 0;
-      bubbles[i] = (r() * 2 - 1) * envelope * seam;
-      remaining--;
+  function loopBuffer(context, original) {
+    var overlap=Math.min(Math.floor(original.sampleRate*.12),Math.floor(original.length/4)),length=original.length-overlap;
+    var buffer=context.createBuffer(original.numberOfChannels,length,original.sampleRate);
+    for(var channel=0;channel<original.numberOfChannels;channel++){
+      var input=original.getChannelData(channel),output=buffer.getChannelData(channel);
+      for(var i=0;i<length;i++){
+        output[i]=input[i+overlap];
+        // Crossfade the tail into the omitted head; the seam joins adjacent source samples.
+        if(i>=length-overlap){var at=i-(length-overlap),mix=at/Math.max(1,overlap-1);output[i]=output[i]*(1-mix)+input[at]*mix;}
+      }
     }
+    return buffer;
   }
-  StrokeAudio.prototype.stroke = function (speed) {
-    var c = this.context; if (c.state !== 'running') return;
-    this.lastMove = c.currentTime; this.speed = Math.max(0, Math.min(2.5, speed));
-    if (!this.node) {
-      var rush = c.createBufferSource(), bubbles = c.createBufferSource(), low = c.createBiquadFilter(), high = c.createBiquadFilter(), band = c.createBiquadFilter(), gain = c.createGain(), bubbleGain = c.createGain();
-      rush.buffer = this.rushBuffer; bubbles.buffer = this.bubbleBuffer; rush.loop = bubbles.loop = true;
-      low.type = 'lowpass'; low.Q.value = .55; high.type = 'highpass'; high.frequency.value = 90;
-      band.type = 'bandpass'; band.Q.value = .65; gain.gain.value = bubbleGain.gain.value = 0;
-      rush.connect(high); high.connect(low); low.connect(gain); gain.connect(this.output);
-      bubbles.connect(band); band.connect(bubbleGain); bubbleGain.connect(this.output);
-      rush.start(); bubbles.start();
-      this.node = { rush: rush, bubbles: bubbles, low: low, high: high, band: band, gain: gain, bubbleGain: bubbleGain };
+  function StrokeAudio(context, output, asset) {
+    this.context=context;this.output=output;this.buffer=null;this.node=null;this.lastMove=-10;this.speed=0;this.failed=false;
+    var self=this;
+    function fail(){self.failed=true;self.speed=0;}
+    try {
+      var raw=root.atob(asset.base64),bytes=new Uint8Array(raw.length);
+      for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+      var decoded=context.decodeAudioData(bytes.buffer,function(original){
+        self.buffer=loopBuffer(context,original);
+        if(self.speed>0&&context.currentTime-self.lastMove<.09)self.stroke(self.speed);
+      },fail);
+      if(decoded&&decoded.catch)decoded.catch(fail);
+    }catch(error){fail();}
+  }
+  StrokeAudio.prototype.stroke=function(speed){
+    var c=this.context;if(c.state!=='running'||this.failed)return;
+    this.lastMove=c.currentTime;this.speed=Math.max(0,Math.min(2.5,speed));
+    if(!this.buffer)return;
+    if(!this.node){
+      var source=c.createBufferSource(),gain=c.createGain();
+      source.buffer=this.buffer;source.loop=true;gain.gain.value=0;
+      source.connect(gain);gain.connect(this.output);source.start();
+      this.node={source:source,gain:gain};
     }
-    var n = this.node, amount = Math.min(1, this.speed / 1.4);
-    n.low.frequency.setTargetAtTime(650 + amount * 1300, c.currentTime, .055);
-    n.band.frequency.setTargetAtTime(380 + amount * 520, c.currentTime, .08);
-    n.gain.gain.setTargetAtTime(.04 + amount * .27, c.currentTime, .035);
-    n.bubbleGain.gain.setTargetAtTime(.018 + amount * .1, c.currentTime, .045);
+    this.node.gain.gain.setTargetAtTime(.10+Math.min(1,this.speed/1.4)*.8,c.currentTime,.035);
   };
-  StrokeAudio.prototype.release = function () {
-    if (!this.node) return;
-    var t = this.context.currentTime;
-    this.node.gain.gain.setTargetAtTime(0, t, .055);
-    this.node.bubbleGain.gain.setTargetAtTime(0, t, .055);
-    this.speed = 0;
+  StrokeAudio.prototype.release=function(){
+    this.speed=0;
+    if(this.node)this.node.gain.gain.setTargetAtTime(0,this.context.currentTime,.055);
   };
-  StrokeAudio.prototype.update = function () {
-    if (!this.node) return;
-    var idle = this.context.currentTime - this.lastMove;
-    if (idle > .09 && this.speed > 0) this.release();
-    if (idle > .4) this.stop();
+  StrokeAudio.prototype.update=function(){
+    var idle=this.context.currentTime-this.lastMove;
+    if(idle>.09&&this.speed>0)this.release();
+    if(idle>.4)this.stop();
   };
-  StrokeAudio.prototype.stop = function () {
-    if (!this.node) return;
-    var n = this.node; this.node = null; this.speed = 0;
-    try { n.rush.stop(); n.bubbles.stop(); } catch (error) {}
-    n.rush.disconnect(); n.bubbles.disconnect(); n.low.disconnect(); n.high.disconnect(); n.band.disconnect(); n.gain.disconnect(); n.bubbleGain.disconnect();
+  StrokeAudio.prototype.stop=function(){
+    this.speed=0;this.lastMove=-10;
+    if(!this.node)return;
+    var n=this.node;this.node=null;
+    try{n.source.stop();}catch(error){}
+    n.source.disconnect();n.gain.disconnect();
   };
   root.WaterSound = { Stroke: StrokeAudio, Tap: TapAudio };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterSound;

@@ -90,21 +90,49 @@ test('tap decoding failure falls back without an unhandled rejection',async()=>{
   await Promise.resolve();assert.equal(tap.play(.6),false);assert.equal(tap.pending.length,0);
 });
 
-test('sliding water sound reuses its voices, follows speed and releases every node',()=>{
-  const {Stroke}=require('../src/water-audio.js');
-  const nodes=[],targets=[],buffers=[];
-  function parameter(){return {value:0,setTargetAtTime(value,time,fade){targets.push({value,time,fade});}};}
-  function node(){const n={gain:parameter(),frequency:parameter(),Q:parameter(),connect(){},disconnect(){this.disconnected=true;},start(){},stop(){this.stopped=true;}};nodes.push(n);return n;}
-  const context={sampleRate:8000,state:'running',currentTime:0,createBuffer(ch,length){const a=new Float32Array(length);buffers.push(a);return {getChannelData:()=>a};},createBufferSource:node,createBiquadFilter:node,createGain:node};
-  const audio=new Stroke(context,{},seededRandom(28));assert(buffers.every(b=>b.every(Number.isFinite)&&b.some(v=>Math.abs(v)>.01)));
-  audio.stroke(.1);const slow=targets[targets.length-2].value,voice=audio.node;
+function strokeFixture(){
+  const {Stroke}=require('../src/water-audio.js'),asset=require('../src/water-swipe-asset.js');
+  const fs=require('fs');assert(Buffer.from(asset.base64,'base64').equals(fs.readFileSync(require('path').join(__dirname,'../assets-source/audio/water-swipe.mp3'))));
+  const nodes=[],targets=[],buffers=[];let success,failure,decodes=0;
+  function node(){const n={gain:{value:0,setTargetAtTime(value,time,fade){targets.push({value,time,fade});}},connect(){},disconnect(){this.disconnected=true;},start(){},stop(){this.stopped=true;}};nodes.push(n);return n;}
+  const context={state:'running',currentTime:0,decodeAudioData(bytes,done,fail){decodes++;assert.equal(bytes.byteLength,asset.bytes);success=done;failure=fail;},createBuffer(channels,length,rate){const data=Array.from({length:channels},()=>new Float32Array(length)),b={length,sampleRate:rate,numberOfChannels:channels,duration:length/rate,getChannelData:i=>data[i]};buffers.push(b);return b;},createBufferSource:node,createGain:node};
+  const original=context.createBuffer(2,16000,8000);
+  for(let channel=0;channel<2;channel++)for(let i=0;i<original.length;i++)original.getChannelData(channel)[i]=Math.sin(i*.01+channel)*.1+i/original.length*.2;
+  const audio=new Stroke(context,{},asset);
+  return {audio,context,nodes,targets,buffers,original,decode:()=>success(original),fail:()=>failure(),decodes:()=>decodes};
+}
+
+test('recorded swipe sound crossfades its loop, follows speed and reuses one source',()=>{
+  const f=strokeFixture(),{audio,context,nodes,targets,original}=f;f.decode();
+  assert.equal(f.decodes(),1);assert.equal(audio.buffer.numberOfChannels,2);
+  assert.equal(audio.buffer.length,15040,'120ms overlap shortens the loop period');
+  for(let channel=0;channel<2;channel++){
+    const loop=audio.buffer.getChannelData(channel),input=original.getChannelData(channel);
+    assert.equal(loop[0],input[960]);assert.equal(loop[loop.length-1],input[959]);
+    assert(Math.abs(loop[loop.length-1]-loop[0])<.002,'loop seam must join adjacent samples');
+    assert(loop.every(Number.isFinite)&&loop.some(v=>Math.abs(v)>.01));
+  }
+  audio.stroke(.1);const slow=targets[targets.length-1].value,voice=audio.node;
   for(let i=0;i<100;i++){context.currentTime+=.016;audio.stroke(1.8);assert.equal(audio.node,voice);}
-  assert.equal(nodes.length,7,'a long swipe must not accumulate sound sources');assert.equal(buffers.length,2,'movement must reuse precomputed buffers');
-  assert(targets[targets.length-2].value>slow*2,'fast strokes sound stronger');assert(targets.every(t=>t.fade>0),'parameter changes must be smoothed');
-  context.currentTime+=.11;audio.update();assert.equal(audio.speed,0);assert.equal(targets[targets.length-1].value,0,'stationary fingers must fade to silence');
+  assert.equal(nodes.length,2);assert.equal(f.buffers.length,2);assert.equal(voice.source.buffer,audio.buffer);assert.equal(voice.source.loop,true);
+  assert(targets[targets.length-1].value>slow*2);assert(targets.every(t=>t.fade>0));
+  context.currentTime+=.11;audio.update();assert.equal(audio.speed,0);assert.equal(targets[targets.length-1].value,0);
   context.currentTime+=.4;audio.update();assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
   audio.stroke(.8);audio.stop();assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
   context.state='suspended';audio.stroke(1);assert.equal(audio.node,null);
+});
+
+test('delayed swipe decoding starts only a current gesture and cancels stopped gestures',()=>{
+  for(const action of ['release','stop','idle']){
+    const f=strokeFixture();f.audio.stroke(.8);
+    if(action==='idle'){f.context.currentTime+=.2;f.audio.update();}else f.audio[action]();
+    f.decode();assert.equal(f.audio.node,null,'decoding must not restart '+action+' gestures');
+  }
+  const f=strokeFixture();f.audio.stroke(.8);f.decode();assert(f.audio.node);f.audio.stop();
+});
+
+test('swipe decoder failure leaves interactions silent and releases pending movement',()=>{
+  const f=strokeFixture();f.audio.stroke(.8);f.fail();f.audio.stroke(1);assert.equal(f.audio.node,null);assert.equal(f.audio.speed,0);
 });
 
 test('overhead rain converges to its own ground point from every side of the optical center',()=>{

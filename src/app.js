@@ -25,7 +25,7 @@
     try {
       audio = new Constructor(); master = audio.createGain(); master.gain.value = .38; master.connect(audio.destination);
       weatherAudio = new window.WaterWeather.Audio(audio, master);
-      strokeAudio = new window.WaterSound.Stroke(audio, master);
+      strokeAudio = new window.WaterSound.Stroke(audio, master, window.WaterSwipeAsset);
       tapAudio = new window.WaterSound.Tap(audio, master, window.WaterTapAsset);
       if (audio.state === 'suspended') audio.resume().catch(function () {});
       return true;
@@ -446,6 +446,7 @@
     thunderPending: weather.pendingThunder >= 0, thunderPlayed: weatherAudio ? weatherAudio.played : 0,
     rainAudio: !!(weatherAudio && weatherAudio.rain), weatherAudioNodes: weatherAudio ? weatherAudio.nodes.length : 0,
     strokeAudio: !!(strokeAudio && strokeAudio.node), strokeSpeed: strokeAudio ? strokeAudio.speed : 0,
+    strokeReady: !!(strokeAudio && strokeAudio.buffer), strokeDuration: strokeAudio && strokeAudio.buffer ? strokeAudio.buffer.duration : 0,
     tapReady: !!(tapAudio && tapAudio.buffer), tapVoices: tapAudio ? tapAudio.voices.length : 0, tapPlayed: tapAudio ? tapAudio.played : 0,
     muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length,
     energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'canvas2d',
