@@ -22,7 +22,7 @@
     cloud: ['M8 16H6a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9h-2M9 12l-3 3 3 3m6-6 3 3-3 3', 'M6 17a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9M3 21h6l-2-2m14 2h-6l2-2', 'M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 17h5a3 3 0 1 1-3 3']
   };
   var natureHints = {
-    snow: ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹'],
+    snow: ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹', '滑动雪面，从小滚大 · 松手留下雪球 · 相碰合并'],
     cloud: ['轻点推开云海 · 滑动划出云间小径', '按住聚拢云团 · 缓缓拖动，带着云走']
   };
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -273,7 +273,7 @@
     natureCanvas.setAttribute('aria-hidden', String(water)); natureCanvas.tabIndex = water ? -1 : 0;
   }
   function syncNatureControls() {
-    var water = sceneKind === 'water', names = sceneKind === 'snow' ? ['划雪','脚印','雪球'] : ['拨云','聚云'];
+    var water = sceneKind === 'water', names = sceneKind === 'snow' ? ['划雪','脚印','滚雪球'] : ['拨云','聚云'];
     document.querySelector('.modes').hidden = !water;
     document.getElementById('nature-modes').hidden = water;
     var controls = document.querySelectorAll('[data-nature]');
@@ -282,11 +282,10 @@
       if (controls[i].hidden) continue;
       controls[i].querySelector('span').textContent = names[i] || '';
       if (!water) { controls[i].querySelector('svg').innerHTML = '<path d="' + natureIcons[sceneKind][i] + '"/>'; }
-      var active=sceneKind==='snow'&&i===2?snow.balls.length>0:i===natureModes[sceneKind];
+      var active=i===natureModes[sceneKind];
       controls[i].classList.toggle('selected',active); controls[i].setAttribute('aria-pressed',String(active));
     }
     hint.textContent = water ? hints[mode] : natureHints[sceneKind][natureModes[sceneKind]];
-    if(sceneKind==='snow'&&snow.balls.length)hint.textContent='拖动雪球，越滚越大 · 再点「雪球」收起';
     natureCanvas.setAttribute('aria-label', (sceneKind === 'snow' ? '交互雪地，' : '交互云层，') + hint.textContent + '；空格或回车触碰中央');
     var weatherName = water ? (rain?window.WaterWeather.profiles[weather.level].name:'下雨') : sceneKind === 'snow' ? '飘雪' : '微风', enabled = water ? rain : natureWeather[sceneKind];
     var rainButton = document.getElementById('rain'); rainButton.hidden = !water; rainButton.querySelector('span').textContent = weatherName;
@@ -319,13 +318,7 @@
   var natureButtons = document.querySelectorAll('[data-nature]');
   for (var ni = 0; ni < natureButtons.length; ni++) natureButtons[ni].addEventListener('click', function () {
     fingers = {}; var selected=Number(this.getAttribute('data-nature'));
-    if(sceneKind==='snow'&&selected===2){
-      if(snow.balls.length)snow.balls.length=0;
-      else if(natureRenderer.available()){
-        var p=natureRenderer.surface.point(.5,.48,'snow',clouds,false);
-        if(p)snow.ball(p.u,p.v,natureRadius()*.042);
-      }
-    }else natureModes[sceneKind]=selected;
+    natureModes[sceneKind]=selected;
     syncNatureControls();
   });
   document.getElementById('view-3d').addEventListener('click',function(){
@@ -351,7 +344,14 @@
     p.u += f.offsetU; p.v += f.offsetV;
     var selected = natureModes[sceneKind], r = natureRadius();
     if (sceneKind === 'snow') {
-      if(f.ball)snow.roll(f.ball,p.u,p.v);
+      if(f.ball){
+        if(!snow.roll(f.ball,p.u,p.v,snowBallPosition)){f.ball=null;f.rollFinished=true;}
+      }
+      else if(selected===2&&!f.rollFinished&&f.travel+distance>=3){
+        f.ball=snow.ball(f.u,f.v,0);
+        if(f.ball)snow.roll(f.ball,p.u,p.v,snowBallPosition);
+        else {f.rollFinished=true;notice('雪球已经很多了，滚到一起合并后还能继续');}
+      }
       else if (selected === 0) snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
       else if (selected === 1 && distance > 0) {
         var dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, step = Math.min(width, height) * .15;
@@ -369,6 +369,7 @@
     if (distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }
     f.travel += distance; f.u = p.u; f.v = p.v;
   }
+  function snowBallPosition(ball){return natureRenderer.surface.ballPosition(ball);}
   function updateNature(dt) {
     if(!natureRenderer.available()){fingers={};natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
     for (var id in fingers) {
