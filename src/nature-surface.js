@@ -6,7 +6,7 @@
     'uniform vec4 uBall,uRotation; varying mediump vec3 vNormal,vWorld,vLocal; varying mediump float vCut,vNoise;',
     'float noiseAt(vec2 uv){vec2 n=texture2D(uNoise,vec2(uv.x*uAspect,uv.y)*mix(.85,1.9,uCloud)+uFlow*uCloud).rg;return n.r+n.g/255.;}',
     'vec2 trackAt(vec2 uv){if(uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.)return vec2(0.);return texture2D(uTracks,uv).rg;}',
-    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*1.0,uCloud);return mix(base-t.r*.38,base-t.r*(base+.35),uCloud)+t.g*mix(.55,1.3,uCloud);}',
+    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*1.0,uCloud);return base+(t.g-t.r)*mix(.38,.55,uCloud);}',
     'vec3 rotate(vec3 p){return p+2.*cross(uRotation.xyz,cross(uRotation.xyz,p)+uRotation.w*p);}',
     'void main(){vec3 p;vTint=aColor;vCut=0.;vNoise=.5;vLocal=aPosition;',
     'if(uObject<.5){vec2 uv=aPosition.xy;float h=heightAt(uv);float e=.0025;',
@@ -140,7 +140,7 @@
       for(var j=0;j<2;j++)for(var i=0;i<2;i++){var val=field.depth[Math.max(0,Math.min(field.size-1,iy+j))*field.size+Math.max(0,Math.min(field.size-1,ix+i))],weight=(i?fx:1-fx)*(j?fy:1-fy);cut+=Math.max(0,val)*weight;rim+=Math.max(0,-val)*weight;}
     }
     var base=cloud ? .28+Math.pow(n,1.3)*1.0 : .16+n*.045;
-    return base-cut*(cloud?base+.35:.38)+rim*(cloud?1.3:.55);
+    return base+(rim-cut)*(cloud ? .55:.38);
   };
   Surface.prototype.point=function(u,v,kind,clouds,pickBall){
     var self=this,field=kind==='snow'?this.snow:clouds.field;
