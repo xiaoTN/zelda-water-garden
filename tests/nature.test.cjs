@@ -71,18 +71,51 @@ test('snow pressure is bounded and affects positions above the former cutoff', (
 });
 test('rolling a selected snowball grows it and leaves a compressed track', () => {
   const snow = new Snow(); snow.aspect = .46;
-  const ball = snow.ball(.3, .5, .02); assert.equal(snow.ball(.3, .5, .02), ball);
+  const ball = snow.ball(.3, .5, .02);
   snow.roll(ball, .75, .6);
   assert(ball.radius > .02); assert(snow.inspect().markedCells > 30);
   snow.roll(ball, 4, -2); assert(ball.u < snow.origin+snow.span && ball.v >= snow.origin);
   snow.clear(); assert.equal(snow.balls.length, 0); assert.equal(snow.inspect().markedCells, 0);
 });
-test('only one snowball can exist and reset clears it with footprints', () => {
+test('multiple snowballs stay in the shared geometry budget and reset clears them with footprints', () => {
   const snow = new Snow();
   for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) snow.ball(.1 + x * .2, .32 + y * .13, .02);
-  assert.equal(snow.balls.length, 1);
+  assert.equal(snow.balls.length, 12);assert.equal(snow.ball(.9,.9,.02),null,'a full scene keeps existing balls instead of deleting them');
   snow.footprint(.5, .5, 0, .04); assert.equal(snow.inspect().footprints, 1);
-  snow.clear(); assert.equal(snow.inspect().footprints, 0);
+  snow.clear(); assert.equal(snow.inspect().footprints, 0);assert.equal(snow.balls.length,0);
+});
+test('fresh snowballs start from zero and grow only with finite rolling travel',()=>{
+  const snow=new Snow(),ball=snow.ball(.3,.5,0);assert.equal(ball.radius,0);
+  snow.roll(ball,.3,.5);assert.equal(ball.radius,0);assert.deepEqual(ball.rotation,[0,0,0,1]);
+  snow.roll(ball,.6,.5);assert(Math.abs(ball.radius-.0225)<1e-12);assert(ball.rotation.every(Number.isFinite));
+  assert(Math.abs(Math.hypot(...ball.rotation)-1)<1e-12);assert(snow.inspect().markedCells>0);
+  const before=snow.inspect();snow.roll(ball,NaN,0);assert.deepEqual(snow.inspect(),before);
+});
+test('touching sphere meshes merge by summed volume, including chain collisions',()=>{
+  const snow=new Snow(),a=snow.ball(.3,.5,.02),b=snow.ball(.345,.5,.03),c=snow.ball(.385,.5,.02);
+  const volume=a.radius**3+b.radius**3+c.radius**3;
+  snow.mergeBalls(a);assert.equal(snow.balls.length,2);assert.equal(b.mergedInto,a);
+  snow.roll(a,.365,.5);assert.equal(snow.balls.length,1);assert.equal(c.mergedInto,a);
+  assert(a.radius**3>=volume&&a.radius>.03,'merged volume is preserved while rolling continues to gather snow');
+  assert.equal(snow.roll(b,.8,.5),null,'a consumed ball cannot reappear through another finger');
+  snow.clear();assert.equal(snow.roll(a,.5,.5),null,'reset leaves no stale rolling handles');
+});
+test('sphere contact uses height and a swept path, rather than overlapping ground circles',()=>{
+  const snow=new Snow(),a=snow.ball(.3,.5,.04),b=snow.ball(.341,.5,.002);
+  snow.mergeBalls(a);assert.equal(snow.balls.length,2,'very different radii do not merge before the actual spheres touch');
+  snow.clear();const rolling=snow.ball(.1,.5,.02),hit=snow.ball(.5,.5,.025),nearby=snow.ball(.5,.65,.02);
+  snow.roll(rolling,.9,.5);assert.equal(snow.balls.length,2);assert.equal(hit.mergedInto,rolling);assert(snow.balls.includes(nearby));
+  snow.clear();const raised=snow.ball(.4,.5,.03),lower=snow.ball(.45,.5,.03);
+  snow.mergeBalls(raised,null,ball=>[(ball.u-.5)*12,ball===raised?2:.36,(ball.v-.5)*12,ball.radius*12]);
+  assert.equal(snow.balls.length,2,'world-space elevation separates spheres on different snow banks');
+  snow.clear();const distant=snow.ball(.1,.5,0);snow.ball(.8,.5,.02);let samples=0;
+  snow.roll(distant,.3,.5,ball=>{samples++;return snow.ballCenter(ball);});
+  assert.equal(samples,0,'rolling away from other spheres needs no repeated terrain support sampling');
+});
+test('merging conserves radius cubed and a large merged sphere never shrinks while rolling',()=>{
+  const snow=new Snow(),a=snow.ball(.3,.5,.08),b=snow.ball(.44,.5,.08);
+  const volume=a.radius**3+b.radius**3;snow.mergeBalls(a);assert.equal(snow.balls.length,1);
+  assert(Math.abs(a.radius**3-volume)<1e-15);const radius=a.radius;snow.roll(a,.55,.5);assert(a.radius>=radius);
 });
 test('parting clouds opens a local gap which recovers over time', () => {
   const clouds = new Clouds(); clouds.aspect = .46;

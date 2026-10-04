@@ -1,0 +1,3919 @@
+{
+  "browser": "154.0.4258.53",
+  "date": "2026-10-05",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "supplied swipe sample renders continuously across two loop seams",
+      "duration": 6.5,
+      "loopDuration": 6.38,
+      "channels": 1,
+      "peak": 0.43821054697036743,
+      "afterLoop": 0.43821054697036743,
+      "seam": 0.027246478013694286,
+      "adjacent": 0.027246478013694286,
+      "bytes": 52763,
+      "result": "passed"
+    },
+    {
+      "scenario": "real WebAudio PCM validates long-sound fades, continuous rain level changes and swipe fade reversal",
+      "swipe": {
+        "sameVoice": true,
+        "early": 0.15280450815334917,
+        "settled": 0.8999999761581421,
+        "tail": 0.24753186907619237,
+        "end": 0.004171219019917771,
+        "resumed": 0.0010995209668180905,
+        "switchJump": 0,
+        "stopJump": 0
+      },
+      "resumed": {
+        "sameVoice": true,
+        "early": 0.15280450815334917,
+        "settled": 0.8999999761581421,
+        "tail": 0.24753186907619237,
+        "end": 0.8943412631750107,
+        "resumed": 0.8992340981960296,
+        "switchJump": 2.2351741790771484e-8,
+        "stopJump": 0
+      },
+      "rain": {
+        "sameVoice": true,
+        "early": 0.002280833659460768,
+        "settled": 0.04378741742111743,
+        "tail": 0.0228646989678964,
+        "end": 0.0005274848379485774,
+        "resumed": 0.1083740834146738,
+        "switchJump": 0,
+        "stopJump": 0.0000010058283805847168
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "real three-channel PCM validates scene fade-in/out and rapid reversals",
+      "before": [
+        1,
+        0,
+        0
+      ],
+      "early": [
+        0.9394130110740662,
+        0.060586944222450256,
+        0
+      ],
+      "tail": [
+        0.5352612733840942,
+        0.46473848819732666,
+        0
+      ],
+      "end": [
+        0.0019009866518899798,
+        0.9980788826942444,
+        0
+      ],
+      "jumps": [
+        0,
+        0.000447690486907959,
+        0.00030606985092163086,
+        0.00002384185791015625
+      ],
+      "sumError": 0.0000424371100962162,
+      "result": "passed"
+    },
+    {
+      "scenario": "real one-shot PCM preserves the ordinary attack and fades the interrupted scene tail",
+      "attack": 0.5,
+      "before": 0.5,
+      "jump": 0,
+      "tail": 0.14325231313705444,
+      "end": 0.0024139725137501955,
+      "stopped": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "sound is enabled by default with no toggle; first touch plays the recorded tap, swipes use their own sound and reset releases voices",
+      "duration": 0.6083900226757369,
+      "channels": 2,
+      "peak": 0.10975364595651627,
+      "bytes": 5686,
+      "result": "passed"
+    },
+    {
+      "scenario": "supplied stone impact sample decodes and renders non-silent PCM",
+      "duration": 3.1300226757369614,
+      "channels": 1,
+      "peak": 0.9268043041229248,
+      "bytes": 25805,
+      "result": "passed"
+    },
+    {
+      "scenario": "supplied ripple recording renders offline across two smooth loop boundaries",
+      "duration": 8.010884353741497,
+      "loopDuration": 7.890884353741496,
+      "channels": 2,
+      "bytes": 64827,
+      "peak": 0.8344364166259766,
+      "afterLoops": 0.7990422248840332,
+      "seamError": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "real ripple PCM fades in, scales with wave strength and fades to silence while weak ripples remain",
+      "sameVoice": true,
+      "fadeSeconds": 0.6500000000000004,
+      "early": 0.002756067318841815,
+      "quiet": 0.050401072949171066,
+      "medium": 0.2526019811630249,
+      "strong": 0.8430030345916748,
+      "reduced": 0.0794212743639946,
+      "tail": 0.018150608986616135,
+      "retainedTail": 0.002260013250634074,
+      "end": 0.0003058598085772246,
+      "jumps": [
+        7.450580596923828e-9,
+        5.364418029785156e-7,
+        0,
+        0.0000064373016357421875
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "pointer release leaves wave-driven sound, weak remaining waves become silent, and fresh waves resume before reset",
+      "remaining": {
+        "fishTime": 2.8994999999999953,
+        "fish": [
+          {
+            "u": 0.3845207928144191,
+            "v": 0.3950220057197193,
+            "y": -0.0707996224082984,
+            "angle": 0.7940636681924851,
+            "fear": 0,
+            "speed": 0.026427681309836366,
+            "swim": 3.220795484627716,
+            "flowX": 0.0011185678331726802,
+            "flowZ": -0.005577259412307551
+          },
+          {
+            "u": 0.5838336648665621,
+            "v": 0.38649536097430925,
+            "y": -0.09025105407034886,
+            "angle": 4.703917208483894,
+            "fear": 0.05692469058925107,
+            "speed": 0.03571992095165635,
+            "swim": 4.151715056270706,
+            "flowX": 0.0014543861597053603,
+            "flowZ": -0.007222626594950569
+          },
+          {
+            "u": 0.4437391672095481,
+            "v": 0.6240892624794409,
+            "y": -0.10965996446402977,
+            "angle": -1.12652361645104,
+            "fear": 0,
+            "speed": 0.017499103336843316,
+            "swim": 3.4164232403640575,
+            "flowX": 0.0038414518200575168,
+            "flowZ": 0.004179643945302968
+          },
+          {
+            "u": 0.615804403177029,
+            "v": 0.5992972813753551,
+            "y": -0.09671016772476851,
+            "angle": 2.9654839686121357,
+            "fear": 0,
+            "speed": 0.027581045632911288,
+            "swim": 3.8831840220275247,
+            "flowX": -0.004412923900780895,
+            "flowZ": 0.0017305158118137225
+          },
+          {
+            "u": 0.4901874944401798,
+            "v": 0.34784359224341915,
+            "y": -0.08659523763696751,
+            "angle": 1.9959994081156684,
+            "fear": 0,
+            "speed": 0.03045836211109162,
+            "swim": 4.516414686178492,
+            "flowX": 0.0014758032124280265,
+            "flowZ": -0.00222583597675121
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 0,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainTransition": false,
+        "rainSpeed": 0,
+        "rainRippleScale": 1,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 26.6494640126254,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 2,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 0,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": true,
+        "rippleLevel": 0.4865886916316983,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.29872300883148317,
+            "v": 0.48069666919693993
+          },
+          {
+            "u": 0.8358114690472018,
+            "v": 0.5607379155435074
+          },
+          {
+            "u": 0.7005341062748135,
+            "v": 0.29071578884531174
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 20.138380224677245,
+        "steps": 169,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 585,
+        "bufferHeight": 1266,
+        "activePointers": 0
+      },
+      "quieter": {
+        "fishTime": 3.500199999999993,
+        "fish": [
+          {
+            "u": 0.39481495260134203,
+            "v": 0.40011587311815583,
+            "y": -0.06980268394536267,
+            "angle": 0.9552829872068309,
+            "fear": 0,
+            "speed": 0.025939028427054967,
+            "swim": 3.909372185624864,
+            "flowX": -0.00047428841484448473,
+            "flowZ": 0.0007722597851625263
+          },
+          {
+            "u": 0.5842724863183055,
+            "v": 0.3777850750745036,
+            "y": -0.09287274989356993,
+            "angle": 4.706590937369197,
+            "fear": 0.039554068964989905,
+            "speed": 0.029173297291700644,
+            "swim": 4.9412440422754225,
+            "flowX": -0.001200642952789962,
+            "flowZ": 0.0018063593510703505
+          },
+          {
+            "u": 0.4476641002991509,
+            "v": 0.6205017058466972,
+            "y": -0.10882929355477881,
+            "angle": -1.3122511770488678,
+            "fear": 0,
+            "speed": 0.018619978402703553,
+            "swim": 4.011709173126605,
+            "flowX": 0.0004296574612483909,
+            "flowZ": -0.002156807001849546
+          },
+          {
+            "u": 0.5982135329155912,
+            "v": 0.6010873743588866,
+            "y": -0.09201511723139957,
+            "angle": 2.9470740333029606,
+            "fear": 0,
+            "speed": 0.029219645664264285,
+            "swim": 4.597311675397386,
+            "flowX": -0.0015271618453150664,
+            "flowZ": -0.0022662396726415117
+          },
+          {
+            "u": 0.4806632896861014,
+            "v": 0.353800353590751,
+            "y": -0.08739062660822143,
+            "angle": 2.1875640964660845,
+            "fear": 0,
+            "speed": 0.028817945962779312,
+            "swim": 5.243646309639373,
+            "flowX": 0.00040605952720113703,
+            "flowZ": 0.0021269888134350674
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 0,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainTransition": false,
+        "rainSpeed": 0,
+        "rainRippleScale": 1,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 26.6494640126254,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 2,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 0,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": true,
+        "rippleLevel": 0.33110458824542,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.33516583665433014,
+            "v": 0.48110588254917186
+          },
+          {
+            "u": 0.8727844864651526,
+            "v": 0.5611719441523567
+          },
+          {
+            "u": 0.7006788479966298,
+            "v": 0.2911369271121515
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 12.050119413755999,
+        "steps": 205,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 585,
+        "bufferHeight": 1266,
+        "activePointers": 0
+      },
+      "weakSilent": {
+        "fishTime": 6.628399999999994,
+        "fish": [
+          {
+            "u": 0.405711202908792,
+            "v": 0.4266799757693512,
+            "y": -0.08033568177587978,
+            "angle": 1.9175668275093218,
+            "fear": 0,
+            "speed": 0.016361468010139782,
+            "swim": 7.211424502987522,
+            "flowX": 0.0011191315219032717,
+            "flowZ": -0.0010288433832603054
+          },
+          {
+            "u": 0.5831485289077667,
+            "v": 0.34910049807354654,
+            "y": -0.10513254932489799,
+            "angle": 4.533930331980356,
+            "fear": 0.005940479075628489,
+            "speed": 0.019546661209630785,
+            "swim": 8.302671379801035,
+            "flowX": 0.0003635599921880648,
+            "flowZ": -0.0004540182075906385
+          },
+          {
+            "u": 0.42430175964069194,
+            "v": 0.5906161101027533,
+            "y": -0.09267443014533269,
+            "angle": -2.2248474319520057,
+            "fear": 0,
+            "speed": 0.02836349505581783,
+            "swim": 7.448260010966616,
+            "flowX": 0.0007237711572224837,
+            "flowZ": 0.0005518865897748673
+          },
+          {
+            "u": 0.5058648111521963,
+            "v": 0.6032440005458807,
+            "y": -0.08143718719254836,
+            "angle": 3.39313698549192,
+            "fear": 0,
+            "speed": 0.02665374286151309,
+            "swim": 8.375928110191282,
+            "flowX": 0.0012782258806952737,
+            "flowZ": 0.00039221339403086374
+          },
+          {
+            "u": 0.4146707735110248,
+            "v": 0.3696591166924508,
+            "y": -0.10616072709540639,
+            "angle": 2.9587298469216767,
+            "fear": 0,
+            "speed": 0.019887984719222443,
+            "swim": 8.67528744747645,
+            "flowX": -0.0000878432264414825,
+            "flowZ": 0.000016486144429177864
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 0,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainTransition": false,
+        "rainSpeed": 0,
+        "rainRippleScale": 1,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 26.6494640126254,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 2,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 0,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": false,
+        "rippleLevel": 0,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.44431973061007696,
+            "v": 0.4832647118976586
+          },
+          {
+            "u": 0.9621236406762033,
+            "v": 0.5633733129952221
+          },
+          {
+            "u": 0.6994118453567747,
+            "v": 0.29332413399303575
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 1.0759810959913196,
+        "steps": 392,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 585,
+        "bufferHeight": 1266,
+        "activePointers": 0
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "water tap, snow and cloud sounds retain fading tails across every scene boundary and release their nodes",
+      "tapRetained": 1,
+      "natureTails": [
+        {
+          "from": "snow",
+          "to": "cloud",
+          "retained": 1
+        },
+        {
+          "from": "cloud",
+          "to": "water",
+          "retained": 1
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "u": 0.3728903105848323,
+        "v": 0.43158739666704776,
+        "y": -0.09549321329430012,
+        "angle": 3.551052860637617,
+        "fear": 0,
+        "speed": 0.016193898184217393,
+        "swim": 8.972316196481454,
+        "flowX": 0,
+        "flowZ": 0
+      },
+      "alarm": {
+        "u": 0.3686714545092482,
+        "v": 0.42975491403914357,
+        "y": -0.10321524334848675,
+        "angle": 4.053463807603034,
+        "fear": 0.690990107616528,
+        "speed": 0.1053911732321048,
+        "swim": 9.182163342976287,
+        "flowX": 0.0026593478351060592,
+        "flowZ": -0.0003917078935770219
+      },
+      "fleeing": {
+        "u": 0.3919978267028523,
+        "v": 0.4069613819384524,
+        "y": -0.12115377707200908,
+        "angle": 5.299369511807328,
+        "fear": 0.55318985739812,
+        "speed": 0.15533763305101742,
+        "swim": 10.762967885809346,
+        "flowX": -0.01000379321203586,
+        "flowZ": 0.016224981719293083
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "Blender fish animation, underwater visibility and occlusion",
+      "visible": 3174,
+      "shallowWater": 2900,
+      "animated": 3646,
+      "occluded": 0,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "smooth wave reconstruction",
+      "linear": {
+        "kink": 6,
+        "peak": 151
+      },
+      "smooth": {
+        "kink": 2,
+        "peak": 102
+      },
+      "antialias": true,
+      "result": "passed"
+    },
+    {
+      "scenario": "isolated coastal foam coupling",
+      "changed": 271,
+      "remote": 0,
+      "resetDifference": 1,
+      "result": "passed"
+    },
+    {
+      "scenario": "3D stone and water depth occlusion",
+      "dry": 17098,
+      "dryCovered": 0,
+      "wet": 1337,
+      "wetTinted": 1337,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "geometry-derived water material depth",
+      "shallowerPixels": 872,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 8,
+          "energy": 21.442472725999323
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 74,
+          "energy": 8.602398901466143
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 286,
+          "energy": 5.5693281016244445
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 812,
+          "energy": 17.334554905833272
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "real rain buttons preserve falling streaks through gradual and interrupted transitions",
+      "boundaries": [
+        {
+          "target": 1,
+          "before": {
+            "count": 840,
+            "current": {
+              "count": 840,
+              "speed": 1.85,
+              "length": 1.4,
+              "wind": 0.07,
+              "cloud": 0.23,
+              "impacts": 640,
+              "thunder": 1,
+              "rippleScale": 2,
+              "intensity": 4
+            },
+            "particles": [
+              {
+                "u": 0.01587511909627351,
+                "v": 0.120577466551131,
+                "altitude": 0.31744167535432044,
+                "span": 0.6067164521532855,
+                "speed": 2.5531754351188614,
+                "depth": 0.9668247163232985
+              },
+              {
+                "u": 0.3628904655602419,
+                "v": 0.10036639105136091,
+                "altitude": 0.22136394191113168,
+                "span": 0.4525388915714329,
+                "speed": 2.0403790790847545,
+                "depth": 0.5048460171934723
+              },
+              {
+                "u": -0.0001207796630531277,
+                "v": 0.5528333124100984,
+                "altitude": 0.25749308897721557,
+                "span": 0.49746014302033026,
+                "speed": 2.117979294290523,
+                "depth": 0.5747561209824532
+              },
+              {
+                "u": 0.483990520835554,
+                "v": 0.21212559854498927,
+                "altitude": 0.0930923109464214,
+                "span": 0.583132117145388,
+                "speed": 1.9855745794123505,
+                "depth": 0.4554725940651805
+              },
+              {
+                "u": 0.5061160539209101,
+                "v": 0.6246644024777886,
+                "altitude": 0.2839808949261144,
+                "span": 0.6133474483461323,
+                "speed": 1.8298141856667662,
+                "depth": 0.31514791501510453
+              },
+              {
+                "u": 1.009972919459063,
+                "v": 0.2219884318197853,
+                "altitude": 0.4980832539443695,
+                "span": 0.4980832539443695,
+                "speed": 1.5318054647592447,
+                "depth": 0.0466715898731932
+              },
+              {
+                "u": 0.7992464367289177,
+                "v": 0.2133977398130383,
+                "altitude": 0.36608866230101805,
+                "span": 0.36608866230101805,
+                "speed": 1.597247212041407,
+                "depth": 0.10562811895622226
+              },
+              {
+                "u": 0.7045931816875378,
+                "v": 0.17168925717557754,
+                "altitude": 0.484037281575256,
+                "span": 0.484037281575256,
+                "speed": 2.3327451497464056,
+                "depth": 0.7682388736454103
+              },
+              {
+                "u": 0.09326839244746549,
+                "v": 0.819724750902932,
+                "altitude": 0.09324927815891476,
+                "span": 0.30812570316562315,
+                "speed": 1.8965262577820807,
+                "depth": 0.37524888088475716
+              },
+              {
+                "u": 0.6616097120347249,
+                "v": 0.8853668581042908,
+                "altitude": 0.29914653741271935,
+                "span": 0.5917297658097674,
+                "speed": 1.9957928267193104,
+                "depth": 0.46467822226964883
+              },
+              {
+                "u": 0.32653395938651997,
+                "v": 0.8541142310908485,
+                "altitude": 0.2878109351704651,
+                "span": 0.6389755158659174,
+                "speed": 1.6494343856057112,
+                "depth": 0.15264359063577582
+              },
+              {
+                "u": 0.9841226927919229,
+                "v": 0.14277578266000387,
+                "altitude": 0.2263177646820385,
+                "span": 0.6819148478986373,
+                "speed": 2.1399581175040088,
+                "depth": 0.5945568626162239
+              },
+              {
+                "u": 0.7292599849620832,
+                "v": 0.8941269939613874,
+                "altitude": 0.018492121571197007,
+                "span": 0.3926200974112273,
+                "speed": 2.552032577353574,
+                "depth": 0.9657951147329492
+              },
+              {
+                "u": 0.2558849325665205,
+                "v": 0.2254791784253601,
+                "altitude": 0.001105216083755911,
+                "span": 0.60725825700219,
+                "speed": 1.748593233136931,
+                "depth": 0.24197588570894657
+              },
+              {
+                "u": 0.7806865251440034,
+                "v": 0.7069056557418861,
+                "altitude": 0.13711787183350502,
+                "span": 0.6643506317808019,
+                "speed": 1.8817125840767912,
+                "depth": 0.36190322889800974
+              },
+              {
+                "u": 0.026283177779638754,
+                "v": 0.3030610972492318,
+                "altitude": 0.18700296782220852,
+                "span": 0.392132387023489,
+                "speed": 2.5641177400160062,
+                "depth": 0.9766826486630688
+              },
+              {
+                "u": 0.8810321236889497,
+                "v": 0.09860847166899217,
+                "altitude": 0.127139588389921,
+                "span": 0.6271841187699174,
+                "speed": 1.7846768199852883,
+                "depth": 0.2744836216083678
+              },
+              {
+                "u": 0.3807068766733793,
+                "v": 0.20989439442523583,
+                "altitude": 0.4498453662887453,
+                "span": 0.5691123467926053,
+                "speed": 1.4908372562982495,
+                "depth": 0.009763293962386843
+              },
+              {
+                "u": 1.0316335130303338,
+                "v": -0.038937165985548736,
+                "altitude": 0.3633337873310688,
+                "span": 0.3633337873310688,
+                "speed": 1.9619533441308497,
+                "depth": 0.43419220191968444
+              },
+              {
+                "u": 1.0068803583918895,
+                "v": 0.5227311798463284,
+                "altitude": 0.24191102540258513,
+                "span": 0.39902394064674646,
+                "speed": 1.9639114405520164,
+                "depth": 0.4359562527495642
+              }
+            ]
+          },
+          "after": {
+            "count": 840,
+            "current": {
+              "count": 840,
+              "speed": 1.85,
+              "length": 1.4,
+              "wind": 0.07,
+              "cloud": 0.23,
+              "impacts": 640,
+              "thunder": 1,
+              "rippleScale": 2,
+              "intensity": 4
+            },
+            "particles": [
+              {
+                "u": 0.01587511909627351,
+                "v": 0.120577466551131,
+                "altitude": 0.31744167535432044,
+                "span": 0.6067164521532855,
+                "speed": 2.5531754351188614,
+                "depth": 0.9668247163232985
+              },
+              {
+                "u": 0.3628904655602419,
+                "v": 0.10036639105136091,
+                "altitude": 0.22136394191113168,
+                "span": 0.4525388915714329,
+                "speed": 2.0403790790847545,
+                "depth": 0.5048460171934723
+              },
+              {
+                "u": -0.0001207796630531277,
+                "v": 0.5528333124100984,
+                "altitude": 0.25749308897721557,
+                "span": 0.49746014302033026,
+                "speed": 2.117979294290523,
+                "depth": 0.5747561209824532
+              },
+              {
+                "u": 0.483990520835554,
+                "v": 0.21212559854498927,
+                "altitude": 0.0930923109464214,
+                "span": 0.583132117145388,
+                "speed": 1.9855745794123505,
+                "depth": 0.4554725940651805
+              },
+              {
+                "u": 0.5061160539209101,
+                "v": 0.6246644024777886,
+                "altitude": 0.2839808949261144,
+                "span": 0.6133474483461323,
+                "speed": 1.8298141856667662,
+                "depth": 0.31514791501510453
+              },
+              {
+                "u": 1.009972919459063,
+                "v": 0.2219884318197853,
+                "altitude": 0.4980832539443695,
+                "span": 0.4980832539443695,
+                "speed": 1.5318054647592447,
+                "depth": 0.0466715898731932
+              },
+              {
+                "u": 0.7992464367289177,
+                "v": 0.2133977398130383,
+                "altitude": 0.36608866230101805,
+                "span": 0.36608866230101805,
+                "speed": 1.597247212041407,
+                "depth": 0.10562811895622226
+              },
+              {
+                "u": 0.7045931816875378,
+                "v": 0.17168925717557754,
+                "altitude": 0.484037281575256,
+                "span": 0.484037281575256,
+                "speed": 2.3327451497464056,
+                "depth": 0.7682388736454103
+              },
+              {
+                "u": 0.09326839244746549,
+                "v": 0.819724750902932,
+                "altitude": 0.09324927815891476,
+                "span": 0.30812570316562315,
+                "speed": 1.8965262577820807,
+                "depth": 0.37524888088475716
+              },
+              {
+                "u": 0.6616097120347249,
+                "v": 0.8853668581042908,
+                "altitude": 0.29914653741271935,
+                "span": 0.5917297658097674,
+                "speed": 1.9957928267193104,
+                "depth": 0.46467822226964883
+              },
+              {
+                "u": 0.32653395938651997,
+                "v": 0.8541142310908485,
+                "altitude": 0.2878109351704651,
+                "span": 0.6389755158659174,
+                "speed": 1.6494343856057112,
+                "depth": 0.15264359063577582
+              },
+              {
+                "u": 0.9841226927919229,
+                "v": 0.14277578266000387,
+                "altitude": 0.2263177646820385,
+                "span": 0.6819148478986373,
+                "speed": 2.1399581175040088,
+                "depth": 0.5945568626162239
+              },
+              {
+                "u": 0.7292599849620832,
+                "v": 0.8941269939613874,
+                "altitude": 0.018492121571197007,
+                "span": 0.3926200974112273,
+                "speed": 2.552032577353574,
+                "depth": 0.9657951147329492
+              },
+              {
+                "u": 0.2558849325665205,
+                "v": 0.2254791784253601,
+                "altitude": 0.001105216083755911,
+                "span": 0.60725825700219,
+                "speed": 1.748593233136931,
+                "depth": 0.24197588570894657
+              },
+              {
+                "u": 0.7806865251440034,
+                "v": 0.7069056557418861,
+                "altitude": 0.13711787183350502,
+                "span": 0.6643506317808019,
+                "speed": 1.8817125840767912,
+                "depth": 0.36190322889800974
+              },
+              {
+                "u": 0.026283177779638754,
+                "v": 0.3030610972492318,
+                "altitude": 0.18700296782220852,
+                "span": 0.392132387023489,
+                "speed": 2.5641177400160062,
+                "depth": 0.9766826486630688
+              },
+              {
+                "u": 0.8810321236889497,
+                "v": 0.09860847166899217,
+                "altitude": 0.127139588389921,
+                "span": 0.6271841187699174,
+                "speed": 1.7846768199852883,
+                "depth": 0.2744836216083678
+              },
+              {
+                "u": 0.3807068766733793,
+                "v": 0.20989439442523583,
+                "altitude": 0.4498453662887453,
+                "span": 0.5691123467926053,
+                "speed": 1.4908372562982495,
+                "depth": 0.009763293962386843
+              },
+              {
+                "u": 1.0316335130303338,
+                "v": -0.038937165985548736,
+                "altitude": 0.3633337873310688,
+                "span": 0.3633337873310688,
+                "speed": 1.9619533441308497,
+                "depth": 0.43419220191968444
+              },
+              {
+                "u": 1.0068803583918895,
+                "v": 0.5227311798463284,
+                "altitude": 0.24191102540258513,
+                "span": 0.39902394064674646,
+                "speed": 1.9639114405520164,
+                "depth": 0.4359562527495642
+              }
+            ]
+          }
+        },
+        {
+          "target": 3,
+          "before": {
+            "count": 388,
+            "current": {
+              "count": 388.2107075838258,
+              "speed": 1.2795589742220024,
+              "length": 1.0577353845332014,
+              "wind": 0.041477948711100124,
+              "cloud": 0.11876399997329046,
+              "impacts": 286.32656401764143,
+              "thunder": 0.4295589742220023,
+              "rippleScale": 1.4295589742220023,
+              "intensity": 2.288676922666007
+            },
+            "particles": [
+              {
+                "u": 0.42646378876668717,
+                "v": 0.6549846139630103,
+                "altitude": 0.01912575338226201,
+                "span": 0.5782738135831037,
+                "speed": 1.1234317641898302,
+                "depth": 0.12997262705678125
+              },
+              {
+                "u": 0.4379833004658644,
+                "v": 0.5522176116535296,
+                "altitude": 0.34193319904919783,
+                "span": 0.5618905518083857,
+                "speed": 1.1384889628969959,
+                "depth": 0.1495851120490168
+              },
+              {
+                "u": 0.9194483076109593,
+                "v": 0.23737105341933903,
+                "altitude": 0.12548412803816777,
+                "span": 0.32971170945078515,
+                "speed": 1.0570724026305607,
+                "depth": 0.04353742699156937
+              },
+              {
+                "u": 0.909317407254845,
+                "v": 0.11320483388554053,
+                "altitude": 0.016056450228819796,
+                "span": 0.5720840695073186,
+                "speed": 1.7510191053032136,
+                "depth": 0.9474252985849658
+              },
+              {
+                "u": 0.8366746326080287,
+                "v": 0.7398861031670692,
+                "altitude": 0.11633764702935703,
+                "span": 0.3060069718367764,
+                "speed": 1.6307742610917084,
+                "depth": 0.7908025264241949
+              },
+              {
+                "u": 0.4972502793742494,
+                "v": 0.7355479792148533,
+                "altitude": 0.2336351627954643,
+                "span": 0.5046239515852208,
+                "speed": 1.4026252872925418,
+                "depth": 0.4936311593158703
+              },
+              {
+                "u": 0.1422282552610376,
+                "v": 1.0292129061003794,
+                "altitude": 0.2256606868810167,
+                "span": 0.5801024613393705,
+                "speed": 1.1161933279492213,
+                "depth": 0.12054433133610143
+              },
+              {
+                "u": 0.8285715778943161,
+                "v": 1.0020935767593617,
+                "altitude": 0.36227324558105634,
+                "span": 0.36227324558105634,
+                "speed": 1.2334049532470908,
+                "depth": 0.2732162384270276
+              },
+              {
+                "u": 0.009421542659716987,
+                "v": 0.9888708967472684,
+                "altitude": 0.3555318801484064,
+                "span": 0.6615996844138843,
+                "speed": 1.3106657355803417,
+                "depth": 0.3738508892321707
+              },
+              {
+                "u": 0.8599884791835988,
+                "v": 0.006234471898574068,
+                "altitude": 0.4090834211983921,
+                "span": 0.4090834211983921,
+                "speed": 1.039296741856995,
+                "depth": 0.02038405783381758
+              },
+              {
+                "u": 0.750147424694861,
+                "v": 0.8877093318751951,
+                "altitude": 0.16143114005223638,
+                "span": 0.3372561866195742,
+                "speed": 1.5117413460948292,
+                "depth": 0.6357583309957743
+              },
+              {
+                "u": 0.9016942306364049,
+                "v": 0.7180172507210322,
+                "altitude": 0.4385062731938597,
+                "span": 0.4385062731938597,
+                "speed": 1.0506490813633078,
+                "depth": 0.03517084470728604
+              },
+              {
+                "u": 0.276821523523331,
+                "v": 0.42439310720823303,
+                "altitude": 0.02475863915403781,
+                "span": 0.4618509766704035,
+                "speed": 1.5892486621178672,
+                "depth": 0.7367140998511646
+              },
+              {
+                "u": 0.3219343406624474,
+                "v": 0.9408140621800749,
+                "altitude": 0.10659807976601395,
+                "span": 0.4814143491998114,
+                "speed": 1.3628155966366473,
+                "depth": 0.44177775844637734
+              },
+              {
+                "u": 0.5816887252183887,
+                "v": 0.48777196717199717,
+                "altitude": 0.036821804307585054,
+                "span": 0.3550996222798608,
+                "speed": 1.647391089003907,
+                "depth": 0.8124464785553083
+              },
+              {
+                "u": 0.061885374785858434,
+                "v": 0.08330871105347012,
+                "altitude": 0.1181314397810276,
+                "span": 0.376185534499598,
+                "speed": 1.1050579484683918,
+                "depth": 0.10604014186514166
+              },
+              {
+                "u": 0.8773485141108506,
+                "v": 0.9628851201521695,
+                "altitude": 0.3878845050967731,
+                "span": 0.5632742637356107,
+                "speed": 1.5079987464378592,
+                "depth": 0.6308834747205939
+              },
+              {
+                "u": 0.2676586788189788,
+                "v": 0.5772514913879538,
+                "altitude": 0.2617859395446438,
+                "span": 0.572623565032987,
+                "speed": 1.331091409743152,
+                "depth": 0.4004559859546951
+              },
+              {
+                "u": 0.5410681406756959,
+                "v": 0.6143685205636558,
+                "altitude": 0.20695000792010199,
+                "span": 0.4764016358026988,
+                "speed": 1.3946690143830658,
+                "depth": 0.48326785827522134
+              },
+              {
+                "u": 0.3658626638698292,
+                "v": 1.0119466058588877,
+                "altitude": 0.14252252688692435,
+                "span": 0.6868120862859585,
+                "speed": 1.0935782907413223,
+                "depth": 0.0910875189193473
+              }
+            ]
+          },
+          "after": {
+            "count": 388,
+            "current": {
+              "count": 388.2107075838258,
+              "speed": 1.2795589742220024,
+              "length": 1.0577353845332014,
+              "wind": 0.041477948711100124,
+              "cloud": 0.11876399997329046,
+              "impacts": 286.32656401764143,
+              "thunder": 0.4295589742220023,
+              "rippleScale": 1.4295589742220023,
+              "intensity": 2.288676922666007
+            },
+            "particles": [
+              {
+                "u": 0.42646378876668717,
+                "v": 0.6549846139630103,
+                "altitude": 0.01912575338226201,
+                "span": 0.5782738135831037,
+                "speed": 1.1234317641898302,
+                "depth": 0.12997262705678125
+              },
+              {
+                "u": 0.4379833004658644,
+                "v": 0.5522176116535296,
+                "altitude": 0.34193319904919783,
+                "span": 0.5618905518083857,
+                "speed": 1.1384889628969959,
+                "depth": 0.1495851120490168
+              },
+              {
+                "u": 0.9194483076109593,
+                "v": 0.23737105341933903,
+                "altitude": 0.12548412803816777,
+                "span": 0.32971170945078515,
+                "speed": 1.0570724026305607,
+                "depth": 0.04353742699156937
+              },
+              {
+                "u": 0.909317407254845,
+                "v": 0.11320483388554053,
+                "altitude": 0.016056450228819796,
+                "span": 0.5720840695073186,
+                "speed": 1.7510191053032136,
+                "depth": 0.9474252985849658
+              },
+              {
+                "u": 0.8366746326080287,
+                "v": 0.7398861031670692,
+                "altitude": 0.11633764702935703,
+                "span": 0.3060069718367764,
+                "speed": 1.6307742610917084,
+                "depth": 0.7908025264241949
+              },
+              {
+                "u": 0.4972502793742494,
+                "v": 0.7355479792148533,
+                "altitude": 0.2336351627954643,
+                "span": 0.5046239515852208,
+                "speed": 1.4026252872925418,
+                "depth": 0.4936311593158703
+              },
+              {
+                "u": 0.1422282552610376,
+                "v": 1.0292129061003794,
+                "altitude": 0.2256606868810167,
+                "span": 0.5801024613393705,
+                "speed": 1.1161933279492213,
+                "depth": 0.12054433133610143
+              },
+              {
+                "u": 0.8285715778943161,
+                "v": 1.0020935767593617,
+                "altitude": 0.36227324558105634,
+                "span": 0.36227324558105634,
+                "speed": 1.2334049532470908,
+                "depth": 0.2732162384270276
+              },
+              {
+                "u": 0.009421542659716987,
+                "v": 0.9888708967472684,
+                "altitude": 0.3555318801484064,
+                "span": 0.6615996844138843,
+                "speed": 1.3106657355803417,
+                "depth": 0.3738508892321707
+              },
+              {
+                "u": 0.8599884791835988,
+                "v": 0.006234471898574068,
+                "altitude": 0.4090834211983921,
+                "span": 0.4090834211983921,
+                "speed": 1.039296741856995,
+                "depth": 0.02038405783381758
+              },
+              {
+                "u": 0.750147424694861,
+                "v": 0.8877093318751951,
+                "altitude": 0.16143114005223638,
+                "span": 0.3372561866195742,
+                "speed": 1.5117413460948292,
+                "depth": 0.6357583309957743
+              },
+              {
+                "u": 0.9016942306364049,
+                "v": 0.7180172507210322,
+                "altitude": 0.4385062731938597,
+                "span": 0.4385062731938597,
+                "speed": 1.0506490813633078,
+                "depth": 0.03517084470728604
+              },
+              {
+                "u": 0.276821523523331,
+                "v": 0.42439310720823303,
+                "altitude": 0.02475863915403781,
+                "span": 0.4618509766704035,
+                "speed": 1.5892486621178672,
+                "depth": 0.7367140998511646
+              },
+              {
+                "u": 0.3219343406624474,
+                "v": 0.9408140621800749,
+                "altitude": 0.10659807976601395,
+                "span": 0.4814143491998114,
+                "speed": 1.3628155966366473,
+                "depth": 0.44177775844637734
+              },
+              {
+                "u": 0.5816887252183887,
+                "v": 0.48777196717199717,
+                "altitude": 0.036821804307585054,
+                "span": 0.3550996222798608,
+                "speed": 1.647391089003907,
+                "depth": 0.8124464785553083
+              },
+              {
+                "u": 0.061885374785858434,
+                "v": 0.08330871105347012,
+                "altitude": 0.1181314397810276,
+                "span": 0.376185534499598,
+                "speed": 1.1050579484683918,
+                "depth": 0.10604014186514166
+              },
+              {
+                "u": 0.8773485141108506,
+                "v": 0.9628851201521695,
+                "altitude": 0.3878845050967731,
+                "span": 0.5632742637356107,
+                "speed": 1.5079987464378592,
+                "depth": 0.6308834747205939
+              },
+              {
+                "u": 0.2676586788189788,
+                "v": 0.5772514913879538,
+                "altitude": 0.2617859395446438,
+                "span": 0.572623565032987,
+                "speed": 1.331091409743152,
+                "depth": 0.4004559859546951
+              },
+              {
+                "u": 0.5410681406756959,
+                "v": 0.6143685205636558,
+                "altitude": 0.20695000792010199,
+                "span": 0.4764016358026988,
+                "speed": 1.3946690143830658,
+                "depth": 0.48326785827522134
+              },
+              {
+                "u": 0.3658626638698292,
+                "v": 1.0119466058588877,
+                "altitude": 0.14252252688692435,
+                "span": 0.6868120862859585,
+                "speed": 1.0935782907413223,
+                "depth": 0.0910875189193473
+              }
+            ]
+          }
+        },
+        {
+          "target": 1,
+          "before": {
+            "count": 394,
+            "current": {
+              "count": 393.7954905739406,
+              "speed": 1.3095022686219233,
+              "length": 1.082728611628434,
+              "wind": 0.04297511343109617,
+              "cloud": 0.12249476724469101,
+              "impacts": 285.2151052708082,
+              "thunder": 0.4735567695324833,
+              "rippleScale": 1.4712143527140567,
+              "intensity": 2.4136430581421697
+            },
+            "particles": [
+              {
+                "u": 0.2772036480176932,
+                "v": 0.26632855838466146,
+                "altitude": 0.3898143917786331,
+                "span": 0.695586380592745,
+                "speed": 1.3249250931409473,
+                "depth": 0.3529627056128921
+              },
+              {
+                "u": 0.4379833004658644,
+                "v": 0.5522176116535296,
+                "altitude": 0.03511106915140262,
+                "span": 0.5618905518083857,
+                "speed": 1.1651310410456899,
+                "depth": 0.1495851120490168
+              },
+              {
+                "u": -0.02663741726414902,
+                "v": 0.463260432828068,
+                "altitude": 0.1418239048591206,
+                "span": 0.3538624402861319,
+                "speed": 1.5992642692540695,
+                "depth": 0.7021274005849082
+              },
+              {
+                "u": 0.8271149092291882,
+                "v": 0.5045132181180431,
+                "altitude": 0.1700928744153127,
+                "span": 0.42747239888741173,
+                "speed": 1.1152381608149138,
+                "depth": 0.08608403810881182
+              },
+              {
+                "u": -0.006346943613695609,
+                "v": -0.012087544329633996,
+                "altitude": 0.21168471729552688,
+                "span": 0.511928688530439,
+                "speed": 1.8159798246726937,
+                "depth": 0.9779517355396546
+              },
+              {
+                "u": 0.3335652169258944,
+                "v": 0.9081098689246863,
+                "altitude": 0.371985360953854,
+                "span": 0.513631177847968,
+                "speed": 1.4231864649073442,
+                "depth": 0.47802469051219265
+              },
+              {
+                "u": 0.8088141172547614,
+                "v": 0.19797670948611942,
+                "altitude": 0.5789807893800905,
+                "span": 0.6209788178562767,
+                "speed": 1.2612020563418187,
+                "depth": 0.27185932467438667
+              },
+              {
+                "u": 0.8285715778943161,
+                "v": 1.0020935767593617,
+                "altitude": 0.0298713101079219,
+                "span": 0.36227324558105634,
+                "speed": 1.2622681853242632,
+                "depth": 0.2732162384270276
+              },
+              {
+                "u": 0.009421542659716987,
+                "v": 0.9888708967472684,
+                "altitude": 0.0023082076487333444,
+                "span": 0.6615996844138843,
+                "speed": 1.341336967443049,
+                "depth": 0.3738508892321707
+              },
+              {
+                "u": 0.8599884791835988,
+                "v": 0.006234471898574068,
+                "altitude": 0.12899353862194354,
+                "span": 0.4090834211983921,
+                "speed": 1.0636175968838013,
+                "depth": 0.02038405783381758
+              },
+              {
+                "u": 0.1207129750206298,
+                "v": 0.7791589321351592,
+                "altitude": 0.49192703869800036,
+                "span": 0.6393332652064052,
+                "speed": 1.1117861696493927,
+                "depth": 0.08169052253647413
+              },
+              {
+                "u": 0.9016942306364049,
+                "v": 0.7180172507210322,
+                "altitude": 0.1553569415580312,
+                "span": 0.4385062731938597,
+                "speed": 1.075235595457663,
+                "depth": 0.03517084470728604
+              },
+              {
+                "u": 0.47986603467125793,
+                "v": 0.2135950371916359,
+                "altitude": 0.10627629435119997,
+                "span": 0.5032149052319443,
+                "speed": 1.7199545584017755,
+                "depth": 0.8557357499041711
+              },
+              {
+                "u": 0.8204283346636667,
+                "v": 1.0117032022921861,
+                "altitude": 0.42592244458429884,
+                "span": 0.6971823851132051,
+                "speed": 1.64067433965891,
+                "depth": 0.7548319935144789
+              },
+              {
+                "u": 0.9427817416145424,
+                "v": 1.0141198541514305,
+                "altitude": 0.2176967407798061,
+                "span": 0.5553740976288987,
+                "speed": 1.4631726248373236,
+                "depth": 0.5289170039355457
+              },
+              {
+                "u": -0.03771447595948604,
+                "v": 0.8152933394187889,
+                "altitude": 0.21345160684242692,
+                "span": 0.45408276326228775,
+                "speed": 1.8149192068157773,
+                "depth": 0.9766018360621576
+              },
+              {
+                "u": 0.5746406928229156,
+                "v": 0.12803501231599357,
+                "altitude": 0.5807064717482932,
+                "span": 0.5807064717482932,
+                "speed": 1.344577997942268,
+                "depth": 0.3779759049943675
+              },
+              {
+                "u": 0.0192018140469715,
+                "v": 0.041797062765934596,
+                "altitude": 0.3867168015536173,
+                "span": 0.5033850330462064,
+                "speed": 1.7560572673246602,
+                "depth": 0.9016854080147011
+              },
+              {
+                "u": 0.2998863343309804,
+                "v": 0.24260530764257257,
+                "altitude": 0.23478718368144375,
+                "span": 0.3560052199060958,
+                "speed": 1.2179383213733421,
+                "depth": 0.21679548349193267
+              },
+              {
+                "u": 0.37369204497971925,
+                "v": 0.22721017148288922,
+                "altitude": 0.1778253177385365,
+                "span": 0.39536251857831395,
+                "speed": 1.6407370096005864,
+                "depth": 0.754911756570486
+              }
+            ]
+          },
+          "after": {
+            "count": 394,
+            "current": {
+              "count": 393.7954905739406,
+              "speed": 1.3095022686219233,
+              "length": 1.082728611628434,
+              "wind": 0.04297511343109617,
+              "cloud": 0.12249476724469101,
+              "impacts": 285.2151052708082,
+              "thunder": 0.4735567695324833,
+              "rippleScale": 1.4712143527140567,
+              "intensity": 2.4136430581421697
+            },
+            "particles": [
+              {
+                "u": 0.2772036480176932,
+                "v": 0.26632855838466146,
+                "altitude": 0.3898143917786331,
+                "span": 0.695586380592745,
+                "speed": 1.3249250931409473,
+                "depth": 0.3529627056128921
+              },
+              {
+                "u": 0.4379833004658644,
+                "v": 0.5522176116535296,
+                "altitude": 0.03511106915140262,
+                "span": 0.5618905518083857,
+                "speed": 1.1651310410456899,
+                "depth": 0.1495851120490168
+              },
+              {
+                "u": -0.02663741726414902,
+                "v": 0.463260432828068,
+                "altitude": 0.1418239048591206,
+                "span": 0.3538624402861319,
+                "speed": 1.5992642692540695,
+                "depth": 0.7021274005849082
+              },
+              {
+                "u": 0.8271149092291882,
+                "v": 0.5045132181180431,
+                "altitude": 0.1700928744153127,
+                "span": 0.42747239888741173,
+                "speed": 1.1152381608149138,
+                "depth": 0.08608403810881182
+              },
+              {
+                "u": -0.006346943613695609,
+                "v": -0.012087544329633996,
+                "altitude": 0.21168471729552688,
+                "span": 0.511928688530439,
+                "speed": 1.8159798246726937,
+                "depth": 0.9779517355396546
+              },
+              {
+                "u": 0.3335652169258944,
+                "v": 0.9081098689246863,
+                "altitude": 0.371985360953854,
+                "span": 0.513631177847968,
+                "speed": 1.4231864649073442,
+                "depth": 0.47802469051219265
+              },
+              {
+                "u": 0.8088141172547614,
+                "v": 0.19797670948611942,
+                "altitude": 0.5789807893800905,
+                "span": 0.6209788178562767,
+                "speed": 1.2612020563418187,
+                "depth": 0.27185932467438667
+              },
+              {
+                "u": 0.8285715778943161,
+                "v": 1.0020935767593617,
+                "altitude": 0.0298713101079219,
+                "span": 0.36227324558105634,
+                "speed": 1.2622681853242632,
+                "depth": 0.2732162384270276
+              },
+              {
+                "u": 0.009421542659716987,
+                "v": 0.9888708967472684,
+                "altitude": 0.0023082076487333444,
+                "span": 0.6615996844138843,
+                "speed": 1.341336967443049,
+                "depth": 0.3738508892321707
+              },
+              {
+                "u": 0.8599884791835988,
+                "v": 0.006234471898574068,
+                "altitude": 0.12899353862194354,
+                "span": 0.4090834211983921,
+                "speed": 1.0636175968838013,
+                "depth": 0.02038405783381758
+              },
+              {
+                "u": 0.1207129750206298,
+                "v": 0.7791589321351592,
+                "altitude": 0.49192703869800036,
+                "span": 0.6393332652064052,
+                "speed": 1.1117861696493927,
+                "depth": 0.08169052253647413
+              },
+              {
+                "u": 0.9016942306364049,
+                "v": 0.7180172507210322,
+                "altitude": 0.1553569415580312,
+                "span": 0.4385062731938597,
+                "speed": 1.075235595457663,
+                "depth": 0.03517084470728604
+              },
+              {
+                "u": 0.47986603467125793,
+                "v": 0.2135950371916359,
+                "altitude": 0.10627629435119997,
+                "span": 0.5032149052319443,
+                "speed": 1.7199545584017755,
+                "depth": 0.8557357499041711
+              },
+              {
+                "u": 0.8204283346636667,
+                "v": 1.0117032022921861,
+                "altitude": 0.42592244458429884,
+                "span": 0.6971823851132051,
+                "speed": 1.64067433965891,
+                "depth": 0.7548319935144789
+              },
+              {
+                "u": 0.9427817416145424,
+                "v": 1.0141198541514305,
+                "altitude": 0.2176967407798061,
+                "span": 0.5553740976288987,
+                "speed": 1.4631726248373236,
+                "depth": 0.5289170039355457
+              },
+              {
+                "u": -0.03771447595948604,
+                "v": 0.8152933394187889,
+                "altitude": 0.21345160684242692,
+                "span": 0.45408276326228775,
+                "speed": 1.8149192068157773,
+                "depth": 0.9766018360621576
+              },
+              {
+                "u": 0.5746406928229156,
+                "v": 0.12803501231599357,
+                "altitude": 0.5807064717482932,
+                "span": 0.5807064717482932,
+                "speed": 1.344577997942268,
+                "depth": 0.3779759049943675
+              },
+              {
+                "u": 0.0192018140469715,
+                "v": 0.041797062765934596,
+                "altitude": 0.3867168015536173,
+                "span": 0.5033850330462064,
+                "speed": 1.7560572673246602,
+                "depth": 0.9016854080147011
+              },
+              {
+                "u": 0.2998863343309804,
+                "v": 0.24260530764257257,
+                "altitude": 0.23478718368144375,
+                "span": 0.3560052199060958,
+                "speed": 1.2179383213733421,
+                "depth": 0.21679548349193267
+              },
+              {
+                "u": 0.37369204497971925,
+                "v": 0.22721017148288922,
+                "altitude": 0.1778253177385365,
+                "span": 0.39536251857831395,
+                "speed": 1.6407370096005864,
+                "depth": 0.754911756570486
+              }
+            ]
+          }
+        },
+        {
+          "target": 4,
+          "before": {
+            "count": 48,
+            "current": {
+              "count": 48,
+              "speed": 0.85,
+              "length": 0.8,
+              "wind": 0.02,
+              "cloud": 0.035,
+              "impacts": 20,
+              "thunder": 0,
+              "rippleScale": 1,
+              "intensity": 1
+            },
+            "particles": [
+              {
+                "u": -0.0009163481284042915,
+                "v": 0.564451465156627,
+                "altitude": 0.10842164629753083,
+                "span": 0.3856714196724069,
+                "speed": 1.1753978383407342,
+                "depth": 0.971368310472028
+              },
+              {
+                "u": 0.1170633655971984,
+                "v": 0.534223222118972,
+                "altitude": 0.41794328153071125,
+                "span": 0.523929045091905,
+                "speed": 0.7935246239378255,
+                "depth": 0.2225973018388735
+              },
+              {
+                "u": 0.694845721699244,
+                "v": 0.4041798646544995,
+                "altitude": 0.15445523188140212,
+                "span": 0.6167531772709449,
+                "speed": 0.7807576282630244,
+                "depth": 0.19756397698632222
+              },
+              {
+                "u": 0.8771198483792971,
+                "v": 0.033501062135011604,
+                "altitude": 0.3121051886935968,
+                "span": 0.34422265060173196,
+                "speed": 0.9644883455896653,
+                "depth": 0.5578202854699322
+              },
+              {
+                "u": 0.7551390722640486,
+                "v": 0.46287692338896297,
+                "altitude": 0.30097734949455074,
+                "span": 0.30097734949455074,
+                "speed": 1.1855005029656602,
+                "depth": 0.9911774567954121
+              },
+              {
+                "u": 0.19950246670652874,
+                "v": 0.8958279007945832,
+                "altitude": 0.38710823475567246,
+                "span": 0.666595053447055,
+                "speed": 1.1848817711760438,
+                "depth": 0.989964257207929
+              },
+              {
+                "u": 0.8185016926617033,
+                "v": 0.6453500772434891,
+                "altitude": 0.32100614951537887,
+                "span": 0.5407688326340113,
+                "speed": 1.090916667709071,
+                "depth": 0.8057189562922957
+              },
+              {
+                "u": 0.26582470275399805,
+                "v": 0.25539912871115167,
+                "altitude": 0.13953359445521643,
+                "span": 0.5004663830328431,
+                "speed": 0.7673442556439329,
+                "depth": 0.17126324636065282
+              },
+              {
+                "u": -0.025272588061197136,
+                "v": 0.5973928130529124,
+                "altitude": 0.12041652947538081,
+                "span": 0.3580473764627127,
+                "speed": 1.0074337680136707,
+                "depth": 0.6420269961052366
+              },
+              {
+                "u": 0.5437041353394146,
+                "v": 0.9525558766636815,
+                "altitude": 0.05381819667642994,
+                "span": 0.6588063243736955,
+                "speed": 0.8928565804944006,
+                "depth": 0.417365844106668
+              },
+              {
+                "u": 0.5773882576132187,
+                "v": 0.565353742606722,
+                "altitude": 0.4471325141540822,
+                "span": 0.5137140999720636,
+                "speed": 0.996730326616499,
+                "depth": 0.6210398561107822
+              },
+              {
+                "u": 0.9643073641008242,
+                "v": 0.9259136776618316,
+                "altitude": 0.3501647387914688,
+                "span": 0.5400701015021092,
+                "speed": 1.1348525089000394,
+                "depth": 0.891867664509881
+              },
+              {
+                "u": 0.9679755522347577,
+                "v": 0.6905302064036386,
+                "altitude": 0.3329323338287826,
+                "span": 0.4046995779103322,
+                "speed": 0.7168147462591292,
+                "depth": 0.07218577697868478
+              },
+              {
+                "u": 0.8249659368924855,
+                "v": 0.1273813096735596,
+                "altitude": 0.1959524136954206,
+                "span": 0.43921162948799786,
+                "speed": 0.8979093418831845,
+                "depth": 0.42727321937879337
+              },
+              {
+                "u": 0.6934590924590112,
+                "v": 0.844692864162542,
+                "altitude": 0.0024779259097493164,
+                "span": 0.5512265891676464,
+                "speed": 0.7154322973276681,
+                "depth": 0.06947509279934927
+              },
+              {
+                "u": 0.7590305598571687,
+                "v": 0.5560868459873384,
+                "altitude": 0.00924131629466187,
+                "span": 0.42536171836634096,
+                "speed": 1.1680745731230064,
+                "depth": 0.9570089669078554
+              },
+              {
+                "u": 0.29979331850821983,
+                "v": 0.2186019905842483,
+                "altitude": 0.4384209572724139,
+                "span": 0.5071285811187306,
+                "speed": 1.0285572432083447,
+                "depth": 0.6834455749183228
+              },
+              {
+                "u": 0.3947088989634447,
+                "v": 0.7563757214421091,
+                "altitude": 0.39567535799478815,
+                "span": 0.5509069523637817,
+                "speed": 0.9276460749485463,
+                "depth": 0.4855805391147967
+              },
+              {
+                "u": 0.8123573066760817,
+                "v": 0.47869197782325795,
+                "altitude": 0.27397267642971107,
+                "span": 0.3457906597564608,
+                "speed": 1.0751195108794984,
+                "depth": 0.7747441389794086
+              },
+              {
+                "u": 0.430894541389406,
+                "v": 0.6325875807820699,
+                "altitude": 0.30000429351493335,
+                "span": 0.5409440715545996,
+                "speed": 0.8893479197826087,
+                "depth": 0.4104861172208014
+              }
+            ]
+          },
+          "after": {
+            "count": 48,
+            "current": {
+              "count": 48,
+              "speed": 0.85,
+              "length": 0.8,
+              "wind": 0.02,
+              "cloud": 0.035,
+              "impacts": 20,
+              "thunder": 0,
+              "rippleScale": 1,
+              "intensity": 1
+            },
+            "particles": [
+              {
+                "u": -0.0009163481284042915,
+                "v": 0.564451465156627,
+                "altitude": 0.10842164629753083,
+                "span": 0.3856714196724069,
+                "speed": 1.1753978383407342,
+                "depth": 0.971368310472028
+              },
+              {
+                "u": 0.1170633655971984,
+                "v": 0.534223222118972,
+                "altitude": 0.41794328153071125,
+                "span": 0.523929045091905,
+                "speed": 0.7935246239378255,
+                "depth": 0.2225973018388735
+              },
+              {
+                "u": 0.694845721699244,
+                "v": 0.4041798646544995,
+                "altitude": 0.15445523188140212,
+                "span": 0.6167531772709449,
+                "speed": 0.7807576282630244,
+                "depth": 0.19756397698632222
+              },
+              {
+                "u": 0.8771198483792971,
+                "v": 0.033501062135011604,
+                "altitude": 0.3121051886935968,
+                "span": 0.34422265060173196,
+                "speed": 0.9644883455896653,
+                "depth": 0.5578202854699322
+              },
+              {
+                "u": 0.7551390722640486,
+                "v": 0.46287692338896297,
+                "altitude": 0.30097734949455074,
+                "span": 0.30097734949455074,
+                "speed": 1.1855005029656602,
+                "depth": 0.9911774567954121
+              },
+              {
+                "u": 0.19950246670652874,
+                "v": 0.8958279007945832,
+                "altitude": 0.38710823475567246,
+                "span": 0.666595053447055,
+                "speed": 1.1848817711760438,
+                "depth": 0.989964257207929
+              },
+              {
+                "u": 0.8185016926617033,
+                "v": 0.6453500772434891,
+                "altitude": 0.32100614951537887,
+                "span": 0.5407688326340113,
+                "speed": 1.090916667709071,
+                "depth": 0.8057189562922957
+              },
+              {
+                "u": 0.26582470275399805,
+                "v": 0.25539912871115167,
+                "altitude": 0.13953359445521643,
+                "span": 0.5004663830328431,
+                "speed": 0.7673442556439329,
+                "depth": 0.17126324636065282
+              },
+              {
+                "u": -0.025272588061197136,
+                "v": 0.5973928130529124,
+                "altitude": 0.12041652947538081,
+                "span": 0.3580473764627127,
+                "speed": 1.0074337680136707,
+                "depth": 0.6420269961052366
+              },
+              {
+                "u": 0.5437041353394146,
+                "v": 0.9525558766636815,
+                "altitude": 0.05381819667642994,
+                "span": 0.6588063243736955,
+                "speed": 0.8928565804944006,
+                "depth": 0.417365844106668
+              },
+              {
+                "u": 0.5773882576132187,
+                "v": 0.565353742606722,
+                "altitude": 0.4471325141540822,
+                "span": 0.5137140999720636,
+                "speed": 0.996730326616499,
+                "depth": 0.6210398561107822
+              },
+              {
+                "u": 0.9643073641008242,
+                "v": 0.9259136776618316,
+                "altitude": 0.3501647387914688,
+                "span": 0.5400701015021092,
+                "speed": 1.1348525089000394,
+                "depth": 0.891867664509881
+              },
+              {
+                "u": 0.9679755522347577,
+                "v": 0.6905302064036386,
+                "altitude": 0.3329323338287826,
+                "span": 0.4046995779103322,
+                "speed": 0.7168147462591292,
+                "depth": 0.07218577697868478
+              },
+              {
+                "u": 0.8249659368924855,
+                "v": 0.1273813096735596,
+                "altitude": 0.1959524136954206,
+                "span": 0.43921162948799786,
+                "speed": 0.8979093418831845,
+                "depth": 0.42727321937879337
+              },
+              {
+                "u": 0.6934590924590112,
+                "v": 0.844692864162542,
+                "altitude": 0.0024779259097493164,
+                "span": 0.5512265891676464,
+                "speed": 0.7154322973276681,
+                "depth": 0.06947509279934927
+              },
+              {
+                "u": 0.7590305598571687,
+                "v": 0.5560868459873384,
+                "altitude": 0.00924131629466187,
+                "span": 0.42536171836634096,
+                "speed": 1.1680745731230064,
+                "depth": 0.9570089669078554
+              },
+              {
+                "u": 0.29979331850821983,
+                "v": 0.2186019905842483,
+                "altitude": 0.4384209572724139,
+                "span": 0.5071285811187306,
+                "speed": 1.0285572432083447,
+                "depth": 0.6834455749183228
+              },
+              {
+                "u": 0.3947088989634447,
+                "v": 0.7563757214421091,
+                "altitude": 0.39567535799478815,
+                "span": 0.5509069523637817,
+                "speed": 0.9276460749485463,
+                "depth": 0.4855805391147967
+              },
+              {
+                "u": 0.8123573066760817,
+                "v": 0.47869197782325795,
+                "altitude": 0.27397267642971107,
+                "span": 0.3457906597564608,
+                "speed": 1.0751195108794984,
+                "depth": 0.7747441389794086
+              },
+              {
+                "u": 0.430894541389406,
+                "v": 0.6325875807820699,
+                "altitude": 0.30000429351493335,
+                "span": 0.5409440715545996,
+                "speed": 0.8893479197826087,
+                "depth": 0.4104861172208014
+              }
+            ]
+          }
+        }
+      ],
+      "frames": [
+        {
+          "level": 1,
+          "count": 837,
+          "speed": 1.8467278394080004,
+          "scale": 1.9967278394080004,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 830,
+          "speed": 1.8372094352640003,
+          "scale": 1.9872094352640002,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 818,
+          "speed": 1.821945976002001,
+          "scale": 1.9719459760020008,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 801,
+          "speed": 1.8012917907500001,
+          "scale": 1.95129179075,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 781,
+          "speed": 1.775647926,
+          "scale": 1.925647926,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 757,
+          "speed": 1.7458079280160028,
+          "scale": 1.8958079280160027,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 731,
+          "speed": 1.7117877381120017,
+          "scale": 1.8617877381120016,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 701,
+          "speed": 1.6742013260000002,
+          "scale": 1.824201326,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 669,
+          "speed": 1.633621892054001,
+          "scale": 1.783621892054001,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 634,
+          "speed": 1.590251717506004,
+          "scale": 1.740251717506004,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 598,
+          "speed": 1.5446553314220022,
+          "scale": 1.694655331422002,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 561,
+          "speed": 1.4972798502500002,
+          "scale": 1.6472798502500001,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 522,
+          "speed": 1.4485723904380032,
+          "scale": 1.5985723904380031,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 483,
+          "speed": 1.3992787774220024,
+          "scale": 1.5492787774220023,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 388,
+          "speed": 1.2795589742220024,
+          "scale": 1.4295589742220023,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 388,
+          "speed": 1.280113387845979,
+          "scale": 1.4303302423743787,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 389,
+          "speed": 1.2817326406792746,
+          "scale": 1.4325828532175413,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 389,
+          "speed": 1.284340530849422,
+          "scale": 1.4362107991159552,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 390,
+          "speed": 1.2878490253780992,
+          "scale": 1.4410916136842324,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 391,
+          "speed": 1.2922173952561145,
+          "scale": 1.4471686370815813,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 392,
+          "speed": 1.2973339555205805,
+          "scale": 1.4542864996503138,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 393,
+          "speed": 1.30311601391329,
+          "scale": 1.4623301647058233,
+          "transition": true
+        },
+        {
+          "level": 3,
+          "count": 394,
+          "speed": 1.3095022686219233,
+          "scale": 1.4712143527140567,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 393,
+          "speed": 1.3079987034066043,
+          "scale": 1.469672463678721,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 389,
+          "speed": 1.3036421497697588,
+          "scale": 1.4652048674507265,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 384,
+          "speed": 1.296561666505316,
+          "scale": 1.457943912356069,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 377,
+          "speed": 1.287120735971037,
+          "scale": 1.448262345420457,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 368,
+          "speed": 1.2752989596701882,
+          "scale": 1.436139248217387,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 358,
+          "speed": 1.2615816216173261,
+          "scale": 1.4220722739869338,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 346,
+          "speed": 1.2459934207330206,
+          "scale": 1.4060867511913577,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 333,
+          "speed": 1.2287223790981974,
+          "scale": 1.3883754943371571,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 319,
+          "speed": 1.2100181012905844,
+          "scale": 1.3691944700812135,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 304,
+          "speed": 1.1900860383323717,
+          "scale": 1.3487543661111547,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 288,
+          "speed": 1.1692597528235475,
+          "scale": 1.3273972470812303,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 272,
+          "speed": 1.1474265596231337,
+          "scale": 1.3050075556604053,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 255,
+          "speed": 1.12504537134071,
+          "scale": 1.2820559015127493,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 238,
+          "speed": 1.102326216506766,
+          "scale": 1.2587576665086129,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 221,
+          "speed": 1.0794065077243709,
+          "scale": 1.2352537657102964,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 203,
+          "speed": 1.0564212467315623,
+          "scale": 1.211682641865418,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 186,
+          "speed": 1.0337121908384779,
+          "scale": 1.1883947632103256,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 169,
+          "speed": 1.0113478880458238,
+          "scale": 1.1654604249404688,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 153,
+          "speed": 0.9895384276597018,
+          "scale": 1.1430950712508985,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 137,
+          "speed": 0.9686811741563104,
+          "scale": 1.1217061948945988,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 122,
+          "speed": 0.9488474795239651,
+          "scale": 1.1013669665244366,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 91,
+          "speed": 0.9066033751937771,
+          "scale": 1.058046117777304,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 79,
+          "speed": 0.8917354259642767,
+          "scale": 1.0427992048656967,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 70,
+          "speed": 0.8788352197728533,
+          "scale": 1.0295701900697523,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 62,
+          "speed": 0.8680302166304316,
+          "scale": 1.018489782181671,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 55,
+          "speed": 0.8595676011901527,
+          "scale": 1.009811466253181,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 51,
+          "speed": 0.8536665265552397,
+          "scale": 1.0037599813002398,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 48,
+          "speed": 0.8505016681377283,
+          "scale": 1.0005144549721285,
+          "transition": true
+        },
+        {
+          "level": 1,
+          "count": 48,
+          "speed": 0.85,
+          "scale": 1,
+          "transition": false
+        },
+        {
+          "level": 1,
+          "count": 48,
+          "speed": 0.85,
+          "scale": 1,
+          "transition": false
+        },
+        {
+          "level": 4,
+          "count": 51,
+          "speed": 0.8532721605919995,
+          "scale": 1.0032721605919996,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 58,
+          "speed": 0.8627905647359997,
+          "scale": 1.0127905647359998,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 70,
+          "speed": 0.8780540239979991,
+          "scale": 1.0280540239979992,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 87,
+          "speed": 0.89870820925,
+          "scale": 1.04870820925,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 107,
+          "speed": 0.9241852207359994,
+          "scale": 1.0741852207359994,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 131,
+          "speed": 0.9541920719840007,
+          "scale": 1.1041920719840006,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 158,
+          "speed": 0.9883196964940008,
+          "scale": 1.1383196964940008,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 187,
+          "speed": 1.0256812613819974,
+          "scale": 1.1756812613819974,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 219,
+          "speed": 1.066504191871997,
+          "scale": 1.2165041918719972,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 254,
+          "speed": 1.1097482824940008,
+          "scale": 1.2597482824940007,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 290,
+          "speed": 1.1553446685779978,
+          "scale": 1.305344668577998,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 327,
+          "speed": 1.2025760958719969,
+          "scale": 1.3525760958719968,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 366,
+          "speed": 1.2512802350559986,
+          "scale": 1.4012802350559987,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 405,
+          "speed": 1.300870575104001,
+          "scale": 1.450870575104001,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 445,
+          "speed": 1.3507499997499999,
+          "scale": 1.50074999975,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 484,
+          "speed": 1.4007720835619968,
+          "scale": 1.5507720835619967,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 523,
+          "speed": 1.450193071104001,
+          "scale": 1.600193071104001,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 562,
+          "speed": 1.499007705314001,
+          "scale": 1.649007705314001,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 599,
+          "speed": 1.5461877919999998,
+          "scale": 1.696187792,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 635,
+          "speed": 1.591717979951997,
+          "scale": 1.741717979951997,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 670,
+          "speed": 1.6348814113140007,
+          "scale": 1.7848814113140008,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 702,
+          "speed": 1.6754913243579983,
+          "scale": 1.8254913243579982,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 731,
+          "speed": 1.7129674062499998,
+          "scale": 1.8629674062499997,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 758,
+          "speed": 1.7467668469759992,
+          "scale": 1.896766846975999,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 782,
+          "speed": 1.7767296107859991,
+          "scale": 1.926729610785999,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 802,
+          "speed": 1.8020526004479989,
+          "scale": 1.952052600447999,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 818,
+          "speed": 1.8225375979999998,
+          "scale": 1.972537598,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 830,
+          "speed": 1.8376177167859997,
+          "scale": 1.9876177167859996,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 838,
+          "speed": 1.846937526534,
+          "scale": 1.996937526534,
+          "transition": true
+        },
+        {
+          "level": 4,
+          "count": 840,
+          "speed": 1.85,
+          "scale": 2,
+          "transition": false
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "dense overhead storm and manual swipe share simulated water",
+      "rainWaves": {
+        "hits": 870,
+        "impulses": 870,
+        "fields": 1,
+        "scales": [
+          1.0127905647359998,
+          1.0280540239979992,
+          1.048638824592001,
+          1.0741852207359994,
+          1.1041920719840006,
+          1.1382122618879984,
+          1.1756812613820018,
+          1.216378107945999,
+          1.259614885887998,
+          1.305205274,
+          1.352576095872002,
+          1.401280235055999,
+          1.4507212225779977,
+          1.500599999872002,
+          1.57549242475,
+          1.6246688205620021,
+          1.672722070565999,
+          1.719068675567998,
+          1.7634112945620017,
+          1.805428496565999,
+          1.8539714826240008,
+          1.8886009099520011,
+          1.9195355009759993,
+          1.9461812622859993,
+          1.9678733864479991,
+          1.9843413080420005,
+          1.9951419146240004,
+          1.999840908034,
+          2
+        ]
+      },
+      "shared": {
+        "fields": 1,
+        "strokes": 18,
+        "energy": 50.920747151791865,
+        "finite": true
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "visible rain streaks and repeated storm lightning with delayed WebAudio thunder",
+      "streakPixels": [
+        262,
+        1125,
+        3647,
+        9942
+      ],
+      "state": {
+        "fishTime": 29.4239,
+        "fish": [
+          {
+            "u": 0.24269779286383378,
+            "v": 0.3856499944540089,
+            "y": -0.07617979203933185,
+            "angle": 1.5355292486844996,
+            "fear": 0,
+            "speed": 0.01453206469455676,
+            "swim": 34.28302741278256,
+            "flowX": -0.012477761546021362,
+            "flowZ": 0.008843623081180379
+          },
+          {
+            "u": 0.4049986322706929,
+            "v": 0.2542654678482035,
+            "y": -0.07555243322213263,
+            "angle": 6.149482033879033,
+            "fear": 0,
+            "speed": 0.024257682695227347,
+            "swim": 32.421499682050616,
+            "flowX": -0.005565151775122579,
+            "flowZ": 0.020745503196663382
+          },
+          {
+            "u": 0.436735243544116,
+            "v": 0.6517107510331284,
+            "y": -0.1044258998874496,
+            "angle": -7.171076772720036,
+            "fear": 0,
+            "speed": 0.028178850377908956,
+            "swim": 33.87253889501526,
+            "flowX": 0.0026347003250884815,
+            "flowZ": 0.002056008757534946
+          },
+          {
+            "u": 0.6307042406269288,
+            "v": 0.6655246228696148,
+            "y": -0.10417645172214429,
+            "angle": -0.6201686292383499,
+            "fear": 0,
+            "speed": 0.020360105825157022,
+            "swim": 35.416852810752914,
+            "flowX": -0.005121189083263029,
+            "flowZ": -0.015616471987636474
+          },
+          {
+            "u": 0.3169950955444935,
+            "v": 0.29270123073752413,
+            "y": -0.08703581873519337,
+            "angle": 5.012339147347546,
+            "fear": 0.016564545179826164,
+            "speed": 0.026631357335539424,
+            "swim": 41.09677468152887,
+            "flowX": -0.002479940633625082,
+            "flowZ": 0.0026929126644622235
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 0,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": true,
+        "rainLevel": 4,
+        "rainStreaks": 840,
+        "rainImpacts": 4928,
+        "rainTransition": false,
+        "rainSpeed": 1.85,
+        "rainRippleScale": 2,
+        "lightningCount": 3,
+        "lightningFlash": 0,
+        "lightningNext": 3.1612425027099,
+        "thunderPending": true,
+        "thunderPlayed": 2,
+        "rainAudio": true,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 1,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 33.814071476944264,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 5,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 0,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": true,
+        "rippleLevel": 0.42021480568601666,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0.6586666666666661,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.47356061653535547,
+            "v": 0.48646067990448694
+          },
+          {
+            "u": 0.9509745638829069,
+            "v": 0.5644261571334205
+          },
+          {
+            "u": 0.6940123177716662,
+            "v": 0.2968204912160354
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 16.432948829808364,
+        "steps": 1755,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 585,
+        "bufferHeight": 1266,
+        "activePointers": 0
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "default rain audio retains continuous playback across level changes and reverses a stopped-rain fade",
+      "result": "passed"
+    },
+    {
+      "scenario": "continuous swipe sound follows motion, fades at rest and releases on reset",
+      "result": "passed"
+    },
+    {
+      "scenario": "water audio tails fade and release across snow/cloud scene switches, then resume on return",
+      "result": "passed"
+    },
+    {
+      "scenario": "stone recording starts automatically at physical water entry and uses its own sample",
+      "played": 1,
+      "result": "passed"
+    },
+    {
+      "scenario": "recorded impact fades on scene exit and rapid three-scene return does not replay it",
+      "retained": 1,
+      "result": "passed"
+    },
+    {
+      "scenario": "settled stones retain exact poses under later impacts and all-fixed scenes stop physics stepping",
+      "fixedPose": {
+        "u": 0.42814510772876113,
+        "v": 0.502318460944859,
+        "y": -0.22003560826856156,
+        "radius": 0.08929658397681496,
+        "top": -0.05540516677971809,
+        "entered": true,
+        "settled": true,
+        "speed": 0,
+        "rotation": [
+          0.1272983941564192,
+          0.2485264853134452,
+          0.34567193225188797,
+          0.8958463150542001
+        ]
+      },
+      "physicsTime": 15.3833333333331,
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "readyAndSettleMs": 13394,
+      "result": "passed",
+      "state": {
+        "fishTime": 53.095700000000015,
+        "fish": [
+          {
+            "u": 0.2479255965045771,
+            "v": 0.3834130046737789,
+            "y": -0.10060945111852641,
+            "angle": -5.3670688579918515,
+            "fear": 0,
+            "speed": 0.020885032903117048,
+            "swim": 79.63849215190068,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.38126219056374727,
+            "v": 0.3967335055626595,
+            "y": -0.08466198659015824,
+            "angle": 10.297975190877228,
+            "fear": 0,
+            "speed": 0.02270242037102226,
+            "swim": 62.84702674241632,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.26630915710198205,
+            "v": 0.6495987311553937,
+            "y": -0.07919059680383622,
+            "angle": -1.7083056454121839,
+            "fear": 0,
+            "speed": 0.022318999864914226,
+            "swim": 64.5473119534052,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.44576492063265033,
+            "v": 0.677638534874701,
+            "y": -0.10681521804194209,
+            "angle": -0.9572138291461108,
+            "fear": 0,
+            "speed": 0.02377331579996407,
+            "swim": 67.41458526844093,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.2976106176982056,
+            "v": 0.372127039783006,
+            "y": -0.11190496445216656,
+            "angle": 8.21531069266741,
+            "fear": 0,
+            "speed": 0.02684575963968015,
+            "swim": 73.71078030640821,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 0.2833333333333334,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainTransition": false,
+        "rainSpeed": 0,
+        "rainRippleScale": 1,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 2,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 32.37344182366613,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 7,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 3,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": false,
+        "rippleLevel": 0,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0.6586666666666661,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.21996166192241384,
+            "v": 0.48002919
+          },
+          {
+            "u": 0.7599522250858928,
+            "v": 0.5600291900000001
+          },
+          {
+            "u": 0.6999867122850766,
+            "v": 0.29002919
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 82,
+        "quality": "low",
+        "renderer": "webgl",
+        "surfaceVertices": 2145,
+        "surfaceTriangles": 4096,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 390,
+        "bufferHeight": 844,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "before": {
+        "u": 0.33222884343176745,
+        "v": 0.387302520228718,
+        "y": -0.07840662325425017,
+        "angle": 0.4804863079304403,
+        "fear": 0,
+        "speed": 0.0353892107635094,
+        "swim": 1.3480595928395755,
+        "flowX": -0.0011821723620790553,
+        "flowZ": -0.0005358117964650966
+      },
+      "alarm": {
+        "u": 0.33905477231593484,
+        "v": 0.3854668415461772,
+        "y": -0.09177452546347695,
+        "angle": -0.4077169955756678,
+        "fear": 0.8299481382391959,
+        "speed": 0.2537339316935463,
+        "swim": 1.7761496836431483,
+        "flowX": 0.017862127717499815,
+        "flowZ": -0.018134948140509772
+      },
+      "fleeing": {
+        "u": 0.3657709911312048,
+        "v": 0.3597623148002371,
+        "y": -0.109847227857261,
+        "angle": -0.6253785263024545,
+        "fear": 0.6779820350051887,
+        "speed": 0.2909013034974596,
+        "swim": 3.5688595928685,
+        "flowX": -0.027724155948785464,
+        "flowZ": 0.01678990773038886
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 8,
+          "energy": 10.551534817129223
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 70,
+          "energy": 5.8921998718194235
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 264,
+          "energy": 3.6372178721322834
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 730,
+          "energy": 6.660718194556225
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "readyAndSettleMs": 1994,
+      "result": "passed",
+      "state": {
+        "fishTime": 19.99360000000004,
+        "fish": [
+          {
+            "u": 0.3306448825196223,
+            "v": 0.4716234234647395,
+            "y": -0.07657043432752045,
+            "angle": -5.792800152527826,
+            "fear": 0,
+            "speed": 0.03,
+            "swim": 34.1978213778913,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.784583275172944,
+            "v": 0.4090817270540259,
+            "y": -0.10351617877815333,
+            "angle": 7.905887470540035,
+            "fear": 0,
+            "speed": 0.032,
+            "swim": 28.697312244870986,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.31498593447953477,
+            "v": 0.49991756816936145,
+            "y": -0.0969452633687759,
+            "angle": -0.5490221863458988,
+            "fear": 0,
+            "speed": 0.034,
+            "swim": 37.94209115280345,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.768728501192335,
+            "v": 0.5215194265643232,
+            "y": -0.08124763745412836,
+            "angle": -2.0478493600341237,
+            "fear": 0,
+            "speed": 0.036,
+            "swim": 28.87596820631048,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.8252781957926864,
+            "v": 0.4454182905298507,
+            "y": -0.10207641327576794,
+            "angle": 0.8806129733634166,
+            "fear": 0,
+            "speed": 0.038,
+            "swim": 33.457323158267165,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 11.441666666666658,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainTransition": false,
+        "rainSpeed": 0,
+        "rainRippleScale": 1,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 50.86631592859545,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 3,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 3,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": false,
+        "rippleLevel": 0,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1194,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 11094,
+        "surfaceTriangles": 21760,
+        "waterMaps": 2,
+        "width": 1440,
+        "height": 960,
+        "bufferWidth": 1732,
+        "bufferHeight": 1154,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "before": {
+        "u": 0.3443811912545738,
+        "v": 0.3854274378707594,
+        "y": -0.07870721521766517,
+        "angle": 0.47444763998345274,
+        "fear": 0,
+        "speed": 0.02642835926295097,
+        "swim": 1.3186564179808271,
+        "flowX": -0.0004409278325589528,
+        "flowZ": -0.0002443709681110865
+      },
+      "alarm": {
+        "u": 0.3544089759976784,
+        "v": 0.38508813637340905,
+        "y": -0.08906834666699845,
+        "angle": -0.24088601492241535,
+        "fear": 0.6419294627233295,
+        "speed": 0.14396534770794703,
+        "swim": 1.6599007490543987,
+        "flowX": 0.0013290960112842742,
+        "flowZ": -0.006014018892873545
+      },
+      "fleeing": {
+        "u": 0.4090852795269276,
+        "v": 0.3705323613427385,
+        "y": -0.10057406520815064,
+        "angle": -0.47157169845656066,
+        "fear": 0.5139130995210162,
+        "speed": 0.1729769490351749,
+        "swim": 3.253886473311337,
+        "flowX": -0.005379754974899268,
+        "flowZ": 0.01566574180358983
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 8,
+          "energy": 30.243099535713828
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 70,
+          "energy": 16.304791882326466
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 264,
+          "energy": 10.025178054834143
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 730,
+          "energy": 20.20250885441407
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "readyAndSettleMs": 2015,
+      "result": "passed",
+      "state": {
+        "fishTime": 18.899300000000043,
+        "fish": [
+          {
+            "u": 0.48653848301435965,
+            "v": 0.3884959690436899,
+            "y": -0.07179874065798138,
+            "angle": 9.360847843942626,
+            "fear": 0,
+            "speed": 0.021539505756187093,
+            "swim": 36.648120722809516,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.6227622869909842,
+            "v": 0.3077224687426277,
+            "y": -0.09885865935807447,
+            "angle": 1.9569816578898822,
+            "fear": 0,
+            "speed": 0.02451980185403421,
+            "swim": 32.13995054475604,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.6985496434152124,
+            "v": 0.6376480283008343,
+            "y": -0.10378391304894759,
+            "angle": -13.375521664264026,
+            "fear": 0,
+            "speed": 0.026339179716553154,
+            "swim": 37.810368268032455,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.28736589341177177,
+            "v": 0.6465226518733591,
+            "y": -0.0838951296654487,
+            "angle": -2.09764881480897,
+            "fear": 0,
+            "speed": 0.026260338891221435,
+            "swim": 39.5947039110492,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.7831512196866381,
+            "v": 0.5131559853117802,
+            "y": -0.09461349845900202,
+            "angle": 14.80188858957625,
+            "fear": 0,
+            "speed": 0.02794427311370823,
+            "swim": 50.29383595322189,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 10.533333333333376,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainTransition": false,
+        "rainSpeed": 0,
+        "rainRippleScale": 1,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 19.46231354271111,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 3,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 3,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": false,
+        "rippleLevel": 0,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.21997614822346961,
+            "v": 0.48002338
+          },
+          {
+            "u": 0.7600142168072315,
+            "v": 0.5600233800000001
+          },
+          {
+            "u": 0.7000392145239889,
+            "v": 0.29002338
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1129,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 9417,
+        "surfaceTriangles": 18432,
+        "waterMaps": 2,
+        "width": 320,
+        "height": 568,
+        "bufferWidth": 480,
+        "bufferHeight": 852,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "pointer stroke startles fish",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "before": {
+        "u": 0.32825307254101754,
+        "v": 0.38706215138558175,
+        "y": -0.07870670342016668,
+        "angle": 0.47444763395733974,
+        "fear": 0,
+        "speed": 0.035187291042728726,
+        "swim": 1.2960479221855041,
+        "flowX": -0.00007592751826480493,
+        "flowZ": -0.00005202969408104603
+      },
+      "alarm": {
+        "u": 0.33168145719287667,
+        "v": 0.38669666428866895,
+        "y": -0.08890170848691822,
+        "angle": -0.23125418159074154,
+        "fear": 0.6314535718454354,
+        "speed": 0.18850363852209065,
+        "swim": 1.6326528569017542,
+        "flowX": 0.0010115595626552227,
+        "flowZ": -0.006889157004641503
+      },
+      "fleeing": {
+        "u": 0.35007826010004756,
+        "v": 0.3734436478950824,
+        "y": -0.1027443675240872,
+        "angle": -0.3392890439298937,
+        "fear": 0.5055263563289175,
+        "speed": 0.22731336547573133,
+        "swim": 3.2061383114379844,
+        "flowX": -0.006303050896263054,
+        "flowZ": -0.0011793396350707392
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "impacts": 8,
+          "energy": 3.731268873613949
+        },
+        {
+          "level": 2,
+          "streaks": 168,
+          "impacts": 70,
+          "energy": 1.7030665646784178
+        },
+        {
+          "level": 3,
+          "streaks": 420,
+          "impacts": 264,
+          "energy": 1.5306814353340217
+        },
+        {
+          "level": 4,
+          "streaks": 840,
+          "impacts": 730,
+          "energy": 3.013235673214599
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "readyAndSettleMs": 1881,
+      "result": "passed",
+      "state": {
+        "fishTime": 16.997300000000052,
+        "fish": [
+          {
+            "u": 0.34087911541575217,
+            "v": 0.5765975702673178,
+            "y": -0.07022828323909812,
+            "angle": -4.735790492885477,
+            "fear": 0,
+            "speed": 0.02903283395601609,
+            "swim": 30.442625330394062,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.5642738680605975,
+            "v": 0.4291866977814254,
+            "y": -0.08624105490358251,
+            "angle": 10.659621402129854,
+            "fear": 0,
+            "speed": 0.031175592596473282,
+            "swim": 27.3914528890679,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.24467840187425716,
+            "v": 0.6235744834542963,
+            "y": -0.10881218361762676,
+            "angle": -1.837550887083257,
+            "fear": 0,
+            "speed": 0.03522855595403787,
+            "swim": 26.127494950975127,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.5278180447205448,
+            "v": 0.4283119272734819,
+            "y": -0.09518741060101828,
+            "angle": 3.75687000491682,
+            "fear": 0,
+            "speed": 0.03643487653693279,
+            "swim": 24.354020156645884,
+            "flowX": 0,
+            "flowZ": 0
+          },
+          {
+            "u": 0.7120422521628972,
+            "v": 0.31967889156610096,
+            "y": -0.08584341285454085,
+            "angle": 0.3950683096364327,
+            "fear": 0,
+            "speed": 0.03663356035109578,
+            "swim": 29.230978077131066,
+            "flowX": 0,
+            "flowZ": 0
+          }
+        ],
+        "fishTriangles": 1175,
+        "ready": true,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stonePhysicsTime": 8.541666666666822,
+        "stoneDynamicBodies": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainTransition": false,
+        "rainSpeed": 0,
+        "rainRippleScale": 1,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "rainAudioFading": false,
+        "weatherAudioNodes": 0,
+        "strokeAudio": false,
+        "strokeSpeed": 0,
+        "audioState": "running",
+        "strokeAudioFading": false,
+        "sceneSoundNodes": 0,
+        "sceneSoundFading": 0,
+        "audioScene": "water",
+        "music": {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 54.19170109746315,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        "strokeReady": true,
+        "strokeDuration": 6.38,
+        "tapReady": true,
+        "tapVoices": 0,
+        "tapPlayed": 3,
+        "stoneReady": true,
+        "stoneVoices": 0,
+        "stonePlayed": 3,
+        "tapFading": 0,
+        "stoneFading": 0,
+        "rippleReady": true,
+        "rippleAudio": false,
+        "rippleLevel": 0,
+        "rippleFading": false,
+        "rippleDuration": 7.890875,
+        "rollReady": true,
+        "rollAudio": false,
+        "rollSpeed": 0,
+        "rollFading": false,
+        "rollPosition": 0,
+        "rollDuration": 9.4,
+        "audioEnabled": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.21996252895042406,
+            "v": 0.48002338
+          },
+          {
+            "u": 0.7599917235268644,
+            "v": 0.5600233800000001
+          },
+          {
+            "u": 0.7000285274545367,
+            "v": 0.29002338
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1015,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 844,
+        "height": 390,
+        "bufferWidth": 1266,
+        "bufferHeight": 585,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "shoreline without derivatives or fragment highp",
+      "result": "passed"
+    },
+    {
+      "scenario": "missing WebGL explicit unavailable state",
+      "result": "passed"
+    },
+    {
+      "scenario": "automatic sound activation: keyboard",
+      "result": "passed"
+    },
+    {
+      "scenario": "automatic sound activation: rain toolbar",
+      "result": "passed"
+    },
+    {
+      "scenario": "automatic sound activation: legacy mouse",
+      "result": "passed"
+    },
+    {
+      "scenario": "automatic sound activation: audio unavailable",
+      "result": "passed"
+    },
+    {
+      "scenario": "file URL offline",
+      "networkRequests": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "reduced motion swipes and rain",
+      "result": "passed"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+
+> zelda-water-garden@1.12.0 test:browser
+> node scripts/music-browser-check.cjs && node scripts/render-recovery-check.cjs && node scripts/browser-check.cjs && node scripts/nature-browser-check.cjs && node scripts/displacement-browser-check.cjs
+
+Music browser checks passed: 3 scenarios
+{
+  kind: 'snow',
+  renderer: 'webgl',
+  quality: 'low',
+  lost: false,
+  status: '',
+  hidden: true
+}
+{
+  kind: 'cloud',
+  renderer: 'webgl',
+  quality: 'low',
+  lost: false,
+  status: '',
+  hidden: true
+}
+{
+  kind: 'water',
+  renderer: 'webgl',
+  quality: 'low',
+  lost: false,
+  status: '',
+  hidden: true
+}
+Browser checks passed: four viewports, rain transitions, recorded audio, falling stones, lifecycle, context recovery, unavailable state and offline file URL.
+AssertionError [ERR_ASSERTION]: holding a stationary snowball stays silent
+
+true !== false
+
+    at run (D:\Projects\guardian-parry\tools\zelda-water-garden\scripts\nature-browser-check.cjs:68:45) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

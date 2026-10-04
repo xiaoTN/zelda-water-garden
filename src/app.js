@@ -17,7 +17,7 @@
   var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
   var natureRenderer = new window.NatureRenderer(natureCanvas, snow, clouds);
   var natureModes = { snow: 0 }, natureWeather = { snow: true, cloud: true };
-  var snowHints = ['滑动留痕 · 长按轻压新雪', '轻点留下脚印 · 拖动串起足迹'];
+  var snowHints = ['滑动留痕 · 长按轻压新雪', '轻点留下脚印 · 拖动串起足迹', '滑动雪面，从小滚大 · 松手留下雪球 · 相碰合并'];
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function notice(text) {
     var element = document.getElementById('notice'); element.textContent = text; element.classList.add('show');
@@ -285,11 +285,11 @@
     document.getElementById('nature-modes').hidden = !snowScene;
     var controls = document.querySelectorAll('[data-nature]');
     for (var i = 0; i < controls.length; i++) {
-      var active = i === 2 ? snow.balls.length > 0 : i === natureModes.snow;
+      controls[i].querySelector('span').textContent = ['划雪','脚印','滚雪球'][i];
+      var active = i === natureModes.snow;
       controls[i].classList.toggle('selected', active); controls[i].setAttribute('aria-pressed', String(active));
     }
     hint.textContent = water ? hints[mode] : snowScene ? snowHints[natureModes.snow] : '滑动拨开云海';
-    if (snowScene && snow.balls.length) hint.textContent = '推着雪球慢慢走 · 再点「雪球」收起';
     natureCanvas.setAttribute('aria-label', snowScene ? '交互雪地，' + hint.textContent + '；空格或回车触碰中央' : '交互云层，滑动拨开云海');
     var weatherName = rain ? window.WaterWeather.profiles[weather.level].name : '下雨';
     var rainButton = document.getElementById('rain'); rainButton.hidden = !water; rainButton.querySelector('span').textContent = weatherName;
@@ -324,13 +324,7 @@
     if(sceneKind!=='snow')return;
     if(rollAudio)rollAudio.stop();
     fingers = {}; var selected=Number(this.getAttribute('data-nature'));
-    if(sceneKind==='snow'&&selected===2){
-      if(snow.balls.length)snow.balls.length=0;
-      else if(natureRenderer.available()){
-        var p=natureRenderer.surface.point(.5,.48,'snow',clouds,false);
-        if(p)snow.ball(p.u,p.v,natureRadius()*.042);
-      }
-    }else natureModes[sceneKind]=selected;
+    natureModes[sceneKind]=selected;
     syncNatureControls();
   });
   function natureRadius() { return Math.min(width, height) / height; }
@@ -356,8 +350,17 @@
     if (sceneKind === 'snow') {
       var snowMove=0;
       if(f.ball){
-        var oldU=f.ball.u,oldV=f.ball.v;snow.roll(f.ball,p.u,p.v);
-        snowMove=Math.hypot((f.ball.u-oldU)*snow.aspect,f.ball.v-oldV);
+        var oldU=f.ball.u,oldV=f.ball.v;
+        if(snow.roll(f.ball,p.u,p.v,snowBallPosition))snowMove=Math.hypot((f.ball.u-oldU)*snow.aspect,f.ball.v-oldV);
+        else {f.ball=null;f.rollFinished=true;}
+      }
+      else if(selected===2&&!f.rollFinished&&f.travel+distance>=3){
+        f.ball=snow.ball(f.u,f.v,0);
+        if(f.ball){
+          if(snow.roll(f.ball,p.u,p.v,snowBallPosition))snowMove=Math.hypot((f.ball.u-f.u)*snow.aspect,f.ball.v-f.v);
+          else {f.ball=null;f.rollFinished=true;}
+        }
+        else {f.rollFinished=true;notice('雪球已经很多了，滚到一起合并后还能继续');}
       }
       else if (selected === 0) {
         snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
@@ -382,6 +385,7 @@
     if (!f.ball && (sceneKind==='cloud'||selected===1) && distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }
     f.travel += distance; f.u = p.u; f.v = p.v;
   }
+  function snowBallPosition(ball){return natureRenderer.surface.ballPosition(ball);}
   function updateNature(dt) {
     if(!natureRenderer.available()){fingers={};if(rollAudio)rollAudio.stop();natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
     for (var id in fingers) {

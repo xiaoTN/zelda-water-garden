@@ -147,14 +147,16 @@
     decodeLoop(this,asset);
   }
   RippleAudio.prototype.update=function(rms){
-    // RMS includes both moving crests and rain waves, independent of grid size.
-    var level=Number.isFinite(rms)?Math.max(0,Math.min(1,(rms-.0005)/.06)):0,c=this.context;
-    if(level<=.005||c.state!=='running'||this.failed){
+    // Small visible waves are already silent. Restart only above a higher RMS
+    // threshold so residual waves cannot repeatedly reverse the fade.
+    var strength=Number.isFinite(rms)?Math.max(0,rms):0,c=this.context;
+    var threshold=this.node&&!this.fadeEnd ? .01 : .012;
+    if(strength<=threshold||c.state!=='running'||this.failed){
       this.stop(c.state!=='running');
       if(this.fadeEnd&&c.currentTime>=this.fadeEnd)this.stop(true);
       return;
     }
-    var previous=this.level;this.level=level;this.fadeEnd=0;
+    var level=Math.min(1,(strength-.01)/.05),previous=this.level;this.level=level;this.fadeEnd=0;
     if(!this.buffer)return;
     if(!this.node)startLoop(this);
     this.node.gain.gain.setTargetAtTime(level*.85,c.currentTime,level>previous ? .18 : .24);

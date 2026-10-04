@@ -10,7 +10,7 @@
   function Snow() {
     this.size = 640; this.origin = -.6; this.span = 2; this.depth = new Float32Array(this.size * this.size);
     this.filtered=new Float32Array(this.depth.length);this.filterWork=new Float32Array(this.depth.length);this.filterRevision=-1;this.active=false;
-    this.balls = []; this.revision = 0; this.foot = 0; this.aspect = 1;
+    this.balls = []; this.ballLimit = 12; this.revision = 0; this.foot = 0; this.aspect = 1;
   }
   Snow.prototype.clear = function () { this.depth.fill(0); this.active=false; this.balls.length = 0; this.foot = 0; this.revision++; };
   Snow.prototype.index=function(u,v){var x=clamp(Math.floor((u-this.origin)/this.span*this.size),0,this.size-1),y=clamp(Math.floor((v-this.origin)/this.span*this.size),0,this.size-1);return y*this.size+x;};
@@ -103,20 +103,58 @@
     this.stamp(u, v, radius, .56, angle, 1, false, 1, undefined, side);
   };
   Snow.prototype.ball = function (u, v, radius) {
-    for (var i = this.balls.length - 1; i >= 0; i--) {
-      var b = this.balls[i];
-      if (Math.hypot((u - b.u) * this.aspect, v - b.v) < b.radius * 1.7) return b;
-    }
-    if (this.balls.length >= 1) return null;
+    if(!isFinite(u+v+radius)||radius<0)return null;
+    if (this.balls.length >= this.ballLimit) return null;
     var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1] }; this.balls.push(item); return item;
   };
-  Snow.prototype.roll = function (ball, u, v) {
-    u = clamp(u, this.origin+ball.radius/this.aspect, this.origin+this.span-ball.radius/this.aspect); v = clamp(v, this.origin+ball.radius, this.origin+this.span-ball.radius);
-    var distance = Math.hypot((u - ball.u) * this.aspect, v - ball.v);
-    this.stroke(ball.u, ball.v, u, v, ball.radius * .65, .65);
-    ball.radius = Math.min(Math.min(this.aspect, 1) * .085, ball.radius + distance * .025);
-    ball.rotation = math.rotation(ball.rotation, (u-ball.u)*this.aspect, v-ball.v, ball.radius);
-    ball.turn += distance / ball.radius; ball.u = u; ball.v = v;
+  Snow.prototype.ballCenter = function (ball, position) {
+    return position ? position(ball) : [(ball.u-.5)*12*this.aspect,ball.radius*12,(ball.v-.5)*12,ball.radius*12];
+  };
+  Snow.prototype.mergeBalls = function (ball, from, position) {
+    if(this.balls.indexOf(ball)<0)return null;
+    // Test sphere contact in the same world used for rendering. The swept center
+    // catches a collision even when a quick pointer move crosses another ball.
+    var merged=true;
+    while(merged){
+      merged=false;var center=this.ballCenter(ball,position),start=from||center;
+      var dx=center[0]-start[0],dy=center[1]-start[1],dz=center[2]-start[2],length=dx*dx+dy*dy+dz*dz;
+      for(var i=0;i<this.balls.length;i++){
+        var other=this.balls[i];if(other===ball)continue;
+        var at=this.ballCenter(other,position),t=length>1e-16?clamp(((at[0]-start[0])*dx+(at[1]-start[1])*dy+(at[2]-start[2])*dz)/length,0,1):0;
+        var separation=Math.hypot(start[0]+dx*t-at[0],start[1]+dy*t-at[1],start[2]+dz*t-at[2]);
+        if(separation>center[3]+at[3]+1e-8)continue;
+        ball.radius=Math.cbrt(ball.radius*ball.radius*ball.radius+other.radius*other.radius*other.radius);
+        other.mergedInto=ball;this.balls.splice(i,1);merged=true;break;
+      }
+    }
+    return ball;
+  };
+  Snow.prototype.roll = function (ball, u, v, position) {
+    if(this.balls.indexOf(ball)<0||!isFinite(u+v))return null;
+    var startU=ball.u,startV=ball.v,distance=Math.hypot((u-startU)*this.aspect,v-startV);
+    if(distance<1e-8)return ball;
+    var steps=Math.min(128,Math.max(1,Math.ceil(distance/Math.max(.006,ball.radius*.45)))),maxRadius=Math.min(this.aspect,1)*.085;
+    for(var i=1;i<=steps;i++){
+      var x=clamp(startU+(u-startU)*i/steps,this.origin+ball.radius/this.aspect,this.origin+this.span-ball.radius/this.aspect);
+      var y=clamp(startV+(v-startV)*i/steps,this.origin+ball.radius,this.origin+this.span-ball.radius);
+      var dx=(x-ball.u)*this.aspect,dz=y-ball.v,travel=Math.hypot(dx,dz),nextRadius=Math.max(ball.radius,Math.min(maxRadius,ball.radius+travel*.075)),near=false;
+      // Distant spheres cannot touch. Avoid recomputing the filtered terrain
+      // between brush steps unless a world-space contact is actually possible.
+      for(var j=0;j<this.balls.length;j++){
+        var other=this.balls[j];if(other===ball)continue;
+        var bx=(other.u-ball.u)*this.aspect,bz=other.v-ball.v,t=travel>1e-8?clamp((bx*dx+bz*dz)/(travel*travel),0,1):0;
+        if(Math.hypot(bx-dx*t,bz-dz*t)<=nextRadius+other.radius+1e-8){near=true;break;}
+      }
+      var from=near?this.ballCenter(ball,position):null;
+      // A fresh gesture starts at radius zero; actual travel gathers its first snow.
+      ball.radius=nextRadius;
+      if(ball.radius>0){
+        this.stroke(ball.u,ball.v,x,y,Math.max(.002,ball.radius*.65),.65);
+        ball.rotation=math.rotation(ball.rotation,dx,dz,ball.radius);ball.turn+=travel/ball.radius;
+      }
+      ball.u=x;ball.v=y;if(near)this.mergeBalls(ball,from,position);
+    }
+    return ball;
   };
   Snow.prototype.update = function (dt, falling) {
     if (!falling) return;

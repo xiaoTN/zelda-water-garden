@@ -162,15 +162,16 @@ test('late rolling decoding and decoder failure cannot revive a stopped ball',()
 test('ripple recording follows actual wave strength, preserves its loop and reverses fades on the same source',()=>{
   const f=strokeFixture('Ripple'),{audio,context,nodes,targets}=f;f.decode();
   assert.equal(f.decodes(),1);assert.equal(audio.buffer.length,15040);audio.update(0);assert.equal(audio.node,null);
-  audio.update(.002);const quiet=targets.at(-1).value,voice=audio.node;
+  audio.update(.003);assert.equal(audio.node,null,'small visible ripples must be silent');
+  audio.update(.013);const quiet=targets.at(-1).value,voice=audio.node;
   audio.update(.015);const medium=targets.at(-1).value;audio.update(.06);assert(targets.at(-1).value>medium&&medium>quiet);
   for(let i=0;i<100;i++){context.currentTime+=.033;audio.update(.025);assert.equal(audio.node,voice);}
   assert.equal(nodes.length,2);assert(voice.source.loop);assert(targets.every(t=>t.fade>0));
   audio.update(0);const deadline=audio.fadeEnd;assert(deadline>context.currentTime);context.currentTime+=.2;audio.update(0);assert.equal(audio.fadeEnd,deadline);
-  audio.update(.012);assert.equal(audio.node,voice);assert.equal(audio.fadeEnd,0);
-  context.currentTime=deadline+.1;audio.update(.012);assert.equal(audio.node,voice,'cancelled fades cannot stop new waves');
+  audio.update(.015);assert.equal(audio.node,voice);assert.equal(audio.fadeEnd,0);
+  context.currentTime=deadline+.1;audio.update(.015);assert.equal(audio.node,voice,'cancelled fades cannot stop new waves');
   audio.stop();context.currentTime+=.7;audio.update(0);assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
-  audio.update(.01);context.state='suspended';audio.update(.01);assert.equal(audio.node,null,'hidden-page suspension releases the loop immediately');
+  audio.update(.02);context.state='suspended';audio.update(.02);assert.equal(audio.node,null,'hidden-page suspension releases the loop immediately');
 });
 
 test('delayed ripple decoding waits for current waves and decoder failure stays silent',()=>{
@@ -179,15 +180,34 @@ test('delayed ripple decoding waits for current waves and decoder failure stays 
   const failed=strokeFixture('Ripple');failed.fail();failed.audio.update(.06);assert.equal(failed.audio.node,null);assert(failed.audio.failed);
 });
 
-test('more simulated ripples raise sound level and naturally settling waves fade to silence without a pointer',()=>{
-  const f=strokeFixture('Ripple'),field=new WaveField(88,192,.462);f.decode();
-  const rms=()=>Math.sqrt(field.energy()/field.current.length);
-  field.disturb(.5,.49,.35);f.audio.update(rms());const single=f.audio.level;
-  field.disturb(.3,.49,.35);field.disturb(.7,.49,.35);f.audio.update(rms());assert(f.audio.level>single*1.5);
-  const strong=f.audio.level;for(let i=0;i<360;i++){field.step();f.context.currentTime+=1/60;f.audio.update(rms());}
-  assert(f.audio.level<strong*.3&&f.audio.node,'quiet remaining waves keep the loop alive');
-  for(let i=0;i<1000;i++){field.step();f.context.currentTime+=1/60;f.audio.update(rms());}
-  assert.equal(f.audio.node,null);assert.equal(f.audio.level,0);
+test('weak remaining ripples fade once, stay silent near the threshold, and resume only for stronger waves',()=>{
+  const {audio,context,nodes,targets,decode}=strokeFixture('Ripple');decode();
+  for(const strength of [0,.004,.006,.008,.01,.011,.012,NaN,Infinity]){audio.update(strength);assert.equal(audio.node,null);}
+  audio.update(.02);const voice=audio.node;assert(voice);
+  audio.update(.011);assert.equal(audio.node,voice);assert.equal(audio.fadeEnd,0,'ongoing waves can weaken smoothly below the restart threshold');
+  audio.update(.01);const deadline=audio.fadeEnd;assert.equal(audio.level,0);assert.equal(targets.at(-1).value,0);
+  assert(Math.abs(deadline-context.currentTime-.65)<1e-12,'the ripple tail retains its original 650ms duration');
+  for(const strength of [.009,.0102,.0119,.012]){context.currentTime+=.1;audio.update(strength);assert.equal(audio.fadeEnd,deadline);assert.equal(audio.level,0);}
+  assert.equal(audio.node,voice,'the fade still plays after the previous shortened deadline');
+  context.currentTime=deadline+.01;audio.update(.011);assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
+  audio.update(.012);assert.equal(audio.node,null);audio.update(.013);assert(audio.node);
+  audio.update(.009);context.currentTime+=.2;const resumed=audio.node;audio.update(.02);
+  assert.equal(audio.node,resumed);assert.equal(audio.fadeEnd,0,'new strong ripples reverse the fade on the same source');
+});
+
+test('more simulated ripples raise sound level and settling waves become silent while weak geometry remains',()=>{
+  for(const [w,h,aspect] of [[88,192,.462],[192,128,1.5]]){
+    const f=strokeFixture('Ripple'),field=new WaveField(w,h,aspect);f.decode();
+    const rms=()=>Math.sqrt(field.energy()/field.current.length);
+    field.disturb(.5,.49,.35);f.audio.update(rms());const single=f.audio.level;
+    field.disturb(.3,.49,.35);field.disturb(.7,.49,.35);f.audio.update(rms());assert(f.audio.level>single*1.5);
+    let silentFrame=0;for(let i=1;i<=720;i++){field.step();f.context.currentTime+=1/60;f.audio.update(rms());if(!f.audio.node){silentFrame=i;break;}}
+    assert(silentFrame>0,'the sound must stop without waiting for waves to disappear');
+    assert(rms()>.006&&rms()<.01,'sound stops earlier than the previous weak-wave threshold');
+    assert(field.current.some(value=>Math.abs(value)>.001),'visible geometry continues moving after sound ends');
+    assert.equal(f.audio.level,0);
+    for(let i=0;i<180;i++){field.step();f.context.currentTime+=1/60;f.audio.update(rms());assert.equal(f.audio.node,null);}
+  }
 });
 
 test('recorded swipe sound crossfades its loop, follows speed and reuses one source',()=>{

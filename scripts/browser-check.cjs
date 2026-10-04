@@ -156,16 +156,18 @@ async function run() {
           const c=new OfflineAudioContext(1,8000*5,8000);let time=0;
           const buffer=c.createBuffer(1,16000,8000);buffer.getChannelData(0).fill(1);
           const clock={state:'running',get currentTime(){return time;},decodeAudioData(bytes,done){done(buffer);},createBuffer:c.createBuffer.bind(c),createBufferSource:c.createBufferSource.bind(c),createGain:c.createGain.bind(c)};
-          const sound=new WaterSound.Ripple(clock,c.destination,WaterRipplesAsset);sound.update(.003);const voice=sound.node;
-          time=1;sound.update(.025);time=2;sound.update(.06);time=3;sound.update(.003);time=4;sound.update(0);
+          const sound=new WaterSound.Ripple(clock,c.destination,WaterRipplesAsset);sound.update(.013);const voice=sound.node;
+          time=1;sound.update(.025);time=2;sound.update(.06);time=3;sound.update(.013);time=4;sound.update(.009);
           const samples=(await c.startRendering()).getChannelData(0),at=t=>samples[Math.round(t*8000)];
-          return {sameVoice:sound.node===voice,early:at(.01),quiet:at(.8),medium:at(1.8),strong:at(2.8),reduced:at(3.8),tail:at(4.15),end:at(4.64),jumps:[1,2,3,4].map(t=>Math.abs(at(t)-at(t-1/8000)))};
+          return {sameVoice:sound.node===voice,fadeSeconds:sound.fadeEnd-time,early:at(.01),quiet:at(.8),medium:at(1.8),strong:at(2.8),reduced:at(3.8),tail:at(4.15),retainedTail:at(4.4),end:at(4.64),jumps:[1,2,3,4].map(t=>Math.abs(at(t)-at(t-1/8000)))};
         });
         assert(rippleFades.sameVoice&&rippleFades.early<rippleFades.quiet*.2);
         assert(rippleFades.medium>rippleFades.quiet*4&&rippleFades.strong>rippleFades.medium*1.8);
         assert(rippleFades.reduced<rippleFades.strong*.12&&rippleFades.end<rippleFades.tail*.025);
         assert(rippleFades.jumps.every(j=>j<.001));
-        reports.push({scenario:'real ripple PCM fades in, scales with wave strength and fades out continuously',...rippleFades,result:'passed'});
+        assert(Math.abs(rippleFades.fadeSeconds-.65)<1e-12,'weak ripple audio must retain its original fade duration');
+        assert(rippleFades.retainedTail>rippleFades.end*5&&rippleFades.end<rippleFades.quiet*.01,'the restored tail must decay smoothly to less than 1% of the quiet wave level');
+        reports.push({scenario:'real ripple PCM fades in, scales with wave strength and fades to silence while weak ripples remain',...rippleFades,result:'passed'});
         await page.waitForFunction(()=>WaterGarden.inspect().rippleReady);
         await page.mouse.move(120,410);await page.mouse.down();await page.mouse.move(270,410,{steps:12});await page.mouse.up();
         await page.waitForTimeout(900);const remaining=await inspect();
@@ -173,9 +175,14 @@ async function run() {
         await page.waitForFunction(level=>WaterGarden.inspect().rippleLevel>0&&WaterGarden.inspect().rippleLevel<level*.7,remaining.rippleLevel);
         const quieter=await inspect();assert(quieter.rippleAudio);
         await page.screenshot({path:path.join(out,'ripple-audio-after-release.png')});
+        await page.waitForFunction(()=>!WaterGarden.inspect().rippleAudio,null,{timeout:20000});
+        const weakSilent=await inspect();assert(weakSilent.energy>0&&weakSilent.rippleLevel===0&&weakSilent.activePointers===0,'weak remaining waves must be silent before the field clears');
+        await page.screenshot({path:path.join(out,'ripple-weak-silent.png')});
+        await page.mouse.move(120,410);await page.mouse.down();await page.mouse.move(270,410,{steps:12});await page.mouse.up();
+        await page.waitForFunction(()=>WaterGarden.inspect().rippleAudio&&WaterGarden.inspect().rippleLevel>.01);
         await page.locator('#reset').click();assert((await inspect()).rippleFading);
         await page.waitForFunction(()=>!WaterGarden.inspect().rippleAudio);
-        reports.push({scenario:'pointer release leaves wave-driven sound which weakens as the water settles and fades on reset',remaining,quieter,result:'passed'});
+        reports.push({scenario:'pointer release leaves wave-driven sound, weak remaining waves become silent, and fresh waves resume before reset',remaining,quieter,weakSilent,result:'passed'});
         await page.touchscreen.tap(195,410);
         const tapSwitch=await page.evaluate(()=>{
           const before=WaterGarden.inspect();document.querySelector('button[data-scene="snow"]').click();return {before,after:WaterGarden.inspect()};

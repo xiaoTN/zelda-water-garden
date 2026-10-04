@@ -49,18 +49,27 @@ async function run() {
       const depth = s.snow.depth; await page.waitForTimeout(150); assert((await state()).snow.depth<depth);
       await page.locator('[data-nature="1"]').click(); await page.mouse.move(x-viewport.width*.2,y+viewport.height*.1); await page.mouse.down(); await page.mouse.move(x+viewport.width*.2,y+viewport.height*.14,{steps:15}); await page.mouse.up(); assert((await state()).snow.footprints >= 3);
       const ballButton=page.locator('[data-nature="2"]');
-      await ballButton.click();assert.equal((await state()).snow.balls.length,1,'button immediately places one ball');
-      await ballButton.click();assert.equal((await state()).snow.balls.length,0,'same button removes it');
-      assert.equal(await ballButton.getAttribute('aria-pressed'),'false');
+      assert.equal(await ballButton.innerText(),'滚雪球');
+      await ballButton.click();assert.equal((await state()).snow.balls.length,0,'selecting rolling mode never places a ball');
+      assert.equal((await state()).mode,2);assert.equal(await ballButton.getAttribute('aria-pressed'),'true');
       await page.touchscreen.tap(x,y);assert.equal((await state()).snow.balls.length,0,'ground taps never create balls');
-      await ballButton.click();assert.equal(await ballButton.getAttribute('aria-pressed'),'true');
+      await page.mouse.move(x-viewport.width*.14,y-viewport.height*.10);await page.mouse.down();
+      assert.equal((await state()).snow.balls.length,0,'pointer down waits for travel');
+      await page.mouse.move(x+viewport.width*.07,y-viewport.height*.10,{steps:18});await page.mouse.up();
+      assert.equal((await state()).snow.balls.length,1);assert((await state()).snow.balls[0].radius>0);
+      await page.mouse.move(x-viewport.width*.16,y+viewport.height*.12);await page.mouse.down();
+      await page.mouse.move(x+viewport.width*.10,y+viewport.height*.12,{steps:18});await page.mouse.up();
+      assert.equal((await state()).snow.balls.length,2,'a fresh stroke leaves a second ball');
+      await ballButton.click();assert.equal((await state()).snow.balls.length,2,'reselecting the mode keeps every ball');
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'snow-multiple.png')});
       const ballPoint=await page.evaluate(()=>{const s=testSurface3D,p=s.camera.project(s.ballPosition(s.snow.balls[0]));return {x:p.u*innerWidth,y:p.v*innerHeight};});
       await page.waitForFunction(()=>WaterGarden.inspect().rollReady);
+      await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);
       await page.mouse.move(ballPoint.x,ballPoint.y);await page.mouse.down();const radius=(await state()).snow.balls[0].radius;
       await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollAudio),false,'holding a stationary snowball stays silent');
       await page.mouse.move(ballPoint.x+60,ballPoint.y+30,{steps:12});
       const rolling=await page.evaluate(()=>WaterGarden.inspect());assert(rolling.rollAudio&&rolling.rollSpeed>0);
-      await page.mouse.up();s=await state();assert.equal(s.snow.balls.length,1);assert(s.snow.balls[0].radius>radius);
+      await page.mouse.up();s=await state();assert.equal(s.snow.balls.length,2);assert(s.snow.balls[0].radius>radius);
       await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);
       const paused=await page.evaluate(()=>WaterGarden.inspect().rollPosition);assert(paused>0);
       await page.waitForTimeout(120);assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollPosition),paused,'silence keeps the saved phase');
@@ -68,7 +77,11 @@ async function run() {
         const p=await page.evaluate(()=>{const s=testSurface3D,p=s.camera.project(s.ballPosition(s.snow.balls[0]));return {x:p.u*innerWidth,y:p.v*innerHeight};});
         await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.move(p.x-40,p.y+10,{steps:8});
         const resumed=await page.evaluate(()=>WaterGarden.inspect());assert(resumed.rollAudio&&resumed.rollPosition>=paused&&resumed.rollPosition<paused+1);
-        await select('cloud');assert(await page.evaluate(()=>WaterGarden.inspect().rollFading),'scene exit fades the shared snow recording');
+        // Switch with a separate touch while the rolling mouse pointer remains held.
+        // Moving that captured mouse to the scene button would also drag the sphere under the toolbar.
+        const cloudControl=await page.locator('button[data-scene="cloud"]').boundingBox();
+        await page.touchscreen.tap(cloudControl.x+cloudControl.width/2,cloudControl.y+cloudControl.height/2);
+        assert(await page.evaluate(()=>WaterGarden.inspect().rollFading),'scene exit fades the shared snow recording');
         await page.mouse.up();await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);await select('snow');
         assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollAudio),false,'returning to snow does not play a stationary ball');
         reports.push({scenario:'snow swipes and rolling share recorded motion audio; stationary holds and release become silent; later rolls resume phase and scene exits fade',paused,resumed:resumed.rollPosition,result:'passed'});
@@ -96,6 +109,17 @@ async function run() {
         const f=pcm.fade;assert(f.early<f.settled*.3&&f.tail>0&&f.tail<f.settled*.3&&f.silent===0);assert(f.resumeStart<f.resumed*.3&&f.resumed>.85&&f.phase===f.paused);
         reports.push({scenario:'first ten seconds render across two seamless loop boundaries; real PCM fades to silence and resumes its saved phase',...pcm,result:'passed'});
       }
+      const merging=await page.evaluate(()=>{
+        const surface=testSurface3D,balls=surface.snow.balls,a=balls[0],b=balls[1],screen=surface.camera.project(surface.ballPosition(a));
+        const pick=surface.point(screen.u,screen.v,'snow',surface.clouds,true),u=b.u-(pick.u-pick.groundU),v=b.v-(pick.v-pick.groundV);
+        const wx=(u-.5)*12*surface.aspect,wz=(v-.5)*12,target=surface.camera.project([wx,surface.height(wx,wz,'snow',surface.snow,surface.clouds),wz]);
+        return {from:{x:screen.u*innerWidth,y:screen.v*innerHeight},to:{x:target.u*innerWidth,y:target.v*innerHeight},volume:a.radius**3+b.radius**3,max:Math.max(a.radius,b.radius)};
+      });
+      await page.mouse.move(merging.from.x,merging.from.y);await page.mouse.down();
+      await page.mouse.move(merging.to.x,merging.to.y,{steps:24});await page.mouse.up();s=await state();
+      assert.equal(s.snow.balls.length,1,'touching balls merge through actual 3D picking');
+      assert(s.snow.balls[0].radius>merging.max&&s.snow.balls[0].radius**3>=merging.volume);
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'snow-merged.png')});
       const support=await page.evaluate(()=>{
         const surface=testSurface3D,ball=surface.snow.balls[0],p=surface.ballPosition(ball),r=p[3];
         let penetration=-Infinity,gap=Infinity;
@@ -180,12 +204,12 @@ async function run() {
           surface.mesh=function(v,indices,stride){edges={};for(let i=0;i<indices.length;i+=3)for(let j=0;j<3;j++){let a=indices[i+j],b=indices[i+(j+1)%3];const key=Math.min(a,b)+':'+Math.max(a,b);edges[key]=(edges[key]||0)+1;}return make.call(this,v,indices,stride);};
           surface.grid(12,true);surface.mesh=make;
           const closed=Object.values(edges).every(count=>count===2),budgets=[];
-          snow.balls.length=0;snow.ball(.5,.5,.025);
+          snow.balls.length=0;for(let i=0;i<12;i++)snow.ball(.18+i%4*.21,.30+Math.floor(i/4)*.20,.008);
           for(const low of [false,true]){
             const size=WaterCore.bufferSize(390,844,devicePixelRatio,low);surface.resize(size.width,size.height,low);surface.draw('snow',0,snow,clouds,0,true,false);
-            if(surface.drawCalls!==3||surface.count!==surface.snowMesh.count+surface.ballMesh.count)throw new Error('Snow must draw only the surface, one snowball and snowfall, without decorative trees');
-            const ball=snow.balls[0],position=surface.ballPosition(ball),screen=surface.camera.project(position),picked=surface.point(screen.u,screen.v,'snow',clouds,true);
-            budgets.push({low,cameraEye:surface.camera.eye,snow:surface.count/3,calls:surface.drawCalls,flakes:surface.flakeMesh.vertices,picked:!!picked&&picked.ball===ball,depth:surface.gl.isEnabled(surface.gl.DEPTH_TEST),pixels:surface.canvas.width*surface.canvas.height});
+            if(surface.drawCalls!==14||surface.count!==surface.snowMesh.count+surface.ballMesh.count*12)throw new Error('Snow must draw the surface, all twelve sphere meshes and snowfall');
+            const picked=snow.balls.every(ball=>{const screen=surface.camera.project(surface.ballPosition(ball)),hit=surface.point(screen.u,screen.v,'snow',clouds,true);return !!hit&&hit.ball===ball;});
+            budgets.push({low,cameraEye:surface.camera.eye,snow:surface.count/3,calls:surface.drawCalls,balls:snow.balls.length,flakes:surface.flakeMesh.vertices,picked,depth:surface.gl.isEnabled(surface.gl.DEPTH_TEST),pixels:surface.canvas.width*surface.canvas.height});
             const snowfallCalls=surface.drawCalls;surface.draw('snow',0,snow,clouds,0,true,true);
             budgets[budgets.length-1].reducedHidesFlakes=surface.drawCalls===snowfallCalls-1;
             surface.draw('cloud',0,snow,clouds,0,false,false);budgets[budgets.length-1].cloud=surface.count/3;
@@ -195,10 +219,13 @@ async function run() {
         });
         assert(geometry.closed,'cloud volume has two incident triangles at every edge');
         for(const b of geometry.budgets){assert.deepEqual(b.cameraEye,[0,12,6]);assert.equal(b.flakes,b.low?300:720);assert(b.reducedHidesFlakes);assert(b.picked&&b.depth,'visible sphere is picked in the depth-tested world');assert(b.snow<=(b.low?50000:100000)&&b.cloud<=(b.low?50000:100000));assert(b.calls<=(b.low?50:100));assert(b.pixels<=(b.low?1000000:2000000));}
-        reports.push({scenario:'closed 3D cloud volume, single sphere mesh, ray picking, depth and both GPU budgets',result:'passed',geometry});
+        reports.push({scenario:'closed 3D cloud volume, twelve sphere meshes, ray picking, depth and both GPU budgets',result:'passed',geometry});
         const cdp = await context.newCDPSession(page);
-        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:130,y:390,id:1},{x:260,y:460,id:2}]}); assert.equal((await state()).activePointers,2);
-        await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]}); assert.equal((await state()).activePointers,0); await cdp.detach();
+        await select('snow');await page.locator('#reset').click();await ballButton.click();
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:130,y:390,id:1},{x:260,y:540,id:2}]}); assert.equal((await state()).activePointers,2);assert.equal((await state()).snow.balls.length,0);
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:90,y:390,id:1},{x:300,y:540,id:2}]});assert.equal((await state()).snow.balls.length,2,'two fingers can roll two fresh spheres');
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]}); assert.equal((await state()).activePointers,0);assert.equal((await state()).snow.balls.length,2); await cdp.detach();
+        reports.push({scenario:'two-finger rolling starts only on travel and cancellation leaves both spheres',result:'passed'});
         await select('snow'); await page.locator('[data-nature="0"]').click(); await page.touchscreen.tap(x,y); const snow = (await state()).snow;
         await page.evaluate(()=>{window.snowBeforeResize=testSurface3D.snow.depth;});
         await page.setViewportSize({width:844,height:390}); await page.waitForFunction(()=>WaterGarden.inspect().width===844);
