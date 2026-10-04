@@ -68,6 +68,7 @@ async function run() {
       await select('cloud'); await page.locator('#reset').click();
       await page.waitForFunction(()=>testSurface3D.landReady);
       assert.equal(await page.evaluate(()=>testSurface3D.landMesh.count),6,'aerial terrain is a separate plane below the cloud mesh');
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'cloud-default.png')});
       const opacity = (await state()).cloud.opacity;
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.move(x+70,y,{steps:15}); await page.mouse.up();
       s = await state(); assert(s.cloud.opacity <= opacity);
