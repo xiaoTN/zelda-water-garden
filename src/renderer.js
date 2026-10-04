@@ -31,9 +31,24 @@
     'uniform vec2 uBedTexel;',
     'uniform vec2 uTexel; uniform float uShorePixel; uniform mediump float uTime; uniform float uAspect; uniform float uLight; uniform float uDetail; uniform mediump float uPass;',
     'float shore(vec2 uv){vec2 p=(uv-vec2(.5,.49))/vec2(.465,.35);float a=atan(p.y,p.x);return length(p)-(1.+.048*sin(a*5.+.7)+.024*sin(a*9.-.5)+.04*cos(a*3.));}',
-    'float heightAt(vec2 uv){vec4 s=texture2D(uWave,uv);return (s.r*(256./257.)+s.g*(1./257.))*2.-1.;}',
+    'float waveAt(vec2 uv){vec4 s=texture2D(uWave,uv);return (s.r*(256./257.)+s.g*(1./257.))*2.-1.;}',
+    // Four bilinear taps reconstruct a smooth cubic B-spline without enlarging the simulation.
+    'float heightAt(vec2 uv){',
+    ' if(uDetail<.5)return waveAt(uv);',
+    ' vec2 p=uv/uTexel-.5,i=floor(p),f=fract(p),f2=f*f,f3=f2*f;',
+    ' vec2 w0=(1.-3.*f+3.*f2-f3)/6.,w1=(4.-6.*f2+3.*f3)/6.;',
+    ' vec2 w2=(1.+3.*f+3.*f2-3.*f3)/6.,w3=f3/6.;',
+    ' vec2 g0=w0+w1,g1=w2+w3,a=(i-.5+w1/g0)*uTexel,b=(i+1.5+w3/g1)*uTexel;',
+    ' return mix(mix(waveAt(a),waveAt(vec2(b.x,a.y)),g1.x),mix(waveAt(vec2(a.x,b.y)),waveAt(b),g1.x),g1.y);',
+    '}',
     'float iceAt(vec2 uv){vec2 t=uTexel*.65;return texture2D(uWave,uv).b*.5+(texture2D(uWave,uv+vec2(t.x,0.)).b+texture2D(uWave,uv-vec2(t.x,0.)).b+texture2D(uWave,uv+vec2(0.,t.y)).b+texture2D(uWave,uv-vec2(0.,t.y)).b)*.125;}',
     'void main(){',
+    ' if(uPass>4.5){',
+    '  float sun=abs(dot(normalize(vNormal),normalize(vec3(-.45,1.,-.35))));',
+    '  vec3 fish=vColor*(.72+sun*.28);',
+    '  if(uLight>.5&&uLight<1.5)fish*=vec3(1.08,.88,.78);if(uLight>1.5)fish*=vec3(.43,.63,.83);',
+    '  gl_FragColor=vec4(fish,1.);return;',
+    ' }',
     ' if(uPass>3.5){float opacity=(1.-smoothstep(.08,.5,length(vUV-.5)))*.30*vColor.r;gl_FragColor=vec4(.025,.055,.035,opacity);return;}',
     ' vec2 uv=vUV;float d=shore(uv);vec3 land=texture2D(uScene,uv).rgb;vec3 col=land;float alpha=1.;',
     ' if(uPass>1.5){',
@@ -120,7 +135,7 @@
   ].join('\n');
   function Renderer(canvas, scene, field) {
     this.canvas = canvas; this.scene = scene; this.field = field; this.low = false; this.gl = null; this.disposed = false; this.mapsLoaded = 0;
-    var gl = canvas.getContext('webgl', { alpha:false, antialias:false, depth:true, stencil:false, preserveDrawingBuffer:false });
+    var gl = canvas.getContext('webgl', { alpha:false, antialias:true, depth:true, stencil:false, preserveDrawingBuffer:false });
     if (!gl) throw new Error('WebGL unavailable');
     this.gl = gl;
     var shaders = [], program, buffers = [], textures = [], self = this;
@@ -146,6 +161,7 @@
       this.positions=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW); this.dynamics=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW); this.indices=buffer(gl.ELEMENT_ARRAY_BUFFER,4,gl.STATIC_DRAW);
       this.ground=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);this.stones=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);
       this.shadows=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);
+      this.fishBuffer=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);
       this.dropped=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropShadows=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropRevision=-1;this.dropCount=0;this.dropShadowCount=0;
       this.buffers=buffers; this.uniforms={};
       var names=['uScene','uWave','uNoise','uIce','uNormal','uFoam','uBed','uBedTexel','uTexel','uShorePixel','uTime','uAspect','uLight','uDetail','uPass','uViewProjection'];
@@ -236,6 +252,17 @@
     this.drawSolid(this.shadows,this.terrain.shadows.length/11,4);gl.disable(gl.BLEND);gl.depthMask(true);
     this.drawSolid(this.stones,this.terrain.stones.length/11,3);
     if(this.dropCount)this.drawSolid(this.dropped,this.dropCount,3);
+    if(this.fishSystem){
+      var fish=this.fishSystem.geometry(this.field);
+      this.fishDepth=root.WaterTerrain.dynamicDepth(this.bed,fish,this.fishDepth);
+      gl.bindBuffer(gl.ARRAY_BUFFER,this.fishBuffer);gl.bufferData(gl.ARRAY_BUFFER,fish,gl.DYNAMIC_DRAW);
+      this.drawSolid(this.fishBuffer,fish.length/11,5);
+    }
+    if(this.fishSystem||this.fishDepthActive){
+      gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,this.bedTexture);
+      gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,this.bed.width,this.bed.height,gl.RGBA,gl.UNSIGNED_BYTE,this.fishSystem?this.fishDepth.pixels:this.bed.pixels);
+    }
+    this.fishDepthActive=!!this.fishSystem;
     root.WaterCore.updateMesh(this.mesh,this.field);
     this.bindVertices(this.positions);gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamics);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.mesh.dynamics);gl.enableVertexAttribArray(this.attributes.dynamics);gl.vertexAttribPointer(this.attributes.dynamics,2,gl.FLOAT,false,8,0);
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);

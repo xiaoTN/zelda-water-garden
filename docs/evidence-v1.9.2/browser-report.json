@@ -1,0 +1,501 @@
+{
+  "browser": "154.0.4258.53",
+  "date": "2026-10-04",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "isolated coastal foam coupling",
+      "changed": 1175,
+      "remote": 0,
+      "resetDifference": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "3D stone and water depth occlusion",
+      "dry": 18036,
+      "dryCovered": 0,
+      "wet": 1641,
+      "wetTinted": 1641,
+      "iceCovered": 0,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "geometry-derived water material depth",
+      "shallowerPixels": 937,
+      "error": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "ripples": 15
+        },
+        {
+          "level": 2,
+          "streaks": 112,
+          "ripples": 43
+        },
+        {
+          "level": 3,
+          "streaks": 240,
+          "ripples": 112
+        },
+        {
+          "level": 4,
+          "streaks": 420,
+          "ripples": 246
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "dense overhead storm",
+      "impactsIn1800ms": 602,
+      "liveRipples": 338,
+      "result": "passed"
+    },
+    {
+      "scenario": "visible rain streaks and repeated storm lightning with delayed WebAudio thunder",
+      "streakPixels": [
+        262,
+        737,
+        1852,
+        4907
+      ],
+      "state": {
+        "ready": true,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "leaf",
+        "light": 0,
+        "rain": true,
+        "rainLevel": 4,
+        "rainStreaks": 420,
+        "rainImpacts": 3743,
+        "rainRipples": 346,
+        "lightningCount": 3,
+        "lightningFlash": 0,
+        "lightningNext": 3.263702871123841,
+        "thunderPending": true,
+        "thunderPlayed": 2,
+        "rainAudio": true,
+        "weatherAudioNodes": 1,
+        "muted": false,
+        "leaves": 5,
+        "leafPositions": [
+          {
+            "u": 0.4534556943568496,
+            "v": 0.4907503651499237
+          },
+          {
+            "u": 0.8787651800971733,
+            "v": 0.5705722844772069
+          },
+          {
+            "u": 0.6980331466228679,
+            "v": 0.30049484765695716
+          },
+          {
+            "u": 0.7718355974223488,
+            "v": 0.49000051251647186
+          },
+          {
+            "u": 0.7214258420363129,
+            "v": 0.4898816062159029
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 10.958140005093732,
+        "steps": 1242,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 585,
+        "bufferHeight": 1266,
+        "activePointers": 0
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "readyAndSettleMs": 3133,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainRipples": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 2,
+        "rainAudio": false,
+        "weatherAudioNodes": 0,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.21997745897680582,
+            "v": 0.48002919
+          },
+          {
+            "u": 0.7600254142038234,
+            "v": 0.5600291900000001
+          },
+          {
+            "u": 0.7000500037290494,
+            "v": 0.29002919
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 187,
+        "quality": "low",
+        "renderer": "webgl",
+        "surfaceVertices": 2145,
+        "surfaceTriangles": 4096,
+        "waterMaps": 2,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 390,
+        "bufferHeight": 844,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "ripples": 17
+        },
+        {
+          "level": 2,
+          "streaks": 112,
+          "ripples": 40
+        },
+        {
+          "level": 3,
+          "streaks": 240,
+          "ripples": 106
+        },
+        {
+          "level": 4,
+          "streaks": 420,
+          "ripples": 237
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "readyAndSettleMs": 1150,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainRipples": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "weatherAudioNodes": 0,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1097,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 11094,
+        "surfaceTriangles": 21760,
+        "waterMaps": 2,
+        "width": 1440,
+        "height": 960,
+        "bufferWidth": 1732,
+        "bufferHeight": 1154,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "ripples": 16
+        },
+        {
+          "level": 2,
+          "streaks": 112,
+          "ripples": 41
+        },
+        {
+          "level": 3,
+          "streaks": 240,
+          "ripples": 103
+        },
+        {
+          "level": 4,
+          "streaks": 420,
+          "ripples": 233
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "readyAndSettleMs": 1111,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainRipples": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "weatherAudioNodes": 0,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22,
+            "v": 0.48
+          },
+          {
+            "u": 0.76,
+            "v": 0.56
+          },
+          {
+            "u": 0.7,
+            "v": 0.29
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1169,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 9417,
+        "surfaceTriangles": 18432,
+        "waterMaps": 2,
+        "width": 320,
+        "height": 568,
+        "bufferWidth": 480,
+        "bufferHeight": 852,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "four rain levels",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "presets": [
+        {
+          "level": 1,
+          "streaks": 48,
+          "ripples": 16
+        },
+        {
+          "level": 2,
+          "streaks": 112,
+          "ripples": 41
+        },
+        {
+          "level": 3,
+          "streaks": 240,
+          "ripples": 102
+        },
+        {
+          "level": 4,
+          "streaks": 420,
+          "ripples": 233
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "readyAndSettleMs": 1103,
+      "result": "passed",
+      "state": {
+        "ready": true,
+        "iceCoverage": 0,
+        "iceCenter": 0,
+        "iceShards": 0,
+        "iceFractures": 0,
+        "stones": [],
+        "stoneImpacts": 0,
+        "stoneDepth": null,
+        "mode": "touch",
+        "light": 0,
+        "rain": false,
+        "rainLevel": 0,
+        "rainStreaks": 0,
+        "rainImpacts": 0,
+        "rainRipples": 0,
+        "lightningCount": 0,
+        "lightningFlash": 0,
+        "lightningNext": null,
+        "thunderPending": false,
+        "thunderPlayed": 0,
+        "rainAudio": false,
+        "weatherAudioNodes": 0,
+        "muted": true,
+        "leaves": 3,
+        "leafPositions": [
+          {
+            "u": 0.22002877875218838,
+            "v": 0.48002331
+          },
+          {
+            "u": 0.7600388776342593,
+            "v": 0.56002331
+          },
+          {
+            "u": 0.7000132325986855,
+            "v": 0.29002331
+          }
+        ],
+        "drops": 0,
+        "rings": 0,
+        "energy": 0,
+        "steps": 1417,
+        "quality": "normal",
+        "renderer": "webgl",
+        "surfaceVertices": 7740,
+        "surfaceTriangles": 15104,
+        "waterMaps": 2,
+        "width": 844,
+        "height": 390,
+        "bufferWidth": 1266,
+        "bufferHeight": 585,
+        "activePointers": 0
+      }
+    },
+    {
+      "scenario": "shoreline without derivatives or fragment highp",
+      "result": "passed"
+    },
+    {
+      "scenario": "no WebGL with falling stone",
+      "result": "passed"
+    },
+    {
+      "scenario": "Canvas rain over ice, thaw and stop",
+      "result": "passed"
+    },
+    {
+      "scenario": "file URL offline",
+      "networkRequests": 0,
+      "result": "passed"
+    },
+    {
+      "scenario": "reduced motion freezes and breaks without airborne shards",
+      "result": "passed"
+    },
+    {
+      "scenario": "synthetic slow timing normal → low → Canvas 2D",
+      "result": "passed"
+    }
+  ]
+}

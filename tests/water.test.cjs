@@ -3,6 +3,265 @@ const assert = require('node:assert/strict');
 const { WaveField, IceField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = require('../src/water-core.js');
 const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
+const {System: Weather,project:projectRain}=require('../src/weather.js');
+
+test('overhead rain converges to its own ground point from every side of the optical center',()=>{
+  for(const [u,v] of [[.15,.2],[.85,.2],[.15,.8],[.85,.8],[.5,.49]]){
+    const near=projectRain(u,v,.7,0,{}),far=projectRain(u,v,.1,0,{}),landed=projectRain(u,v,0,.07,{});
+    assert(Math.hypot(landed.u-u,landed.v-v)<1e-12,'the rain ray must meet the ripple origin within floating-point precision');
+    if(u===.5){assert.deepEqual(near,landed);continue;}
+    assert(Math.hypot(near.u-u,near.v-v)>Math.hypot(far.u-u,far.v-v));
+    assert.equal(Math.sign(near.u-far.u),Math.sign(u-.5));
+    assert.equal(Math.sign(near.v-far.v),Math.sign(v-.49));
+  }
+});
+
+test('storm surface impacts stay dense at 60, 30 and 12.5 updates per second',()=>{
+  for(const dt of [1/60,1/30,.08]){
+    const w=new Weather(seededRandom(87));w.setLevel(4);
+    for(let elapsed=0;elapsed<8;elapsed+=dt)w.update(dt,false,false,(u,v)=>shore(u,v)<-.015);
+    assert(w.hits>2000,'storm must land hundreds of water drops per second, not two per frame');
+    const hits=w.hits;w.setLevel(0);
+    for(let i=0;i<90;i++)w.update(1/60,false,false,()=>assert.fail('stopped rain cannot inject waves'));
+    assert.equal(w.hits,hits);w.clear();assert.equal(w.hits,0);
+  }
+});
+
+test('larger rain presets visibly populate more streaks, land more drops and strike more often',()=>{
+  const results=[];
+  for(let level=1;level<=4;level++){
+    const w=new Weather(seededRandom(1729)),strikes=[],thunders=[];let time=0,lastStrike=0;
+    w.setLevel(level);
+    for(let step=0;step<7200;step++){
+      time+=1/60;
+      w.update(1/60,false,false,(u,v)=>shore(u,v)<-.015,()=>thunders.push(time));
+      if(w.strikes>lastStrike){strikes.push(time);lastStrike=w.strikes;}
+    }
+    for(let i=0;i<thunders.length;i++)assert(thunders[i]>strikes[i]+.28,'thunder must follow visible lightning');
+    results.push({count:w.count,hits:w.hits,strikes:w.strikes});
+  }
+  assert.equal(results[0].strikes,0,'light rain stays free of lightning');
+  for(let i=1;i<4;i++){
+    assert(results[i].count>results[i-1].count);
+    assert(results[i].hits>results[i-1].hits,'actual water impacts should rise with rainfall');
+    assert(results[i].strikes>results[i-1].strikes);
+  }
+  assert(results[3].strikes>=20,'storm should strike repeatedly within two simulated minutes');
+});
+
+test('rain impacts occur at streak landing, never during initial population',()=>{
+  const w=new Weather(seededRandom(41));let hits=0;
+  w.setLevel(4);w.update(0,false,false,()=>{hits++;return true;});assert.equal(hits,0);
+  for(let i=0;i<120;i++)w.update(1/60,false,false,()=>{hits++;return true;});
+  assert(hits>500);assert(hits<=642,'surface impacts have a fixed per-second budget');
+  assert(w.particles.slice(0,w.count).every(p=>p.altitude>0),'landed particles recycle above their next target');
+});
+
+test('stopping or clearing rain cancels queued thunder, flashes and falling streaks',()=>{
+  for(const action of ['setLevel','clear']){
+    const w=new Weather(seededRandom(20));let thunder=0;w.setLevel(4);
+    while(w.strikes===0)w.update(1/60,false,false,null,()=>thunder++);
+    assert(w.pendingThunder>0);
+    if(action==='clear')w.clear();else w.setLevel(0);
+    for(let i=0;i<180;i++)w.update(1/60,false,false,()=>assert.fail('stopped rain cannot hit'),()=>thunder++);
+    assert.equal(thunder,0);assert.equal(w.count,0);assert.equal(w.flash,0);assert(w.cloud<.001);
+  }
+});
+
+test('low quality reduces rain work while keeping storms and rain visible',()=>{
+  const w=new Weather(seededRandom(4));w.setLevel(4);let hits=0;
+  for(let i=0;i<1800;i++)w.update(1/60,true,false,()=>{hits++;return true;});
+  assert(w.count>100&&w.count<180);assert(hits<=3842);assert(w.strikes>=5);
+  w.update(1/60,true,true);assert(w.count<100);
+});
+
+const fishAsset=require('../src/fish-asset.js');
+const {System: FishSchool}=require('../src/fish.js');
+
+test('fish body shading stays continuous across shared mesh edges while retaining natural color variation',()=>{
+  const school=new FishSchool();school.attach(1);
+  for(const swim of [0,.37,.82]){
+    school.items.forEach(f=>{f.swim=swim;});
+    const data=school.geometry();
+    for(let fish=0;fish<school.items.length;fish++){
+      const seen=new Map(),colors=new Set();
+      for(let corner=0;corner<fishAsset.indices.length;corner++){
+        if(fishAsset.materials[Math.floor(corner/3)]>1)continue;
+        const vertex=fishAsset.indices[corner],offset=(fish*fishAsset.indices.length+corner)*11;
+        const shade=Array.from(data.subarray(offset+5,offset+11));
+        assert(Math.abs(Math.hypot(...shade.slice(0,3))-1)<1e-5,'body normals must remain normalized after animation');
+        if(seen.has(vertex)){
+          const other=seen.get(vertex);
+          assert(Math.hypot(...shade.slice(3).map((v,i)=>v-other[i+3]))<1e-6,'fish body colors must not jump at a polygon boundary');
+          assert(Math.hypot(...shade.slice(0,3).map((v,i)=>v-other[i]))<1e-6,'fish body lighting must not form flat polygon blocks');
+        }
+        seen.set(vertex,shade);colors.add(shade.slice(3).map(v=>v.toFixed(3)).join(','));
+      }
+      assert(colors.size>12,'the fish still needs graduated body color, rather than a flat silhouette');
+    }
+  }
+});
+
+test('animated fish geometry raises displayed water depth and clears old footprints without altering the solid bed',()=>{
+  for(const low of [false,true]){
+    const aspect=.6,bed=terrain.bathymetry(terrain.create(aspect,low),aspect,low),school=new FishSchool();school.attach(aspect);
+    const base=Array.from(bed.pixels),physical=Array.from(bed.heights);
+    const depth=p=>(p[0]*256+p[1])/65535*.6-.3;
+    const state=terrain.dynamicDepth(bed,school.geometry());let raised=0,max=0;
+    for(let i=0;i<base.length;i+=4){const delta=depth(state.pixels.subarray(i,i+2))-depth(base.slice(i,i+2));if(delta>.01)raised++;max=Math.max(max,delta);assert.equal(state.pixels[i+2],base[i+2]);assert.equal(state.pixels[i+3],base[i+3]);}
+    assert(raised>25&&max>.05,'real fish surfaces must affect the water depth color');
+    assert.deepEqual(Array.from(bed.pixels),base);assert.deepEqual(Array.from(bed.heights),physical);
+    const old=Array.from(state.pixels);school.items.forEach(f=>f.u+=.10);
+    assert.equal(terrain.dynamicDepth(bed,school.geometry(),state),state,'reuse depth storage');
+    assert.notDeepEqual(Array.from(state.pixels),old,'depth silhouette must follow swimming geometry');
+    terrain.dynamicDepth(bed,new Float32Array(0),state);assert.deepEqual(Array.from(state.pixels),base,'removing fish must leave no depth trails');
+  }
+});
+
+test('nearby strokes startle fish, accelerate the Blender swim cycle and then decay',()=>{
+  const calm=new FishSchool(),scared=new FishSchool();calm.attach(1);scared.attach(1);
+  const f=scared.items[0],u=f.u-.045,v=f.v,bed={heightAt:()=>-.22};
+  scared.scare(u,v,1,u-.2,v);
+  assert(f.fear>.5);assert.equal(scared.items[3].fear,0,'distant fish should stay calm');
+  const before=Math.hypot(f.u-u,(f.v-v)/.866);
+  for(let i=0;i<45;i++){calm.update(1/30,bed,false);scared.update(1/30,bed,false);}
+  assert(f.speed>calm.items[0].speed*1.5);
+  assert(f.swim>calm.items[0].swim*1.4,'existing Blender animation must play faster without a phase jump');
+  assert(f.y<calm.items[0].y-.015,'startled fish dive');
+  assert(Math.hypot(f.u-u,(f.v-v)/.866)>before+.03,'fish swim away from the hand');
+  for(let i=0;i<360;i++)scared.update(1/30,bed,false);
+  assert(f.fear<.002);assert(f.speed<.06,'fish return to a gentle cruise');
+});
+
+test('water moves fish and shallow fish feed back bounded wakes without repainting pool depth',()=>{
+  const flat=new FishSchool(),wave=new FishSchool();flat.attach(1);wave.attach(1);
+  const bed={heightAt:()=>-.22},still={sample:()=>0,ice:{sample:()=>0},disturb:()=>{}},sloped={sample:(u,v)=>(u-.3)*2,ice:{sample:()=>0},disturb:()=>{}};
+  for(let i=0;i<30;i++){flat.update(1/30,bed,false,still);wave.update(1/30,bed,false,sloped);}
+  assert(wave.items[0].flowX<-.025,'wave slope pushes the body');
+  assert(wave.items[0].u<flat.items[0].u-.006,'water must change the actual position, not just its appearance');
+  const field=new WaveField(96,96,1);field.setBathymetry(bed);const school=new FishSchool();school.attach(1);
+  const originalMask=Array.from(field.mask),originalDepth=Array.from(field.depthScale);
+  let maximum=0;
+  for(let i=0;i<600;i++){school.update(1/30,bed,false,field);field.step();field.step();maximum=Math.max(maximum,field.energy());}
+  assert(maximum>.00001&&maximum<1,'swimming must make small stable waves');
+  assert(school.items.every(f=>f.fear===0),'fish must not panic from their own small wakes');
+  assert.deepEqual(Array.from(field.mask),originalMask);assert.deepEqual(Array.from(field.depthScale),originalDepth);
+  field.clear();school.calm();school.update(.08,bed,false,field);assert.equal(field.energy(),0);
+  field.ice.current.fill(1);for(let i=0;i<90;i++)school.update(1/30,bed,false,field);assert.equal(field.energy(),0,'fish cannot disturb solid ice');
+});
+
+test('a new stone overlapping a fish does not trap it forever or teleport it',()=>{
+  const school=new FishSchool();school.attach(1);const f=school.items[0],u=f.u,v=f.v;
+  const bed={heightAt:(x,y)=>Math.hypot((x-u)*2,(y-v)/.4330127)<.13?.03:-.22};
+  school.scare(u,v,1.5);
+  for(let i=0;i<600;i++){const a=f.u,b=f.v;school.update(1/30,bed,false);assert(Math.hypot((f.u-a)*2,(f.v-b)/.4330127)<.018);}
+  assert(school.clearAt(f.u,f.v,f.size,bed),'fish must be able to leave a newly occupied footprint');
+});
+
+test('airborne stones trigger a fast escape toward safety before water impact',()=>{
+  const school=new FishSchool();school.attach(1);const f=school.items[0],u=f.u,v=f.v;
+  const stone={u:u-.15,v,y:1,entered:false,settled:false,body:{velocity:{x:.54,y:-1,z:0}}};
+  school.anticipate([stone]);assert(f.fear>.9,'projected landing point must startle the fish');
+  const bed={heightAt:()=>-.22};
+  for(let i=0;i<9;i++)school.update(1/30,bed,false);
+  assert(f.speed>.27,'escape must accelerate within 300 ms');
+  assert(Math.hypot((f.u-u)*2,(f.v-v)/.4330127)>.055,'fish must actually move before impact');
+  school.calm();stone.entered=true;school.anticipate([stone]);assert.equal(f.fear,0,'submerged rocks do not keep renewing the airborne threat');
+});
+
+test('fast underwater swimming and sharp turns create balanced wakes that settle',()=>{
+  const bed={heightAt:()=>-.22};
+  function wakes(turn){
+    const school=new FishSchool();school.attach(1);school.items=school.items.slice(0,1);
+    const f=school.items[0];f.speed=.35;f.fear=1;f.y=-.16;f.angle=0;f.wake=1;
+    f.threatU=f.u+(turn?.1:-.1);f.threatV=f.v;
+    const impulses=[];school.update(1/30,bed,false,{sample:()=>0,ice:{sample:()=>0},disturb:(u,v,s,r)=>impulses.push(s)});
+    assert(Math.abs(impulses.reduce((a,b)=>a+b,0))<1e-8);return impulses;
+  }
+  const straight=wakes(false),turn=wakes(true);
+  assert.equal(straight.length,2);assert(straight[0]>.02,'a diving fish still drives a visible wake');
+  assert.equal(turn.length,4,'turn adds a lateral water push');assert(turn[0]>straight[0]);
+  const field=new WaveField(96,96,1);field.setBathymetry(bed);const school=new FishSchool();school.attach(1);
+  school.scare(school.items[0].u,school.items[0].v,2);
+  let maximum=0;for(let i=0;i<600;i++){school.update(1/30,bed,false,field);field.step();field.step();maximum=Math.max(maximum,field.energy());}
+  assert(maximum>.01&&maximum<20,'escape waves remain bounded');assert(school.items.every(f=>f.fear<.002),'escape wakes must not sustain panic');
+});
+
+test('Blender fish asset contains a closed swim cycle with stronger tail movement and an animated GLB',()=>{
+  assert.equal(fishAsset.poses.length,24);
+  assert.equal(fishAsset.materials.length,fishAsset.indices.length/3);
+  assert(fishAsset.indices.every(i=>i>=0&&i<fishAsset.vertexCount));
+  assert(fishAsset.poses.every(p=>p.length===fishAsset.vertexCount*3&&p.every(Number.isFinite)));
+  const motion=index=>{const zs=fishAsset.poses.map(p=>p[index*3+2]);return Math.max(...zs)-Math.min(...zs);};
+  const rest=fishAsset.poses[0];let head=0,tail=0;
+  for(let i=0;i<fishAsset.vertexCount;i++){if(rest[i*3]>.35*fishAsset.scale)head=Math.max(head,motion(i));if(rest[i*3]<-.75*fishAsset.scale)tail=Math.max(tail,motion(i));}
+  assert(tail>head*5,'tail must visibly bend relative to the head');
+  const distance=(a,b)=>Math.sqrt(a.reduce((s,x,i)=>s+(x-b[i])**2,0));
+  const seam=distance(fishAsset.poses[23],fishAsset.poses[0]);
+  const largestStep=Math.max(...fishAsset.poses.slice(1).map((p,i)=>distance(p,fishAsset.poses[i])));
+  assert(seam<=largestStep*1.05,'loop wrap must be no larger than an ordinary frame step');
+  const bytes=require('fs').readFileSync(require('path').join(__dirname,'../assets-source/fish/garden-koi.glb'));
+  assert.equal(bytes.toString('ascii',0,4),'glTF');
+  const gltf=JSON.parse(bytes.toString('utf8',20,20+bytes.readUInt32LE(12)).trim());
+  assert(gltf.skins.length>0&&gltf.animations[0].channels.length>=3,'GLB must preserve the animated rig');
+});
+
+test('fish keep a bounded underwater footprint around banks and obstacles across aspect ratios',()=>{
+  for(const aspect of [.38,.462,1,2.2]){
+    const school=new FishSchool();school.attach(aspect);
+    const bed={heightAt:(u,v)=>Math.hypot((u-.5)*aspect*2,(v-.49)/.4330127)<.075?0:-.22};
+    let moved=0;
+    for(let step=0;step<2400;step++){
+      const before=school.items.map(f=>[f.u,f.v]);school.update(1/30,bed,false);
+      school.items.forEach((f,i)=>{
+        const d=Math.hypot((f.u-before[i][0])*aspect*2,(f.v-before[i][1])/.4330127);
+        assert(d<.002,'movement cannot teleport');moved+=d;
+        assert(school.clearAt(f.u,f.v,f.size*school.scale,bed),'fish footprint must remain in clear water');
+      });
+    }
+    assert(moved>1,'fish must continue swimming');
+    const vertices=school.geometry();assert.equal(vertices.length/33,1175);
+    assert(vertices.every(Number.isFinite));
+    for(let i=1;i<vertices.length;i+=11)assert(vertices[i]<-.035,'the entire fish must remain underwater');
+    const frozen=Array.from(vertices),clock=school.clock;
+    school.update(.08,bed,true);assert.equal(school.clock,clock);assert.deepEqual(Array.from(school.geometry()),frozen);
+    school.update(.08,bed,false);assert.equal(school.geometry(),vertices,'reuse the animation buffer');
+    assert.notDeepEqual(Array.from(vertices),frozen);
+  }
+});
+
+test('even small stone waves spread wider and carry much more energy than a finger stroke',()=>{
+  for(const aspect of [.38,.462,1,2.2]){
+    const w=aspect>=1?192:Math.max(64,Math.round(192*aspect)),h=aspect>=1?Math.max(64,Math.round(192/aspect)):192;
+    const finger=new WaveField(w,h,aspect),small=new WaveField(w,h,aspect),large=new WaveField(w,h,aspect);
+    finger.stroke(.4,.49,.6,.49,.17);
+    small.stoneImpact(.5,.49,.075*Math.sqrt(Math.min(aspect,1)));
+    large.stoneImpact(.5,.49,.185*Math.sqrt(Math.min(aspect,1)));
+    const widthAcrossStroke=field=>{
+      let low=h,high=0;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(Math.abs(field.current[y*w+x])>.02){low=Math.min(low,y);high=Math.max(high,y);}
+      return high-low;
+    };
+    assert(widthAcrossStroke(small)>widthAcrossStroke(finger)*3,'the smallest rock needs a broad displacement, not a narrow finger wake');
+    assert(large.energy()>small.energy()*2,'larger rocks must displace more water');
+    let stoneEnergy=0,fingerEnergy=0;
+    for(let frame=0;frame<=30;frame++){
+      stoneEnergy+=small.energy();fingerEnergy+=finger.energy();
+      small.step();large.step();finger.step();
+    }
+    assert(stoneEnergy>fingerEnergy*4,'stone waves need much more energy over the first half-second, including troughs between crests');
+  }
+});
+
+test('stone entry still pushes surrounding water when an existing rock blocks its center',()=>{
+  const field=new WaveField(128,128,1);
+  field.setBathymetry({heightAt:(u,v)=>Math.hypot(u-.5,v-.49)<.035?.1:-.16});
+  assert.equal(field.disturb(.5,.49,.95,.06),false);
+  assert.equal(field.stoneImpact(.5,.49,.075),true);
+  assert(field.energy()>1,'the exposed perimeter must receive the impact');
+  for(let frame=0;frame<60;frame++)field.step();
+  for(let i=0;i<field.mask.length;i++)if(!field.mask[i])assert.equal(field.current[i],0);
+});
 
 test('compressed stones settle without ground contact chatter or spontaneous wakes',()=>{
   const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(6*713);
@@ -130,8 +389,31 @@ test('random stone sizes, capacity and cancellation are bounded',()=>{
   assert(stones.add(.35,.45));assert.equal(stones.add(0,0),false);
   stones.clear();let events=0;stones.add(.5,.49);stones.update(.08);stones.clear();for(let i=0;i<100;i++)stones.update(.04,()=>events++);assert.equal(events,0);
   for(const v of [.28,.48,.68])for(const u of [.2,.4,.6,.8])stones.add(u,v,()=>0);
-  assert.equal(stones.items.length,stoneLimit);assert.equal(stones.add(.5,.49),false);
+  assert.equal(stones.items.length,stoneLimit);
+  const existing=stones.items.slice(),bodyCount=stones.world.bodies.length;
+  assert.equal(stones.add(0,0),false);assert.deepEqual(stones.items,existing,'invalid targets must not remove a stone');
+  for(let i=0;i<stoneLimit+2;i++){
+    const oldest=stones.items[0],next=stones.items[1],added=stones.add(.5,.49,()=>.3);
+    assert(added);assert.equal(stones.items.length,stoneLimit);assert.equal(stones.items[0],next);
+    assert.equal(stones.items[stoneLimit-1],added);assert(!stones.world.bodies.includes(oldest.body));
+    assert.equal(stones.world.bodies.length,bodyCount,'replacement must release the old physics body');
+  }
   const before=stones.items[0].y;stones.update(0);assert.equal(stones.items[0].y,before);
+});
+
+test('replacing the oldest stone wakes its resting support group without stale members',()=>{
+  const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(2*713);
+  s.attach(.462,terrain.bathymetry(scene,.462,true),scene);
+  for(let i=0;i<3;i++)s.add(.5,.49,random);
+  for(let i=0;i<2400;i++)s.update(1/120);
+  const oldest=s.items[0],neighbour=s.items[1],unrelated=s.items[2];
+  assert(oldest.restGroup.includes(neighbour));assert(neighbour.settled);
+  while(s.items.length<stoneLimit)assert(s.add(.75,.4,()=>0));
+  assert(s.add(.75,.4,()=>0));
+  assert(!s.world.bodies.includes(oldest.body));assert(!neighbour.settled);assert.equal(neighbour.restGroup,null);
+  assert(unrelated.settled,'unrelated resting rocks should remain asleep');
+  s.update(1/120);
+  for(const stone of s.items)assert(!stone.restGroup||!stone.restGroup.includes(oldest));
 });
 
 test('fixed physics steps agree across frame rates and ten overlapping drops stay bounded',()=>{
@@ -178,6 +460,29 @@ test('repeated drops dissipate impact energy instead of scattering across the po
   assert(maxLift<.08,'underwater collisions must not launch stones far above water');
 });
 
+test('displayed underwater depth reconstructs diagonal edges without large stair steps',()=>{
+  const vertex=(u,v,y)=>[(u-.5)*2,y,(v-.5)*2/.8660254,u,v,0,1,0,1,1,1];
+  const ground=new Float32Array([...vertex(0,0,-.22),...vertex(1,0,-.22),...vertex(0,1,-.22),...vertex(1,0,-.22),...vertex(1,1,-.22),...vertex(0,1,-.22)]);
+  const stones=new Float32Array([...vertex(.3,.3,-.03),...vertex(.7,.61,-.03),...vertex(.3,.7,-.03)]);
+  for(const low of [false,true]){
+    const bed=terrain.bathymetry({ground,stones},1,low);
+    const read=(x,y)=>{const i=(y*bed.width+x)*4;return (bed.pixels[i]*256+bed.pixels[i+1])/65535*.6-.3;};
+    const height=(u,v)=>{
+      const x=u*bed.width-.5,y=v*bed.height-.5,ix=Math.floor(x),iy=Math.floor(y),tx=x-ix,ty=y-iy;
+      return (read(ix,iy)*(1-tx)+read(ix+1,iy)*tx)*(1-ty)+(read(ix,iy+1)*(1-tx)+read(ix+1,iy+1)*tx)*ty;
+    };
+    let maxError=0;
+    for(let j=0;j<700;j++){
+      const u=.36+j/700*.25,expected=.3+(u-.3)*.775;
+      let a=expected-.015,b=expected+.015;
+      for(let k=0;k<24;k++){const m=(a+b)/2;if(height(u,m)>-.125)b=m;else a=m;}
+      maxError=Math.max(maxError,Math.abs((a+b)/2-expected)*1280);
+    }
+    assert(maxError<(low?1.3:.65),'a straight stone edge must stay straight at display scale');
+    assert.equal(bed.heightAt(.4,.5),Math.fround(-.03),'physical stone heights must remain sharp');
+  }
+});
+
 test('bathymetry comes from stone triangles and blocks waves and ice at dry footprints', () => {
   const mesh=terrain.create(.8,false),bed=terrain.bathymetry(mesh,.8,false),field=new WaveField(128,160,.8);
   field.setBathymetry(bed);
@@ -186,7 +491,12 @@ test('bathymetry comes from stone triangles and blocks waves and ice at dry foot
     const i=y*bed.width+x,u=(x+.5)/bed.width,v=(y+.5)/bed.height;
     if(bed.stone[i]&&bed.heights[i]<-.004&&bed.heights[i]>terrain.elevation(u,v)+.01)raisedWet++;
     const packed=(bed.pixels[i*4]*256+bed.pixels[i*4+1])/65535*.6-.3;
-    assert(Math.abs(packed-bed.heights[i])<.00001);
+    let min=Infinity,max=-Infinity;
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+      const value=bed.heights[Math.max(0,Math.min(bed.height-1,y+dy))*bed.width+Math.max(0,Math.min(bed.width-1,x+dx))];
+      min=Math.min(min,value);max=Math.max(max,value);
+    }
+    assert(packed>=min-.00001&&packed<=max+.00001,'visual reconstruction must not overshoot the local geometry');
   }
   assert(raisedWet>100,'submerged stone surfaces must make the local water shallower');
   for(let y=0;y<field.height;y++)for(let x=0;x<field.width;x++) {

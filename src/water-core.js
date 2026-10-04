@@ -57,6 +57,17 @@
     var count = Math.min(24, Math.max(1, Math.ceil(distance / 0.009)));
     for (var n = 1; n <= count; n++) this.disturb(u0 + (u1 - u0) * n / count, v0 + (v1 - v0) * n / count, strength, 0.015);
   };
+  WaveField.prototype.stoneImpact = function (u, v, radius) {
+    if (!Number.isFinite(radius) || radius <= 0) return false;
+    // Even the smallest stone displaces a much broader patch than a finger.
+    var disturbed = this.disturb(u, v, .95, Math.max(.045, radius * .85));
+    // Push a wide crest beyond the rock's silhouette before it blocks the water grid.
+    for (var i = 0; i < 16; i++) {
+      var a = i / 16 * Math.PI * 2, r = radius * 1.5;
+      if (this.disturb(u + Math.cos(a) * r / (this.aspect * 2), v + Math.sin(a) * r * .4330127, .5, Math.max(.035, radius * .32))) disturbed = true;
+    }
+    return disturbed;
+  };
   WaveField.prototype.step = function () {
     var w = this.width, h = this.height, a = this.current, b = this.previous, c = this.next, mask = this.mask, speed = this.depthScale;
     for (var y = 1; y < h - 1; y++) for (var x = 1; x < w - 1; x++) {
