@@ -33,8 +33,15 @@ async function run() {
       assert.equal(await page.evaluate(() => WaterGarden.inspect().steps), steps, 'inactive water simulation pauses');
       const depth = s.snow.depth; await page.waitForTimeout(150); assert((await state()).snow.depth<depth);
       await page.locator('[data-nature="1"]').click(); await page.mouse.move(x-viewport.width*.2,y+viewport.height*.1); await page.mouse.down(); await page.mouse.move(x+viewport.width*.2,y+viewport.height*.14,{steps:15}); await page.mouse.up(); assert((await state()).snow.footprints >= 3);
-      await page.locator('[data-nature="2"]').click(); await page.mouse.move(x,y-65); await page.mouse.down(); const radius = (await state()).snow.balls[0].radius;
-      await page.mouse.move(x+80,y-35,{steps:12}); await page.mouse.up(); s = await state(); assert(s.snow.balls[0].radius > radius);
+      const ballButton=page.locator('[data-nature="2"]');
+      await ballButton.click();assert.equal((await state()).snow.balls.length,1,'button immediately places one ball');
+      await ballButton.click();assert.equal((await state()).snow.balls.length,0,'same button removes it');
+      assert.equal(await ballButton.getAttribute('aria-pressed'),'false');
+      await page.touchscreen.tap(x,y);assert.equal((await state()).snow.balls.length,0,'ground taps never create balls');
+      await ballButton.click();assert.equal(await ballButton.getAttribute('aria-pressed'),'true');
+      const ballPoint=await page.evaluate(()=>{const s=testSurface3D,p=s.camera.project(s.ballPosition(s.snow.balls[0]));return {x:p.u*innerWidth,y:p.v*innerHeight};});
+      await page.mouse.move(ballPoint.x,ballPoint.y);await page.mouse.down();const radius=(await state()).snow.balls[0].radius;
+      await page.mouse.move(ballPoint.x+60,ballPoint.y+30,{steps:12});await page.mouse.up();s=await state();assert.equal(s.snow.balls.length,1);assert(s.snow.balls[0].radius>radius);
       const support=await page.evaluate(()=>{
         const surface=testSurface3D,ball=surface.snow.balls[0],p=surface.ballPosition(ball),r=p[3];
         let penetration=-Infinity,gap=Infinity;
@@ -94,10 +101,10 @@ async function run() {
           surface.mesh=function(v,indices,stride){edges={};for(let i=0;i<indices.length;i+=3)for(let j=0;j<3;j++){let a=indices[i+j],b=indices[i+(j+1)%3];const key=Math.min(a,b)+':'+Math.max(a,b);edges[key]=(edges[key]||0)+1;}return make.call(this,v,indices,stride);};
           surface.grid(12,true);surface.mesh=make;
           const closed=Object.values(edges).every(count=>count===2),budgets=[];
-          snow.balls.length=0;for(let i=0;i<12;i++)snow.balls.push({u:.15+(i%4)*.23,v:.35+Math.floor(i/4)*.15,radius:.025,rotation:[0,0,0,1]});
+          snow.balls.length=0;snow.ball(.5,.5,.025);
           for(const low of [false,true]){
             const size=WaterCore.bufferSize(390,844,devicePixelRatio,low);surface.resize(size.width,size.height,low);surface.draw('snow',0,snow,clouds,0,true,false);
-            const ball=snow.balls[5],position=surface.ballPosition(ball),screen=surface.camera.project(position),picked=surface.point(screen.u,screen.v,'snow',clouds,true);
+            const ball=snow.balls[0],position=surface.ballPosition(ball),screen=surface.camera.project(position),picked=surface.point(screen.u,screen.v,'snow',clouds,true);
             budgets.push({low,snow:surface.count/3,calls:surface.drawCalls,flakes:surface.flakeMesh.vertices,picked:!!picked&&picked.ball===ball,depth:surface.gl.isEnabled(surface.gl.DEPTH_TEST),pixels:surface.canvas.width*surface.canvas.height});
             const snowfallCalls=surface.drawCalls;surface.draw('snow',0,snow,clouds,0,true,true);
             budgets[budgets.length-1].reducedHidesFlakes=surface.drawCalls===snowfallCalls-1;
@@ -108,7 +115,7 @@ async function run() {
         });
         assert(geometry.closed,'cloud volume has two incident triangles at every edge');
         for(const b of geometry.budgets){assert.equal(b.flakes,b.low?300:720);assert(b.reducedHidesFlakes);assert(b.picked&&b.depth,'visible sphere is picked in the depth-tested world');assert(b.snow<=(b.low?50000:100000)&&b.cloud<=(b.low?50000:100000));assert(b.calls<=(b.low?50:100));assert(b.pixels<=(b.low?1000000:2000000));}
-        reports.push({scenario:'closed 3D cloud volume, 12 sphere meshes, ray picking, depth and both GPU budgets',result:'passed',geometry});
+        reports.push({scenario:'closed 3D cloud volume, single sphere mesh, ray picking, depth and both GPU budgets',result:'passed',geometry});
         const cdp = await context.newCDPSession(page);
         await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:130,y:390,id:1},{x:260,y:460,id:2}]}); assert.equal((await state()).activePointers,2);
         await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]}); assert.equal((await state()).activePointers,0); await cdp.detach();

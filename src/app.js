@@ -20,7 +20,7 @@
     cloud: ['M8 16H6a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9h-2M9 12l-3 3 3 3m6-6 3 3-3 3', 'M6 17a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9M3 21h6l-2-2m14 2h-6l2-2', 'M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 17h5a3 3 0 1 1-3 3']
   };
   var natureHints = {
-    snow: ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹', '轻点放下雪球 · 拖着滚动，越滚越大'],
+    snow: ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹'],
     cloud: ['轻点推开云海 · 滑动划出云间小径', '按住聚拢云团 · 缓缓拖动，带着云走']
   };
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -265,9 +265,11 @@
       if (controls[i].hidden) continue;
       controls[i].querySelector('span').textContent = names[i] || '';
       if (!water) { controls[i].querySelector('svg').innerHTML = '<path d="' + natureIcons[sceneKind][i] + '"/>'; }
-      controls[i].classList.toggle('selected', i === natureModes[sceneKind]); controls[i].setAttribute('aria-pressed', String(i === natureModes[sceneKind]));
+      var active=sceneKind==='snow'&&i===2?snow.balls.length>0:i===natureModes[sceneKind];
+      controls[i].classList.toggle('selected',active); controls[i].setAttribute('aria-pressed',String(active));
     }
     hint.textContent = water ? hints[mode] : natureHints[sceneKind][natureModes[sceneKind]];
+    if(sceneKind==='snow'&&snow.balls.length)hint.textContent='拖动雪球，越滚越大 · 再点「雪球」收起';
     natureCanvas.setAttribute('aria-label', (sceneKind === 'snow' ? '交互雪地，' : '交互云层，') + hint.textContent + '；空格或回车触碰中央');
     var weatherName = water ? '细雨' : sceneKind === 'snow' ? '飘雪' : '微风', enabled = water ? rain : weather[sceneKind];
     var rainButton = document.getElementById('rain'); rainButton.hidden = !water; rainButton.querySelector('span').textContent = weatherName;
@@ -299,7 +301,17 @@
   var sceneButtons = document.querySelectorAll('button[data-scene]');
   for (var si = 0; si < sceneButtons.length; si++) sceneButtons[si].addEventListener('click', function () { setScene(this.getAttribute('data-scene')); });
   var natureButtons = document.querySelectorAll('[data-nature]');
-  for (var ni = 0; ni < natureButtons.length; ni++) natureButtons[ni].addEventListener('click', function () { fingers = {}; natureModes[sceneKind] = Number(this.getAttribute('data-nature')); syncNatureControls(); });
+  for (var ni = 0; ni < natureButtons.length; ni++) natureButtons[ni].addEventListener('click', function () {
+    fingers = {}; var selected=Number(this.getAttribute('data-nature'));
+    if(sceneKind==='snow'&&selected===2){
+      if(snow.balls.length)snow.balls.length=0;
+      else if(natureRenderer.available()){
+        var p=natureRenderer.surface.point(.5,.48,'snow',clouds,false);
+        if(p)snow.ball(p.u,p.v,natureRadius()*.042);
+      }
+    }else natureModes[sceneKind]=selected;
+    syncNatureControls();
+  });
   document.getElementById('view-3d').addEventListener('click',function(){
     if(!natureRenderer.available())return;
     var surface=natureRenderer.surface;surface.oblique=!surface.oblique;surface.resize(surface.canvas.width,surface.canvas.height,surface.low);fingers={};this.setAttribute('aria-pressed',String(surface.oblique));
@@ -313,9 +325,9 @@
     fingers[id] = f;
     if (sceneKind === 'snow') {
       var r = natureRadius();
-      if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
+      if(p.ball)f.ball=p.ball;
+      else if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
       else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
-      else { f.ball = snow.ball(p.u, p.v, r * .042); if (!f.ball) notice('已有十二个雪球，轻点「新雪」重新开始'); }
     } else clouds.touch(p.u, p.v, ['part','gather'][selected], 0, 0, selected===0 ? .04 : .22);
     sound(.22, false);
   }
@@ -323,14 +335,15 @@
     p.u += f.offsetU; p.v += f.offsetV;
     var selected = natureModes[sceneKind], r = natureRadius();
     if (sceneKind === 'snow') {
-      if (selected === 0) snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
+      if(f.ball)snow.roll(f.ball,p.u,p.v);
+      else if (selected === 0) snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
       else if (selected === 1 && distance > 0) {
         var dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, step = Math.min(width, height) * .15;
         f.angle = Math.atan2(dy, dx) + Math.PI / 2;
         var actual = Math.hypot(dx, dy), next = step - f.spacing;
         for (; next <= actual; next += step) snow.footprint(f.u + (p.u - f.u) * next / actual, f.v + (p.v - f.v) * next / actual, f.angle, r * .07);
         f.spacing = (f.spacing + actual) % step;
-      } else if (f.ball) snow.roll(f.ball, p.u, p.v);
+      }
     } else {
       var count = Math.min(24, Math.max(1, Math.ceil(distance / 8)));
       var elapsed=Math.max(.008,Math.min(.1,now-f.movedAt)),speed=Math.hypot((p.u-f.u)*clouds.aspect,p.v-f.v)/elapsed;
@@ -344,7 +357,7 @@
     if(!natureRenderer.available()){fingers={};natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
     for (var id in fingers) {
       var f = fingers[id], selected = natureModes[sceneKind];
-      if (sceneKind === 'snow' && selected === 0 && f.travel < 15 && now - f.born > .3) snow.stamp(f.u, f.v, natureRadius() * .04, Math.min(1, .65 + (now - f.born) * .2));
+      if (sceneKind === 'snow' && !f.ball && selected === 0 && f.travel < 15 && now - f.born > .3) snow.stamp(f.u, f.v, natureRadius() * .04, Math.min(1, .65 + (now - f.born) * .2));
       if (sceneKind === 'cloud' && selected < 2) clouds.touch(f.u, f.v, selected === 0 ? 'part' : 'gather', 0, 0, dt);
     }
     if (sceneKind === 'snow') snow.update(dt, weather.snow);

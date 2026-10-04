@@ -101,7 +101,7 @@
       var b = this.balls[i];
       if (Math.hypot((u - b.u) * this.aspect, v - b.v) < b.radius * 1.7) return b;
     }
-    if (this.balls.length >= 12) return null;
+    if (this.balls.length >= 1) return null;
     var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1] }; this.balls.push(item); return item;
   };
   Snow.prototype.roll = function (ball, u, v) {

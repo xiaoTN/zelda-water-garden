@@ -78,10 +78,10 @@ test('rolling a selected snowball grows it and leaves a compressed track', () =>
   snow.roll(ball, 4, -2); assert(ball.u < snow.origin+snow.span && ball.v >= snow.origin);
   snow.clear(); assert.equal(snow.balls.length, 0); assert.equal(snow.inspect().markedCells, 0);
 });
-test('snowballs have a fixed population cap and reset footprints', () => {
+test('only one snowball can exist and reset clears it with footprints', () => {
   const snow = new Snow();
   for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) snow.ball(.1 + x * .2, .32 + y * .13, .02);
-  assert.equal(snow.balls.length, 12);
+  assert.equal(snow.balls.length, 1);
   snow.footprint(.5, .5, 0, .04); assert.equal(snow.inspect().footprints, 1);
   snow.clear(); assert.equal(snow.inspect().footprints, 0);
 });
