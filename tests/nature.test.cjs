@@ -2,6 +2,21 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Snow, Clouds } = require('../src/nature-core.js');
 
+test('footprints have a mirrored medial arch, broad forefoot, heel and conserved displaced snow', () => {
+  const radius=.09;
+  for(const side of [-1,1]){
+    const snow=new Snow();snow.foot=side===-1?0:1;
+    snow.footprint(.5,.5,0,radius);
+    const u=.5+radius*.65*side;
+    const depth=(x,y)=>snow.depth[snow.index(u+x*radius*side,.5+y*radius)];
+    assert(depth(.25,.25)>.2,'outer sole joins forefoot to heel');
+    assert(depth(-.25,.25)<.05,'medial arch stays inset');
+    assert(depth(0,-.4)>.4,'forefoot presses into snow');
+    assert(depth(0,.57)>.4,'heel presses into snow');
+    assert(Math.abs(snow.depth.reduce((sum,d)=>sum+d,0))<.001,'snow moves to the rim');
+  }
+});
+
 test('a snow stroke stays continuous, local and persistent without snowfall', () => {
   const snow = new Snow(); snow.aspect = .46;
   snow.stroke(.2, .5, .8, .5, .022, .8);

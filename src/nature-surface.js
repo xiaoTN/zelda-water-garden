@@ -23,11 +23,11 @@
     'varying vec3 vNormal,vWorld,vLocal,vTint;varying float vCut,vNoise;',
     'void main(){vec3 sun=normalize(vec3(-.6,1.,-.45));vec3 n=normalize(vNormal);float lit=max(0.,dot(n,sun));',
     'float grain=sin(vLocal.x*197.+sin(vLocal.y*171.))*sin(vLocal.z*187.+vLocal.y*93.);',
-    'if(uObject>.5&&uObject<1.5)lit=clamp(lit+grain*.025,0.,1.);float shadow=1.;',
-    'if(uObject<.5&&uCloud<.5){for(int i=0;i<12;i++){if(float(i)>=uShadowCount)break;vec3 d=uShadows[i].xyz-vWorld;float along=dot(d,sun);float perp=length(d-sun*along);float r=uShadows[i].w;if(along>0.)shadow*=smoothstep(r*.75,r*1.45,perp)*.48+.52;}}',
+    'if(uObject>.5&&uObject<1.5)lit=clamp(lit+grain*.025,0.,1.);float shadow=1.,contact=1.;',
+    'if(uObject<.5&&uCloud<.5){for(int i=0;i<12;i++){if(float(i)>=uShadowCount)break;vec3 d=uShadows[i].xyz-vWorld;float along=dot(d,sun);float perp=length(d-sun*along);float r=uShadows[i].w;float softness=r*.04+max(0.,along-r)*.12;if(along>0.)shadow*=smoothstep(r-softness,r+softness,perp);float gap=max(0.,length(d)-r);contact*=1.-.22*exp(-gap/max(.001,r*.12));}}',
     'vec3 shade=mix(vec3(.40,.53,.69),vec3(.57,.60,.75),uCloud),white=vec3(1.,.99,.96);',
     'if(uLight>.5&&uLight<1.5){shade=vec3(.41,.32,.53);white=vec3(1.,.85,.72);}if(uLight>1.5){shade=vec3(.10,.17,.29);white=vec3(.62,.75,.88);}',
-    'float ambient=mix(.20,.12,uCloud);vec3 col=mix(shade,white,ambient+lit*(1.-ambient))*shadow;',
+    'float ambient=mix(.20,.12,uCloud);vec3 col=mix(shade,white,ambient+lit*shadow*(1.-ambient))*contact;',
     'col*=1.-vCut*.1;col+=(grain*.003)*(1.-uCloud);',
     'if(uObject>1.5&&uObject<2.5){if(length(gl_PointCoord-.5)>.5)discard;col=white;}',
     'if(uObject>2.5)col=vTint*(.68+.32*lit)*mix(vec3(1.),white,step(.5,uLight)*.6);float fog=(1.-smoothstep(-13.,3.,vWorld.z))*.38;col=mix(col,mix(vec3(.76,.85,.89),vec3(.19,.29,.40),step(1.5,uLight)),fog);',
@@ -156,7 +156,17 @@
     }
     return {u:p[0]/(12*this.aspect)+.5,v:p[2]/12+.5};
   };
-  Surface.prototype.ballPosition=function(ball){var x=(ball.u-.5)*12*this.aspect,z=(ball.v-.5)*12,r=ball.radius*12;return [x,this.height(x,z,'snow',this.snow,this.clouds)+r*.96,z,r];};
+  Surface.prototype.ballPosition=function(ball){
+    var x=(ball.u-.5)*12*this.aspect,z=(ball.v-.5)*12,r=ball.radius*12;
+    var center=this.height(x,z,'snow',this.snow,this.clouds)+r;
+    // Support the sphere on the highest contact under its curved underside.
+    for(var ring=1;ring<=3;ring++)for(var i=0;i<12;i++){
+      var distance=r*(ring===1 ? .45 : ring===2 ? .8 : .97),angle=i*Math.PI/6;
+      var h=this.height(x+Math.cos(angle)*distance,z+Math.sin(angle)*distance,'snow',this.snow,this.clouds);
+      center=Math.max(center,h+Math.sqrt(r*r-distance*distance));
+    }
+    return [x,center-r*.025,z,r];
+  };
   Surface.prototype.bind=function(mesh){
     var gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertex);gl.enableVertexAttribArray(this.attribute);gl.vertexAttribPointer(this.attribute,3,gl.FLOAT,false,mesh.stride*4,0);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.index);
     if(mesh.stride===9){gl.enableVertexAttribArray(this.normalAttribute);gl.vertexAttribPointer(this.normalAttribute,3,gl.FLOAT,false,36,12);gl.enableVertexAttribArray(this.colorAttribute);gl.vertexAttribPointer(this.colorAttribute,3,gl.FLOAT,false,36,24);}

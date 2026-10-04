@@ -28,7 +28,7 @@
   // Reused brush workspace: one synchronous transfer moves material, including old berms.
   var cutIndices=new Int32Array(640*640),cutAmounts=new Float32Array(640*640);
   var bankIndices=new Int32Array(640*640),bankWeights=new Float32Array(640*640);
-  Snow.prototype.stamp = function (u, v, radius, strength, angle, narrow, gather, rate, flowAngle) {
+  Snow.prototype.stamp = function (u, v, radius, strength, angle, narrow, gather, rate, flowAngle, footSide) {
     if (!(radius > 0) || !isFinite(u+v+radius+strength)) return;
     var n=this.size,origin=this.origin,scale=n/this.span,aspect=this.aspect,reach=radius*1.8,direction=gather?-1:1;
     var x0=Math.max(0,Math.floor((u-reach/aspect-origin)*scale)),x1=Math.min(n-1,Math.ceil((u+reach/aspect-origin)*scale));
@@ -39,8 +39,17 @@
       var dx=(origin+x/scale-u)*aspect,dy=origin+y/scale-v;
       var xx=(dx*ca+dy*sa)/(radius*(narrow||1)),yy=(-dx*sa+dy*ca)/radius;
       var d=Math.hypot(xx,yy),at=y*n+x;
+      if(footSide){
+        // Mirrored sole: broad forefoot, narrow heel and an inset medial arch.
+        var fx=xx*footSide;
+        var fore=Math.hypot((fx+.04)/.48,(yy+.40)/.60);
+        var heel=Math.hypot(fx/.30,(yy-.57)/.36);
+        var arch=Math.hypot((fx-.14)/.25,(yy-.08)/.57);
+        d=Math.min(fore,heel,arch);
+      }
       if(d<1){
         var target=strength*(.5+.5*Math.cos(d*Math.PI));
+        if(footSide)target=strength*(1-Math.pow(clamp((d-.55)/.45,0,1),2));
         if(this.soft)target=strength*Math.pow(1-d*d,2);
         var amount=Math.max(0,target-direction*this.depth[at])*(gather?clamp(rate===undefined?1:rate,0,1):1);
         if(amount>0){cutIndices[cuts]=at;cutAmounts[cuts++]=amount;removed+=amount;}
@@ -85,7 +94,7 @@
     var side = this.foot % 2 ? -1 : 1;
     u += Math.cos(angle) * radius * .65 * side / this.aspect;
     v += Math.sin(angle) * radius * .65 * side;
-    this.stamp(u, v, radius, .88, angle, .48);
+    this.stamp(u, v, radius, .56, angle, 1, false, 1, undefined, side);
   };
   Snow.prototype.ball = function (u, v, radius) {
     for (var i = this.balls.length - 1; i >= 0; i--) {

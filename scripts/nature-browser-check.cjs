@@ -34,6 +34,19 @@ async function run() {
       await page.locator('[data-nature="1"]').click(); await page.mouse.move(x-viewport.width*.2,y+viewport.height*.1); await page.mouse.down(); await page.mouse.move(x+viewport.width*.2,y+viewport.height*.14,{steps:15}); await page.mouse.up(); assert((await state()).snow.footprints >= 3);
       await page.locator('[data-nature="2"]').click(); await page.mouse.move(x,y-65); await page.mouse.down(); const radius = (await state()).snow.balls[0].radius;
       await page.mouse.move(x+80,y-35,{steps:12}); await page.mouse.up(); s = await state(); assert(s.snow.balls[0].radius > radius);
+      const support=await page.evaluate(()=>{
+        const surface=testSurface3D,ball=surface.snow.balls[0],p=surface.ballPosition(ball),r=p[3];
+        let penetration=-Infinity,gap=Infinity;
+        for(let ring=0;ring<=3;ring++)for(let i=0;i<12;i++){
+          const d=r*[0,.45,.8,.97][ring],a=i*Math.PI/6;
+          const ground=surface.height(p[0]+Math.cos(a)*d,p[2]+Math.sin(a)*d,'snow',surface.snow,surface.clouds);
+          const clearance=p[1]-Math.sqrt(r*r-d*d)-ground;
+          penetration=Math.max(penetration,-clearance);gap=Math.min(gap,clearance);
+        }
+        return {penetration,gap,r};
+      });
+      assert(support.penetration<=support.r*.026,'sphere rests on the displaced snow without crossing its banks');
+      assert(support.gap<=.001,'sphere has terrain contact rather than floating');
       if (viewport.width === 390 || viewport.width === 1440) await page.screenshot({path:path.join(out,viewport.width===390?'snow-mobile.png':'snow-desktop.png')});
       await page.locator('#view-3d').click();assert.equal(await page.locator('#view-3d').getAttribute('aria-pressed'),'true');
       assert((await state()).snow.balls[0].rotation.some((v,i)=>Math.abs(v-[0,0,0,1][i])>.01),'drag rolls a 3D quaternion');

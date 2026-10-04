@@ -312,7 +312,7 @@
     if (sceneKind === 'snow') {
       var r = natureRadius();
       if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
-      else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .045);
+      else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
       else { f.ball = snow.ball(p.u, p.v, r * .042); if (!f.ball) notice('已有十二个雪球，轻点「新雪」重新开始'); }
     } else clouds.touch(p.u, p.v, ['part','gather','wind'][selected], .018, 0, .22);
     sound(.22, false);
@@ -323,10 +323,10 @@
     if (sceneKind === 'snow') {
       if (selected === 0) snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
       else if (selected === 1 && distance > 0) {
-        var dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, step = Math.min(width, height) * .095;
+        var dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, step = Math.min(width, height) * .15;
         f.angle = Math.atan2(dy, dx) + Math.PI / 2;
         var actual = Math.hypot(dx, dy), next = step - f.spacing;
-        for (; next <= actual; next += step) snow.footprint(f.u + (p.u - f.u) * next / actual, f.v + (p.v - f.v) * next / actual, f.angle, r * .045);
+        for (; next <= actual; next += step) snow.footprint(f.u + (p.u - f.u) * next / actual, f.v + (p.v - f.v) * next / actual, f.angle, r * .07);
         f.spacing = (f.spacing + actual) % step;
       } else if (f.ball) snow.roll(f.ball, p.u, p.v);
     } else {
