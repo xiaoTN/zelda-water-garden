@@ -308,7 +308,7 @@
   function beginNature(id, p) {
     if (!isFinite(p.u+p.v)) return;
     garden.classList.add('touched'); if (!muted) initAudio();
-    var f = { u: p.u, v: p.v, born: now, last: now, travel: 0, spacing: 0, angle: 0 }, selected = natureModes[sceneKind];
+    var f = { u: p.u, v: p.v, born: now, last: now, movedAt: now, travel: 0, spacing: 0, angle: 0 }, selected = natureModes[sceneKind];
     f.offsetU=p.ball?p.u-p.groundU:0; f.offsetV=p.ball?p.v-p.groundV:0;
     fingers[id] = f;
     if (sceneKind === 'snow') {
@@ -316,7 +316,7 @@
       if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
       else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
       else { f.ball = snow.ball(p.u, p.v, r * .042); if (!f.ball) notice('已有十二个雪球，轻点「新雪」重新开始'); }
-    } else clouds.touch(p.u, p.v, ['part','gather'][selected], .018, 0, selected===0 ? .04 : .22);
+    } else clouds.touch(p.u, p.v, ['part','gather'][selected], 0, 0, selected===0 ? .04 : .22);
     sound(.22, false);
   }
   function moveNature(f, p, distance) {
@@ -333,7 +333,9 @@
       } else if (f.ball) snow.roll(f.ball, p.u, p.v);
     } else {
       var count = Math.min(24, Math.max(1, Math.ceil(distance / 8)));
-      for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, ['part','gather'][selected], (p.u - f.u) / count, (p.v - f.v) / count, selected===0 ? .016 : .045);
+      var elapsed=Math.max(.008,Math.min(.1,now-f.movedAt)),speed=Math.hypot((p.u-f.u)*clouds.aspect,p.v-f.v)/elapsed;
+      for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, ['part','gather'][selected], (p.u - f.u) / count, (p.v - f.v) / count, selected===0 ? .016 : .045,speed);
+      f.movedAt=now;
     }
     if (distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }
     f.travel += distance; f.u = p.u; f.v = p.v;

@@ -127,7 +127,7 @@
     for (var i = 0; i < this.depth.length; i++) if (this.depth[i] > .01) { cells++; depth += this.depth[i]; }
     return { markedCells: cells, depth: depth, raised: raised, raisedCells: raisedCells, footprints: this.foot, balls: this.balls.map(function (b) { return { u: b.u, v: b.v, radius: b.radius, rotation: b.rotation.slice() }; }) };
   };
-  function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.field.soft = true; this.drift = 0; this.clear(); }
+  function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.field.soft = true; this.transport=new Float32Array(this.field.depth.length); this.currents=new Float32Array(this.field.size); this.drift = 0; this.clear(); }
   Clouds.prototype.clear = function () {
     this.items.length = 0; this.time = 0; this.field.clear(); this.drift = 0; this.driftY = 0; this.flowX = 0; this.flowY = 0;
     var rng = random(10426);
@@ -136,11 +136,12 @@
       this.items.push({ u: u, v: v, homeU: u, homeV: v, vx: 0, vy: 0, opacity: 1, size: .065 + rng() * .09, seed: i % 4, phase: rng() * 6.28 });
     }
   };
-  Clouds.prototype.touch = function (u, v, mode, dx, dy, dt) {
+  Clouds.prototype.touch = function (u, v, mode, dx, dy, dt, speed) {
     if(mode!=='part'&&mode!=='gather')return;
     var radius = Math.min(this.aspect, 1) * .32 / 3;
     this.field.aspect = this.aspect;
-    if (mode === 'part') this.field.stamp(u, v, radius * .27, .82,0,1,false,1-Math.exp(-dt*9),Math.hypot(dx,dy)>1e-5?Math.atan2(dy,dx*this.aspect):undefined);
+    var rush=clamp((speed===undefined?Math.hypot(dx*this.aspect,dy)/Math.max(.008,dt):speed)/.65,0,1);
+    if (mode === 'part') this.field.stamp(u, v, radius * .27, .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)),Math.hypot(dx,dy)>1e-5?Math.atan2(dy,dx*this.aspect):undefined);
     else this.field.stamp(u,v,radius*.36,.65,0,1,true,dt*6);
     for (var i = 0; i < this.items.length; i++) {
       var p = this.items[i], x = (p.u - u) * this.aspect, y = p.v - v, d = Math.hypot(x, y);
@@ -158,7 +159,8 @@
   };
   Clouds.prototype.update = function (dt, breeze, reduced) {
     if (!reduced) this.time += dt;
-    if(this.field.active){var decay=Math.exp(-dt*.32),peak=0;for(var k=0;k<this.field.depth.length;k++){this.field.depth[k]*=decay;peak=Math.max(peak,Math.abs(this.field.depth[k]));}if(peak<1e-5){this.field.depth.fill(0);this.field.active=false;}this.field.revision++;} this.drift *= Math.exp(-dt*.7); this.driftY *= Math.exp(-dt*.7);
+    if(this.field.active)this.refill(dt,reduced);
+    this.drift *= Math.exp(-dt*.7); this.driftY *= Math.exp(-dt*.7);
     this.flowX += dt * ((reduced ? 0 : breeze ? .009 : .003) + this.drift*.035);
     this.flowY += dt * ((reduced ? 0 : .0015) + this.driftY*.035);
     for (var i = 0; i < this.items.length; i++) {
@@ -172,6 +174,25 @@
       if (p.u < -.28) p.u = 1.28;
       p.v = clamp(p.v, .22, .88);
     }
+  };
+  Clouds.prototype.refill=function(dt,reduced){
+    var field=this.field,d=field.depth,out=this.transport,n=field.size,peak=0,k,x,y;
+    // Conservative neighbour flux lets the raised shoulders flow into the opening.
+    // The bounded coefficients keep this explicit transport stable even after a long pause.
+    var step=Math.min(Math.max(dt,0),.04),diffusion=Math.min(.20,step*9),turn=reduced?0:step*.65;
+    for(k=0;k<d.length;k++)peak=Math.max(peak,Math.abs(d[k]));
+    for(k=0;k<n;k++)this.currents[k]=Math.sin(k*.19+this.time*1.8);
+    out.set(d);
+    for(y=0;y<n;y++)for(x=0;x<n;x++){
+      k=y*n+x;var a=d[k],b,flux,velocity;
+      if(x<n-1){b=d[k+1];if(a!==0||b!==0){velocity=turn*this.currents[y];flux=(a-b)*diffusion+velocity*(velocity>0?a:b);out[k]-=flux;out[k+1]+=flux;}}
+      if(y<n-1){b=d[k+n];if(a!==0||b!==0){velocity=-turn*this.currents[x];flux=(a-b)*diffusion+velocity*(velocity>0?a:b);out[k]-=flux;out[k+n]+=flux;}}
+    }
+    // Deep fresh gaps close quickly; the remaining wisps settle more slowly.
+    var decay=Math.exp(-dt*(.30+1.7*peak));
+    for(k=0;k<d.length;k++)d[k]=out[k]*decay;
+    if(peak*decay<1e-5){d.fill(0);field.active=false;}
+    field.revision++;
   };
   Clouds.prototype.inspect = function () {
     var speed = 0, opacity = 0, spread = 0;

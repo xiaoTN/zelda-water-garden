@@ -6,7 +6,7 @@
     'uniform vec4 uBall;uniform mediump vec4 uRotation; varying mediump vec3 vNormal,vWorld,vLocal; varying mediump float vCut,vNoise,vBottom;',
     'float noiseAt(vec2 uv){vec2 n=texture2D(uNoise,vec2(uv.x*uAspect,uv.y)*mix(.85,1.9,uCloud)+uFlow*uCloud).rg;return n.r+n.g/255.;}',
     'vec2 trackAt(vec2 uv){vec2 p=(uv-vec2(uFieldDomain.x))/uFieldDomain.y;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.)return vec2(0.);return texture2D(uTracks,p).rg;}',
-    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*.65,uCloud);return base+(t.g-t.r)*mix(.38,.28,uCloud);}',
+    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*.65,uCloud);return base+(t.g-t.r)*mix(.38,.62,uCloud);}',
     'vec3 rotate(vec3 p){return p+2.*cross(uRotation.xyz,cross(uRotation.xyz,p)+uRotation.w*p);}',
     'void main(){vec3 p;vTint=aColor;vBottom=0.;vCut=0.;vNoise=.5;vLocal=aPosition;',
     'if(uObject<.5){vec2 uv=aPosition.xy;float h=heightAt(uv);float e=.0025;',
@@ -35,7 +35,7 @@
     'if(uCloud<.5&&uObject<1.5)col*=.48+albedo*.62;col*=1.-vCut*.1;col+=(grain*.003)*(1.-uCloud);',
     'if(uObject>1.5&&uObject<2.5){if(length(gl_PointCoord-.5)>.5)discard;col=white;}',
     'if(uObject>2.5)col=vTint*(.68+.32*lit)*mix(vec3(1.),white,step(.5,uLight)*.6);float fog=(1.-smoothstep(-13.,3.,vWorld.z))*.38;col=mix(col,mix(vec3(.76,.85,.89),vec3(.19,.29,.40),step(1.5,uLight)),fog);',
-    'float alpha=1.;if(uCloud>.5&&uObject<.5){float opening=smoothstep(.035,.42,vCut);alpha=(.35+.60*smoothstep(.38,.70,vNoise))*(1.-opening*.985);if(alpha<.02)discard;}gl_FragColor=vec4(col,alpha);}'
+    'float alpha=1.;if(uCloud>.5&&uObject<.5){float fringe=sin(vWorld.x*19.+vWorld.z*23.)*sin(vWorld.z*17.-vWorld.x*11.);float opening=smoothstep(.015,.50,vCut*(.85+.30*vNoise)+fringe*.045*smoothstep(.01,.10,vCut));alpha=(.35+.60*smoothstep(.38,.70,vNoise))*(1.-opening*.985);if(alpha<.02)discard;}gl_FragColor=vec4(col,alpha);}'
   ].join('\n');
   function noiseData() {
     var n=256, data=new Uint8Array(n*n*4), values=new Float32Array(n*n);
@@ -165,7 +165,7 @@
       for(var j=0;j<2;j++)for(var i=0;i<2;i++){var val=heights[Math.max(0,Math.min(field.size-1,iy+j))*field.size+Math.max(0,Math.min(field.size-1,ix+i))],weight=(i?fx:1-fx)*(j?fy:1-fy);cut+=Math.max(0,val)*weight;rim+=Math.max(0,-val)*weight;}
     }
     var base=cloud ? .28+Math.pow(n,1.3)*.65 : .16+n*.045;
-    return base+(rim-cut)*(cloud ? .28:.38);
+    return base+(rim-cut)*(cloud ? .62:.38);
   };
   Surface.prototype.point=function(u,v,kind,clouds,pickBall){
     var self=this,field=kind==='snow'?this.snow:clouds.field;

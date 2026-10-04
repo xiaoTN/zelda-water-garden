@@ -2,6 +2,26 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Snow, Clouds } = require('../src/nature-core.js');
 
+test('fast cloud gestures open deeper gaps without widening the brush',()=>{
+  const slow=new Clouds(),fast=new Clouds();
+  slow.touch(.5,.5,'part',.003,0,.016,.03);fast.touch(.5,.5,'part',.003,0,.016,.8);
+  const center=fast.field.index(.5,.5);
+  assert(fast.field.depth[center]>slow.field.depth[center]*3);
+  assert.equal(fast.field.depth.filter(v=>v!==0).length,slow.field.depth.filter(v=>v!==0).length);
+});
+test('cloud shoulders flow inward, with fast closure then a slower wispy tail',()=>{
+  const cloud=new Clouds();cloud.touch(.5,.5,'part',.01,0,.06,.8);
+  const field=cloud.field,center=field.index(.5,.5),side=field.index(.5,.53),start=field.depth[center],edge=field.depth[side];
+  for(let i=0;i<30;i++)cloud.update(1/60,true,false);
+  const half=field.depth[center];
+  assert(half<start*.6,'fresh gaps close visibly within half a second');
+  assert(edge>0&&field.depth[side]<0,'raised shoulders advance into the former opening');
+  for(let i=0;i<30;i++)cloud.update(1/60,true,false);
+  assert(field.depth[center]/half>half/start,'late recovery is slower');
+  assert(Math.abs(field.depth.reduce((sum,d)=>sum+d,0))<.001,'transport conserves signed displacement');
+  assert(field.depth.every(v=>Number.isFinite(v)&&v>=-1&&v<=1));
+});
+
 test('parting clouds builds a soft depression over time instead of cutting to full depth on contact', () => {
   const cloud=new Clouds(),field=cloud.field;
   cloud.touch(.5,.5,'part',0,0,.016);

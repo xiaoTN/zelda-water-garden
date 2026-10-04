@@ -66,6 +66,10 @@ async function run() {
       s = await state(); assert(s.cloud.opacity <= opacity);
       assert(s.cloudCarve>10,'parting must deform the actual cloud surface');
       if (viewport.width === 390 || viewport.width === 1440) await page.screenshot({path:path.join(out,viewport.width===390?'cloud-mobile.png':'cloud-desktop.png')});
+      const openDepth=(await state()).cloudCarve;
+      await page.waitForTimeout(650);
+      assert((await state()).cloudCarve<openDepth*.8,'released cloud gaps close quickly');
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'cloud-refilling.png')});
       await page.locator('[data-nature="1"]').click();
       const gatherPoint=await page.evaluate(({x,y})=>testSurface3D.point(x/innerWidth,y/innerHeight,'cloud',testSurface3D.clouds),{x,y});
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up();
