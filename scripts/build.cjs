@@ -3,7 +3,7 @@ const root = path.resolve(__dirname, '..');
 function run(command, args, cwd = root) { const result = spawnSync(command, args, { cwd, stdio: 'inherit' }); if (result.error) throw result.error; if (result.status !== 0) process.exit(result.status || 1); }
 run(process.execPath, ['scripts/bundle-physics.cjs']);
 run(process.execPath, ['scripts/bundle-audio.cjs']);
-run(process.execPath, ['--test', 'tests/water.test.cjs', 'tests/nature.test.cjs', 'tests/nature-3d.test.cjs']);
+run(process.execPath, ['--test', 'tests/water.test.cjs', 'tests/nature.test.cjs', 'tests/nature-3d.test.cjs', 'tests/music.test.cjs']);
 run(process.execPath, ['scripts/verify-package.cjs']);
 run(process.execPath, ['scripts/audit-artifact.mjs', 'src']);
 const version = require('../package.json').version;

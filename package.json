@@ -1,6 +1,6 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.11.24",
+  "version": "1.11.25",
   "private": true,
   "description": "片刻：在水光、雪落与云间，留一点宁静",
   "engines": {
@@ -14,10 +14,11 @@
     "physics": "node scripts/bundle-physics.cjs",
     "audio": "node scripts/bundle-audio.cjs",
     "audio:snow": "node scripts/prepare-snow-audio.cjs",
-    "test": "node --test tests/water.test.cjs tests/nature.test.cjs tests/nature-3d.test.cjs",
+    "audio:music": "node scripts/prepare-music.cjs && node scripts/bundle-audio.cjs",
+    "test": "node --test tests/water.test.cjs tests/nature.test.cjs tests/nature-3d.test.cjs tests/music.test.cjs",
     "check": "node scripts/verify-package.cjs",
     "build": "node scripts/build.cjs",
-    "test:browser": "node scripts/render-recovery-check.cjs && node scripts/browser-check.cjs && node scripts/nature-browser-check.cjs && node scripts/displacement-browser-check.cjs",
+    "test:browser": "node scripts/music-browser-check.cjs && node scripts/render-recovery-check.cjs && node scripts/browser-check.cjs && node scripts/nature-browser-check.cjs && node scripts/displacement-browser-check.cjs",
     "test:nature-browser": "node scripts/nature-browser-check.cjs"
   },
   "dependencies": {

@@ -74,14 +74,14 @@
     }
     return buffer;
   }
-  function decodeLoop(self, asset, ready, failed) {
+  function decodeLoop(self, asset, ready, failed, overlapSeconds) {
     var context=self.context;
     function fail(){self.failed=true;if(failed)failed();}
     try {
       var raw=root.atob(asset.base64),bytes=new Uint8Array(raw.length);
       for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
       var decoded=context.decodeAudioData(bytes.buffer,function(original){
-        self.buffer=loopBuffer(context,original,asset.seconds,asset.overlap);
+        self.buffer=loopBuffer(context,original,asset.seconds,overlapSeconds||asset.overlap);
         if(ready)ready();
       },fail);
       if(decoded&&decoded.catch)decoded.catch(fail);
@@ -170,6 +170,62 @@
     try{n.source.stop();}catch(error){}
     n.source.disconnect();n.gain.disconnect();
   };
-  root.WaterSound = { Stroke: StrokeAudio, Rolling: RollingAudio, Ripple: RippleAudio, Tap: TapAudio, OneShot: TapAudio, SceneMixer: SceneMixer, fadeParameter: fadeParameter };
+  function Music(context, output, assets, random) {
+    this.context=context;this.output=output;this.assets=assets;this.random=random||Math.random;this.kind=null;this.tracks={};
+  }
+  Music.prototype.level=function(track, target) {
+    var time=this.context.currentTime,voice=track.node;
+    // Evaluate our envelope explicitly so rapid reversals also work on Chrome 61.
+    var value=voice.target+(voice.from-voice.target)*Math.exp(-(time-voice.at)/.25);
+    voice.gain.gain.cancelScheduledValues(time);voice.gain.gain.setValueAtTime(value,time);
+    voice.gain.gain.setTargetAtTime(target,time,.25);
+    voice.from=value;voice.target=target;voice.at=time;track.fadeEnd=target?0:time+1.5;
+  };
+  Music.prototype.select=function(kind) {
+    if(!this.assets[kind])return;
+    this.kind=kind;this.update();
+  };
+  Music.prototype.update=function() {
+    var c=this.context,self=this;
+    if(c.state!=='running')return;
+    for(var name in this.tracks){
+      var track=this.tracks[name];
+      if(track.fadeEnd&&c.currentTime>=track.fadeEnd)this.release(track);
+      if(track.node&&name!==this.kind&&!track.fadeEnd)this.level(track,0);
+    }
+    if(!this.kind)return;
+    var active=this.tracks[this.kind];
+    if(!active){active={context:c,buffer:null,node:null,loading:false,failed:false,fadeEnd:0};this.tracks[this.kind]=active;}
+    if(active.failed)return;
+    if(active.node){if(active.fadeEnd)this.level(active,.42);return;}
+    if(!active.buffer){
+      if(active.loading)return;
+      active.loading=true;var requested=this.kind;
+      decodeLoop(active,this.assets[requested],function(){
+        active.loading=false;
+        if(self.kind!==requested||c.state!=='running'){active.buffer=null;return;}
+        self.update();
+      },function(){active.loading=false;},.8);
+      return;
+    }
+    var source=c.createBufferSource(),gain=c.createGain();
+    source.buffer=active.buffer;source.loop=true;gain.gain.value=0;source.connect(gain);gain.connect(this.output);
+    var offset=(.02+Math.max(0,Math.min(.999999,this.random()))*.96)*active.buffer.duration*.5;
+    active.node={source:source,gain:gain,offset:offset,from:0,target:0,at:c.currentTime};
+    source.start(0,offset);this.level(active,.42);
+  };
+  Music.prototype.release=function(track) {
+    var node=track.node;track.node=null;track.buffer=null;track.fadeEnd=0;
+    if(node){try{node.source.stop();}catch(error){}node.source.disconnect();node.gain.disconnect();}
+  };
+  Music.prototype.stop=function() {
+    this.kind=null;for(var name in this.tracks)this.release(this.tracks[name]);
+  };
+  Music.prototype.inspect=function() {
+    var tracks=[];
+    for(var name in this.tracks){var t=this.tracks[name];if(t.node)tracks.push({scene:name,offset:t.node.offset,duration:t.buffer.duration,loop:t.node.source.loop,fading:!!t.fadeEnd});}
+    return {scene:this.kind,voices:tracks,loading:Object.keys(this.tracks).filter(function(name){return this.tracks[name].loading;},this).length};
+  };
+  root.WaterSound = { Music: Music, Stroke: StrokeAudio, Rolling: RollingAudio, Ripple: RippleAudio, Tap: TapAudio, OneShot: TapAudio, SceneMixer: SceneMixer, fadeParameter: fadeParameter };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterSound;
 }(typeof window !== 'undefined' ? window : global));

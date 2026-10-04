@@ -11,7 +11,7 @@
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
-  var audio = null, master = null, sceneAudio = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
+  var audio = null, master = null, sceneAudio = null, music = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
   var hints = { touch: '轻触起涟漪 · 滑动拨水 · 长按蓄波', leaf: '轻放一片叶 · 拨水送它远行', stone: '轻点落石，让涟漪慢慢散开' };
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
   var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
@@ -30,6 +30,7 @@
     try {
       audio = new Constructor(); master = audio.createGain(); master.gain.value = .38; master.connect(audio.destination);
       sceneAudio = new window.WaterSound.SceneMixer(audio, master); sceneAudio.select(sceneKind);
+      music = new window.WaterSound.Music(audio, master, window.GardenMusicAssets); music.select(sceneKind);
       var waterOutput = sceneAudio.output('water');
       weatherAudio = new window.WaterWeather.Audio(audio, waterOutput);
       strokeAudio = new window.WaterSound.Stroke(audio, waterOutput, window.WaterSwipeAsset);
@@ -301,6 +302,7 @@
     if (kind === sceneKind) return;
     fingers = {}; cursor.style.display = 'none'; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; stopAudio(); sceneKind = kind;
     if(sceneAudio)sceneAudio.select(kind);
+    if(music)music.select(kind);
     garden.setAttribute('data-scene', kind); garden.classList.remove('touched');
     var titles = { water: '水光', snow: '雪落', cloud: '云间' };
     document.getElementById('scene-title').textContent = titles[kind]; document.title = '片刻 · ' + titles[kind];
@@ -550,6 +552,7 @@
       if (strokeAudio) strokeAudio.update();
       if (rollAudio) rollAudio.update();
       if (weatherAudio) weatherAudio.update();
+      if (music) music.update();
       if (sceneKind !== 'water') { accumulator = 0; updateNature(dt); }
       else if(renderer) {
       stoneDrops.update(dt,stoneEvent);
@@ -595,8 +598,8 @@
   window.addEventListener('resize', function () { resized = true; });
   window.addEventListener('blur', function () { fingers = {}; cursor.style.display = 'none'; });
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { cancelAnimationFrame(frameId); frameId = 0; fingers = {}; clearTimeout(noticeTimer); document.getElementById('notice').classList.remove('show'); stopAudio(true); }
-    else { lastFrame = 0; lastRender = 0; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; if (audio) { audio.resume().catch(function () {}); if (weatherAudio) weatherAudio.setLevel(sceneKind==='water'?weather.level:0); } if (!frameId) frameId = requestAnimationFrame(tick); }
+    if (document.hidden) { cancelAnimationFrame(frameId); frameId = 0; fingers = {}; clearTimeout(noticeTimer); document.getElementById('notice').classList.remove('show'); stopAudio(true); if(music)music.stop(); }
+    else { lastFrame = 0; lastRender = 0; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; if (audio) { audio.resume().catch(function () {}); if (weatherAudio) weatherAudio.setLevel(sceneKind==='water'?weather.level:0); if(music)music.select(sceneKind); } if (!frameId) frameId = requestAnimationFrame(tick); }
   });
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return {
@@ -615,6 +618,7 @@
     audioState: audio ? audio.state : 'uninitialized', strokeAudioFading: !!(strokeAudio && strokeAudio.fadeEnd),
     sceneSoundNodes: audioNodes.length, sceneSoundFading: audioNodes.filter(function(node){return node.fading;}).length,
     audioScene: sceneAudio ? sceneAudio.kind : 'uninitialized',
+    music: music ? music.inspect() : {scene:null,voices:[],loading:0},
     strokeReady: !!(strokeAudio && strokeAudio.buffer), strokeDuration: strokeAudio && strokeAudio.buffer ? strokeAudio.buffer.duration : 0,
     tapReady: !!(tapAudio && tapAudio.buffer), tapVoices: tapAudio ? tapAudio.voices.length : 0, tapPlayed: tapAudio ? tapAudio.played : 0,
     stoneReady: !!(stoneAudio && stoneAudio.buffer), stoneVoices: stoneAudio ? stoneAudio.voices.length : 0, stonePlayed: stoneAudio ? stoneAudio.played : 0,
