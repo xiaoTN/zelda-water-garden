@@ -89,12 +89,45 @@
     var flowAngle=Math.atan2(y-v,(x-u)*this.aspect);
     for (var i = 1; i <= count; i++) this.stamp(u + (x - u) * i / count, v + (y - v) * i / count, radius, strength,0,1,false,1,flowAngle);
   };
-  Snow.prototype.footprint = function (u, v, angle, radius) {
+  Snow.prototype.footprint = function (u, v, angle, radius, ball) {
+    var crushed=ball&&this.crush(ball);
     this.foot++;
     var side = this.foot % 2 ? -1 : 1;
-    u += Math.cos(angle) * radius * .65 * side / this.aspect;
-    v += Math.sin(angle) * radius * .65 * side;
+    if(!crushed){u += Math.cos(angle) * radius * .65 * side / this.aspect;v += Math.sin(angle) * radius * .65 * side;}
     this.stamp(u, v, radius, .56, angle, 1, false, 1, undefined, side);
+  };
+  Snow.prototype.crush = function (ball) {
+    var selected=this.balls.indexOf(ball);if(selected<0)return false;
+    var n=this.size,scale=n/this.span,cellArea=Math.pow(12/scale,2)*this.aspect;
+    // Height displacement is 0.38 world units per depth unit. Return the sphere's
+    // volume to the same height field, then the footprint presses into that snow.
+    var volume=4*Math.PI/3*Math.pow(ball.radius*12,3)/(cellArea*.38);
+    var reach=Math.max(.012*Math.min(this.aspect,1),ball.radius*2.3,Math.sqrt(48*Math.pow(ball.radius,3)/(.38*.65)));
+    var banks=0,capacity=0;
+    for(var attempt=0;attempt<12;attempt++){
+      banks=0;capacity=0;
+      var x0=Math.max(0,Math.floor((ball.u-reach/this.aspect-this.origin)*scale)),x1=Math.min(n-1,Math.ceil((ball.u+reach/this.aspect-this.origin)*scale));
+      var y0=Math.max(0,Math.floor((ball.v-reach-this.origin)*scale)),y1=Math.min(n-1,Math.ceil((ball.v+reach-this.origin)*scale));
+      for(var y=y0;y<=y1;y++)for(var x=x0;x<=x1;x++){
+        var distance=Math.hypot((this.origin+(x+.5)/scale-ball.u)*this.aspect,this.origin+(y+.5)/scale-ball.v)/reach,at=y*n+x;
+        if(distance>=1||this.depth[at]<=-1)continue;
+        bankIndices[banks]=at;bankWeights[banks++]=Math.pow(1-distance*distance,2);capacity+=1+this.depth[at];
+      }
+      if(capacity>=volume)break;
+      reach*=1.7;
+    }
+    if(capacity+1e-6<volume)return false;
+    for(var pass=0;pass<6&&volume>1e-6;pass++){
+      var total=0,i;for(i=0;i<banks;i++)if(this.depth[bankIndices[i]]>-1)total+=bankWeights[i];
+      if(total<=0)break;
+      var budget=volume;
+      for(i=0;i<banks;i++){var index=bankIndices[i],before=this.depth[index];this.depth[index]=Math.max(-1,before-Math.min(1+before,budget*bankWeights[i]/total));volume-=before-this.depth[index];}
+    }
+    if(volume>1e-6){
+      var room=0;for(i=0;i<banks;i++)room+=1+this.depth[bankIndices[i]];
+      var fraction=Math.min(1,volume/room);for(i=0;i<banks;i++){index=bankIndices[i];this.depth[index]-=(1+this.depth[index])*fraction;}
+    }
+    this.balls.splice(selected,1);ball.crushed=true;this.active=true;this.revision++;return true;
   };
   Snow.prototype.ball = function (u, v, radius) {
     if(!isFinite(u+v+radius)||radius<0)return null;

@@ -22,7 +22,7 @@
     cloud: ['M8 16H6a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9h-2M9 12l-3 3 3 3m6-6 3 3-3 3', 'M6 17a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9M3 21h6l-2-2m14 2h-6l2-2', 'M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 17h5a3 3 0 1 1-3 3']
   };
   var natureHints = {
-    snow: ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹', '滑动雪面，从小滚大 · 松手留下雪球 · 相碰合并'],
+    snow: ['滑动划出雪痕 · 长按压实积雪', '轻点留下脚印 · 拖动走出足迹 · 踩碎雪球堆起雪', '滑动雪面，从小滚大 · 松手留下雪球 · 相碰合并'],
     cloud: ['轻点推开云海 · 滑动划出云间小径', '按住聚拢云团 · 缓缓拖动，带着云走']
   };
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -200,7 +200,7 @@
   function move(id, x, y) {
     var f = fingers[id]; if (!f) return;
     var p = point(x, y), dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, distance = Math.sqrt(dx * dx + dy * dy);
-    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,false); if(!p)return; distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height); moveNature(f, p, distance); return; }
+    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,sceneKind==='snow'&&natureModes.snow===1); if(!p)return; distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height); moveNature(f, p, distance); return; }
     f.travel += distance;
     if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
@@ -330,13 +330,13 @@
     if (!isFinite(p.u+p.v)) return;
     garden.classList.add('touched'); initAudio();
     var f = { u: p.u, v: p.v, born: now, last: now, movedAt: now, travel: 0, spacing: 0, angle: 0 }, selected = natureModes[sceneKind];
-    f.offsetU=p.ball?p.u-p.groundU:0; f.offsetV=p.ball?p.v-p.groundV:0;
+    f.offsetU=p.ball&&selected!==1?p.u-p.groundU:0; f.offsetV=p.ball&&selected!==1?p.v-p.groundV:0;
     fingers[id] = f;
     if (sceneKind === 'snow') {
       var r = natureRadius();
-      if(p.ball)f.ball=p.ball;
+      if(selected===1)snow.footprint(p.u,p.v,0,r*.07,p.ball);
+      else if(p.ball)f.ball=p.ball;
       else if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
-      else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
     } else clouds.touch(p.u, p.v, ['part','gather'][selected], 0, 0, selected===0 ? .04 : .22);
     sound(.22, false);
   }
@@ -344,6 +344,7 @@
     p.u += f.offsetU; p.v += f.offsetV;
     var selected = natureModes[sceneKind], r = natureRadius();
     if (sceneKind === 'snow') {
+      if(selected===1&&p.ball){snow.footprint(p.u,p.v,f.angle,r*.07,p.ball);p.u=p.groundU;p.v=p.groundV;}
       if(f.ball){
         if(!snow.roll(f.ball,p.u,p.v,snowBallPosition)){f.ball=null;f.rollFinished=true;}
       }

@@ -1,0 +1,281 @@
+{
+  "date": "2026-10-05",
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "footstep crushes sphere, raises terrain and leaves sole in both views and quality tiers",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "result": "passed",
+      "crushed": [
+        {
+          "low": false,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.2634985148906708,
+          "raised": 0.1100734402251245,
+          "stale": true
+        },
+        {
+          "low": false,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 3,
+          "sole": 0.2374880164861679,
+          "raised": 0.11665760888695759,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.2634985148906708,
+          "raised": 0.1100734402251245,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 3,
+          "sole": 0.2374880164861679,
+          "raised": 0.11665760888695759,
+          "stale": true
+        }
+      ]
+    },
+    {
+      "scenario": "closed 3D cloud volume, twelve sphere meshes, ray picking, depth and both GPU budgets",
+      "result": "passed",
+      "geometry": {
+        "closed": true,
+        "budgets": [
+          {
+            "low": false,
+            "snow": 98624,
+            "calls": 14,
+            "balls": 12,
+            "flakes": 720,
+            "picked": true,
+            "depth": true,
+            "pixels": 740610,
+            "reducedHidesFlakes": true,
+            "cloud": 98594
+          },
+          {
+            "low": true,
+            "snow": 38472,
+            "calls": 14,
+            "balls": 12,
+            "flakes": 300,
+            "picked": true,
+            "depth": true,
+            "pixels": 329160,
+            "reducedHidesFlakes": true,
+            "cloud": 49282
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "two-finger rolling starts only on travel and cancellation leaves both spheres",
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "footstep crushes sphere, raises terrain and leaves sole in both views and quality tiers",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "result": "passed",
+      "crushed": [
+        {
+          "low": false,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.10527332872152328,
+          "raised": 0.1771287890093209,
+          "stale": true
+        },
+        {
+          "low": false,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.10527332872152328,
+          "raised": 0.1771287890093209,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.10527332872152328,
+          "raised": 0.1771287890093209,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.10527332872152328,
+          "raised": 0.1771287890093209,
+          "stale": true
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "footstep crushes sphere, raises terrain and leaves sole in both views and quality tiers",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "result": "passed",
+      "crushed": [
+        {
+          "low": false,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.2116992324590683,
+          "raised": 0.13077082027435316,
+          "stale": true
+        },
+        {
+          "low": false,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 3,
+          "sole": 0.18304511904716492,
+          "raised": 0.13912248280525258,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.2116992324590683,
+          "raised": 0.13077082027435316,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 3,
+          "sole": 0.18304511904716492,
+          "raised": 0.13912248280525258,
+          "stale": true
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "footstep crushes sphere, raises terrain and leaves sole in both views and quality tiers",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "result": "passed",
+      "crushed": [
+        {
+          "low": false,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.09837325662374496,
+          "raised": 0.1769861012753719,
+          "stale": true
+        },
+        {
+          "low": false,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 2,
+          "sole": 0.08411955833435059,
+          "raised": 0.23446788400030366,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": false,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 1,
+          "sole": 0.09837325662374496,
+          "raised": 0.1769861012753719,
+          "stale": true
+        },
+        {
+          "low": true,
+          "oblique": true,
+          "balls": 1,
+          "crushed": true,
+          "footprints": 2,
+          "sole": 0.08411955833435059,
+          "raised": 0.23446788400030366,
+          "stale": true
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "offline WebGL, touch fallback, reduced motion",
+      "result": "passed",
+      "networkRequests": 0
+    },
+    {
+      "scenario": "unsupported hardware shows explicit 3D unavailable state",
+      "result": "passed"
+    }
+  ]
+}

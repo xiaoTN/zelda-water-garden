@@ -83,6 +83,36 @@ async function run() {
       await select('cloud'); await select('snow'); assert.deepEqual((await state()).snow.balls,saved.balls,'scene switching preserves snowballs');assert((await state()).snow.depth>0);
       assert.equal(await page.locator('#rain').isVisible(),false); await page.waitForTimeout(250); assert((await state()).snow.depth < saved.depth);
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snowfall-mobile.png')});
+      await page.locator('[data-nature="1"]').click();
+      const crushed=[];
+      for(const low of [false,true])for(const oblique of [false,true]){
+        const target=await page.evaluate(({low,oblique})=>{
+          const surface=testSurface3D,snow=surface.snow;snow.clear();
+          window.stompUpdate=snow.update;snow.update=function(){};
+          window.stompSurface={width:surface.canvas.width,height:surface.canvas.height,low:surface.low,oblique:surface.oblique};
+          surface.oblique=oblique;surface.resize(surface.canvas.width,surface.canvas.height,low);
+          const radius=.075*Math.min(snow.aspect,1),ball=snow.ball(.5,.52,radius);snow.ball(.82,.72,.02*Math.min(snow.aspect,1));window.stompBall=ball;
+          const near=Math.max(radius*.95,Math.min(innerWidth,innerHeight)/innerHeight*.07*1.6);
+          window.stompNear=[(ball.u-.5)*12*surface.aspect+near*12,(ball.v-.5)*12];
+          window.stompHeight=surface.height(stompNear[0],stompNear[1],'snow',snow,surface.clouds);
+          surface.draw('snow',0,snow,surface.clouds,0,true,false);
+          const screen=surface.camera.project(surface.ballPosition(ball)),hit=surface.point(screen.u,screen.v,'snow',surface.clouds,true);
+          return {x:screen.u*innerWidth,y:screen.v*innerHeight,picked:hit&&hit.ball===ball};
+        },{low,oblique});
+        assert(target.picked,'the foot targets the visible 3D sphere in both views and quality tiers');
+        if(oblique){await page.mouse.move(target.x-60,target.y);await page.mouse.down();await page.mouse.move(target.x,target.y,{steps:12});await page.mouse.up();}
+        else await page.touchscreen.tap(target.x,target.y);
+        const result=await page.evaluate(()=>{
+          const surface=testSurface3D,snow=surface.snow;
+          surface.draw('snow',0,snow,surface.clouds,0,true,false);
+          return {balls:snow.balls.length,crushed:stompBall.crushed,footprints:snow.foot,sole:snow.depth[snow.index(stompBall.u,stompBall.v)],raised:surface.height(stompNear[0],stompNear[1],'snow',snow,surface.clouds)-stompHeight,stale:snow.roll(stompBall,.6,.5)===null};
+        });
+        assert.equal(result.balls,1,'stepping crushes the target and keeps the other sphere');assert(result.crushed&&result.stale);assert(result.footprints>=1&&result.sole>.01,'a sole remains in the broken sphere pile');assert(result.raised>.03,'nearby snow rises in the real world mesh');
+        crushed.push({low,oblique,...result});
+        if(viewport.width===390&&oblique&&!low)await page.screenshot({path:path.join(out,'snow-crushed-footprint.png')});
+        await page.evaluate(()=>{const s=testSurface3D;s.snow.update=stompUpdate;s.oblique=stompSurface.oblique;s.resize(stompSurface.width,stompSurface.height,stompSurface.low);});
+      }
+      reports.push({scenario:'footstep crushes sphere, raises terrain and leaves sole in both views and quality tiers',viewport,result:'passed',crushed});
       await page.locator('#reset').click(); assert.equal((await state()).snow.markedCells,0); assert.equal((await state()).snow.balls.length,0); assert.equal((await state()).weather,true);
       await select('cloud'); await page.locator('#reset').click();
       await page.waitForFunction(()=>testSurface3D.landReady);
@@ -179,6 +209,9 @@ async function run() {
     await page.waitForFunction(()=>window.offlineSurface && offlineSurface.snowMaps===2);
     await page.waitForFunction(()=>offlineSurface.landReady);
     assert.equal(await page.evaluate(()=>NatureGarden.inspect().renderer),'webgl');
+    await page.locator('[data-nature="1"]').click();
+    const offlineBall=await page.evaluate(()=>{const s=offlineSurface,b=s.snow.ball(.5,.52,.035),p=s.camera.project(s.ballPosition(b));return {x:p.u*innerWidth,y:p.v*innerHeight};});
+    await page.touchscreen.tap(offlineBall.x,offlineBall.y);assert(await page.evaluate(()=>offlineSurface.snow.balls.length===0&&offlineSurface.snow.foot>0&&offlineSurface.snow.inspect().raised>0),'touch fallback can crush and leave snow plus a footprint offline');
     await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().cloudCarve>0));
     await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloud.time),0);assert.equal(requests,0);
     reports.push({scenario:'offline WebGL, touch fallback, reduced motion',result:'passed',networkRequests:requests});await context.close();
