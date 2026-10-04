@@ -90,7 +90,8 @@ async function run() {
       await page.locator('#light').click();
       await page.waitForFunction(() => NatureGarden.inspect().renderLight === 2);
       if (viewport.width===390) { await select('snow'); await page.screenshot({path:path.join(out,'snow-moon.png')}); await select('cloud'); }
-      await page.locator('#sound').click(); assert.equal(await page.evaluate(() => WaterGarden.inspect().muted),false); await page.locator('#sound').click();
+      assert.equal(await page.locator('#sound').count(),0);assert(await page.evaluate(()=>WaterGarden.inspect().audioEnabled));
+      await page.waitForFunction(()=>WaterGarden.inspect().audioState==='running');
       await page.locator('#nature').focus(); await page.keyboard.press('Enter'); assert.equal((await state()).activePointers,0);
       if (viewport.width===390) {
         const geometry=await page.evaluate(()=>{

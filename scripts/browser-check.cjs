@@ -22,6 +22,8 @@ async function run() {
       page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
       const before = Date.now(); await page.goto(url); await page.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 10); await page.waitForTimeout(700);
       const inspect = () => page.evaluate(() => window.WaterGarden.inspect());
+      assert.equal(await page.locator('#sound').count(),0);
+      assert((await inspect()).audioEnabled);assert.equal((await inspect()).audioState,'uninitialized','audio waits for the first user gesture');
       assert.equal(await page.locator('[data-mode]').count(),3); assert.equal(await page.getByText('落石',{exact:true}).count(),1);
       assert.deepEqual(await page.locator('[data-mode]').evaluateAll(buttons=>buttons.map(b=>b.dataset.mode)),['touch','leaf','stone']);
       assert.equal(await page.locator('#ice-actions, #freeze-all, #thaw-all').count(),0);
@@ -72,8 +74,8 @@ async function run() {
         }
         assert(fades.resumed.sameVoice&&fades.resumed.resumed>.85,'a resumed swipe reverses its fade without restarting the source');
         reports.push({scenario:'real WebAudio PCM validates long-sound fades, continuous rain level changes and swipe fade reversal',...fades,result:'passed'});
-        await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,0,'muted taps stay silent');
-        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().tapReady);
+        await page.touchscreen.tap(195,410);await page.waitForFunction(()=>WaterGarden.inspect().tapReady&&WaterGarden.inspect().tapPlayed===1);
+        assert.equal((await inspect()).audioState,'running','the first touch automatically unlocks sound');
         const sample=await page.evaluate(async()=>{
           const raw=atob(WaterTapAsset.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
           const audio=new OfflineAudioContext(2,22050,22050),buffer=await audio.decodeAudioData(bytes.buffer);
@@ -83,15 +85,13 @@ async function run() {
           return {duration:buffer.duration,channels:buffer.numberOfChannels,peak,bytes:WaterTapAsset.bytes};
         });
         assert(sample.duration>.4&&sample.duration<.8&&sample.peak>.01,'supplied sample must decode and render non-silent PCM');
-        await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,1);
+        assert.equal((await inspect()).tapPlayed,1);
         await page.waitForFunction(()=>WaterGarden.inspect().tapVoices===0);
         await page.mouse.move(120,410);await page.mouse.down();await page.mouse.move(270,410,{steps:12});await page.mouse.up();
         assert.equal((await inspect()).tapPlayed,1,'swipes use continuous water sound only');
         await page.touchscreen.tap(195,410);await page.locator('#reset').click();assert.equal((await inspect()).tapVoices,0);
-        await page.touchscreen.tap(195,410);await page.locator('#sound').click();assert.equal((await inspect()).tapVoices,0);
-        const mutedCount=(await inspect()).tapPlayed;await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,mutedCount);
         await page.locator('#reset').click();
-        reports.push({scenario:'supplied tap sample decodes, plays on taps, stays out of swipes and stops on mute/reset',...sample,result:'passed'});
+        reports.push({scenario:'sound is enabled by default with no toggle; first touch plays the recorded tap, swipes use their own sound and reset releases voices',...sample,result:'passed'});
         const stoneSample=await page.evaluate(async()=>{
           const raw=atob(StoneImpactAsset.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
           const audio=new OfflineAudioContext(1,22050*4,22050),buffer=await audio.decodeAudioData(bytes.buffer);
@@ -135,7 +135,7 @@ async function run() {
         assert(rippleFades.reduced<rippleFades.strong*.12&&rippleFades.end<rippleFades.tail*.025);
         assert(rippleFades.jumps.every(j=>j<.001));
         reports.push({scenario:'real ripple PCM fades in, scales with wave strength and fades out continuously',...rippleFades,result:'passed'});
-        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().rippleReady);
+        await page.waitForFunction(()=>WaterGarden.inspect().rippleReady);
         await page.mouse.move(120,410);await page.mouse.down();await page.mouse.move(270,410,{steps:12});await page.mouse.up();
         await page.waitForTimeout(900);const remaining=await inspect();
         assert(!remaining.strokeAudio&&remaining.rippleAudio&&remaining.rippleLevel>.01&&remaining.activePointers===0,'released fingers leave audible moving water');
@@ -143,7 +143,7 @@ async function run() {
         const quieter=await inspect();assert(quieter.rippleAudio);
         await page.screenshot({path:path.join(out,'ripple-audio-after-release.png')});
         await page.locator('#reset').click();assert((await inspect()).rippleFading);
-        await page.waitForFunction(()=>!WaterGarden.inspect().rippleAudio);await page.locator('#sound').click();
+        await page.waitForFunction(()=>!WaterGarden.inspect().rippleAudio);
         reports.push({scenario:'pointer release leaves wave-driven sound which weakens as the water settles and fades on reset',remaining,quieter,result:'passed'});
       }
       assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
@@ -432,23 +432,22 @@ async function run() {
         });
         assert(streakPixels[0]>150,'light rain must contain visible airborne streaks');
         for(let i=1;i<4;i++)assert(streakPixels[i]>streakPixels[i-1],'higher rainfall must visibly cover more pixels');
-        await page.locator('#sound').click();assert.equal((await inspect()).rainAudio,true);
+        assert.equal((await inspect()).rainAudio,true);
         await page.waitForFunction(()=>WaterGarden.inspect().lightningFlash>.45);
         await page.screenshot({path:path.join(out,'mobile-storm-lightning.png')});
         await page.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);
         const firstStrike=(await inspect()).lightningCount;
         await page.waitForFunction(count=>WaterGarden.inspect().lightningCount>count,firstStrike,{timeout:10000});
         reports.push({scenario:'visible rain streaks and repeated storm lightning with delayed WebAudio thunder',streakPixels,state:await inspect(),result:'passed'});
-        await page.locator('#sound').click();assert.equal((await inspect()).rainAudio,false);
-        assert.equal((await inspect()).rainAudioFading,true);assert.equal((await inspect()).audioState,'running','mute lets long sounds finish their fade');
-        await page.waitForTimeout(120);await page.locator('#sound').click();
-        await page.waitForTimeout(850);assert.equal((await inspect()).audioState,'running','a cancelled mute must never suspend resumed audio');assert.equal((await inspect()).rainAudio,true);
-        await page.locator('[data-rain="2"]').click();await page.locator('[data-rain="4"]').click();assert.equal((await inspect()).rainAudioFading,false);
-        await page.locator('#sound').click();
-        await page.waitForFunction(()=>WaterGarden.inspect().audioState==='suspended');assert.equal((await inspect()).weatherAudioNodes,0);assert.equal((await inspect()).rainAudioFading,false);
-        reports.push({scenario:'rapid mute/unmute cancels suspension and rain intensity changes retain continuous playback',result:'passed'});
+        await page.locator('[data-rain="0"]').click();assert((await inspect()).rainAudioFading);
+        await page.waitForTimeout(120);await page.locator('#rain').click();
+        assert((await inspect()).rainAudio&&!((await inspect()).rainAudioFading));
+        await page.locator('[data-rain="2"]').click();await page.locator('[data-rain="4"]').click();
         await page.locator('[data-rain="0"]').click();await page.locator('#reset').click();
-        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().strokeReady&&WaterGarden.inspect().audioState==='running');
+        await page.waitForFunction(()=>!WaterGarden.inspect().rainAudioFading&&WaterGarden.inspect().weatherAudioNodes===0);
+        assert.equal((await inspect()).audioState,'running','reset leaves default audio available');
+        reports.push({scenario:'default rain audio retains continuous playback across level changes and reverses a stopped-rain fade',result:'passed'});
+        await page.waitForFunction(()=>WaterGarden.inspect().strokeReady&&WaterGarden.inspect().audioState==='running');
         await page.mouse.move(x-40,y);await page.mouse.down();
         for(let i=0;i<12;i++){await page.mouse.move(x-40+i*7,y);await page.waitForTimeout(25);}
         await page.mouse.move(x+45,y);
@@ -457,24 +456,24 @@ async function run() {
         await page.mouse.move(x+55,y);await page.waitForTimeout(35);assert((await inspect()).strokeSpeed>0);
         await page.mouse.up();await page.waitForTimeout(800);assert.equal((await inspect()).strokeAudio,false,'release must free the continuous sound graph after its fade');
         await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+25,y);await page.waitForTimeout(40);
-        await page.mouse.up();await page.locator('#sound').click();assert.equal((await inspect()).strokeAudioFading,true,'mute retains the soft tail');
-        await page.waitForFunction(()=>WaterGarden.inspect().audioState==='suspended');assert.equal((await inspect()).strokeAudio,false,'mute releases the stroke graph after fading');
-        reports.push({scenario:'continuous swipe sound follows motion, fades at rest and releases on mute',result:'passed'});
+        await page.mouse.up();await page.locator('#reset').click();assert.equal((await inspect()).strokeAudioFading,true,'reset retains the soft tail');
+        await page.waitForFunction(()=>!WaterGarden.inspect().strokeAudio);
+        reports.push({scenario:'continuous swipe sound follows motion, fades at rest and releases on reset',result:'passed'});
         // Scene switches keep the same soft water tails, then release them while water physics pauses.
-        await page.locator('#sound').click();await page.locator('#rain').click();
+        await page.locator('#rain').click();
         await page.mouse.move(x-25,y);await page.mouse.down();await page.mouse.move(x+25,y,{steps:8});
         assert((await inspect()).strokeAudio);await page.mouse.up();
         await page.locator('button[data-scene="snow"]').click();assert.equal(await page.evaluate(()=>NatureGarden.inspect().scene),'snow');
         assert((await inspect()).rainAudioFading);
         await page.waitForFunction(()=>!WaterGarden.inspect().strokeAudio&&!WaterGarden.inspect().rainAudioFading&&!WaterGarden.inspect().rippleAudio);
-        assert.equal((await inspect()).audioState,'running','scene changes keep unmuted audio available');
+        assert.equal((await inspect()).audioState,'running','scene changes keep default audio available');
         await page.locator('button[data-scene="cloud"]').click();await page.locator('button[data-scene="water"]').click();assert((await inspect()).rainAudio);
-        await page.locator('#sound').click();await page.locator('#reset').click();
+        await page.locator('#reset').click();
         reports.push({scenario:'water audio tails fade and release across snow/cloud scene switches, then resume on return',result:'passed'});
       }
       await page.locator('#light').click(); assert.equal((await inspect()).light, 1); await page.locator('#light').click(); assert.equal((await inspect()).light, 2);
       if (viewport.width === 390) await page.screenshot({ path: path.join(out, 'mobile-moon-rain.png') });
-      await page.locator('#sound').click(); assert.equal((await inspect()).muted, false); await page.touchscreen.tap(x, y); await page.locator('#sound').click(); assert.equal((await inspect()).muted, true);
+      await page.touchscreen.tap(x,y);assert((await inspect()).audioEnabled);
       await page.locator('#reset').click(); state = await inspect(); assert.equal(state.rain, false); assert.equal(state.leaves, 3); assert(state.energy < .000001);
       assert.equal(state.rainStreaks,0);assert.equal(state.lightningFlash,0);assert.equal(state.thunderPending,false);assert.equal(state.rainAudio,false);
       assert.equal(await page.locator('#rain-options').isVisible(),false);
@@ -485,7 +484,7 @@ async function run() {
       if (viewport.width === 390) {
         await page.setViewportSize({width:844,height:390}); await page.waitForTimeout(600); assert.equal((await inspect()).width,844);
         await page.setViewportSize(viewport); await page.waitForTimeout(600);
-        await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();await page.locator('#sound').click();
+        await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();
         await page.waitForTimeout(250);const beforePause=await inspect();assert(beforePause.rainAudio);
         // A controlled visibility event checks the exact lifecycle path without OS focus assumptions.
         await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable:true,value:true}); document.dispatchEvent(new Event('visibilitychange')); });
@@ -496,7 +495,7 @@ async function run() {
         await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable:true,value:false}); document.dispatchEvent(new Event('visibilitychange')); });
         await page.waitForTimeout(170); assert((await inspect()).steps > paused);
         assert((await inspect()).rainAudio);assert.equal((await inspect()).rainLevel,4);
-        await page.locator('#sound').click();await page.locator('#reset').click();
+        await page.locator('#reset').click();
         // Lose the actual GL context, then restore it once and verify pause and recovery.
         await page.evaluate(() => { window.testLostContext = document.getElementById('water').getContext('webgl').getExtension('WEBGL_lose_context'); window.testLostContext.loseContext(); });
         await page.waitForTimeout(180); assert.equal((await inspect()).renderer, 'unavailable');
@@ -525,7 +524,7 @@ async function run() {
         await page.locator('#reset').click();
       }
       if(viewport.width===390){
-        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().stoneReady);
+        await page.waitForFunction(()=>WaterGarden.inspect().stoneReady);
       }
       // Reuse a fixed varied rock sequence; weather/audio consume random values at
       // different rates, which must not change this independent physics fixture.
@@ -545,9 +544,7 @@ async function run() {
       if(viewport.width===390){
         assert.equal(state.stonePlayed,beforeStoneAudio.stonePlayed+1,'the supplied sample must play once at water entry');
         assert(state.stoneVoices>0);assert.equal(state.tapPlayed,beforeStoneAudio.tapPlayed,'stone impacts must not use the tap recording');
-        await page.locator('#sound').click();assert.equal((await inspect()).stoneVoices,0,'mute immediately releases short stone voices');
-        await page.locator('#sound').click();assert.equal((await inspect()).stonePlayed,state.stonePlayed,'unmuting must not replay past impacts');
-        reports.push({scenario:'stone recording starts at physical water entry, uses its own sample and releases on mute',played:state.stonePlayed,result:'passed'});
+        reports.push({scenario:'stone recording starts automatically at physical water entry and uses its own sample',played:state.stonePlayed,result:'passed'});
         await page.screenshot({path:path.join(out,'stone-impact.png')});
         await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'stone-ripples.png')});
       }
@@ -605,6 +602,26 @@ async function run() {
     assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().renderer),'unavailable');assert(await fallbackPage.locator('#render-status').isVisible());
     await fallbackPage.waitForTimeout(200);assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().steps),0);
     await fallbackPage.screenshot({path:path.join(out,'3d-unavailable.png')});reports.push({scenario:'missing WebGL explicit unavailable state',result:'passed'});await fallbackContext.close();
+    for(const gesture of ['keyboard','rain toolbar','legacy mouse','audio unavailable']){
+      const activationContext=await browser.newContext({viewport:{width:390,height:844}}),activationPage=await activationContext.newPage();
+      activationPage.on('pageerror',e=>errors.push(e.message));
+      if(gesture==='legacy mouse')await activationPage.addInitScript(()=>{window.PointerEvent=undefined;});
+      if(gesture==='audio unavailable')await activationPage.addInitScript(()=>{window.AudioContext=undefined;window.webkitAudioContext=undefined;});
+      await activationPage.goto(url);await activationPage.waitForFunction(()=>window.WaterGarden&&WaterGarden.inspect().steps>5);
+      assert.equal(await activationPage.locator('#sound').count(),0);
+      assert.equal(await activationPage.evaluate(()=>WaterGarden.inspect().audioState),'uninitialized');
+      if(gesture==='keyboard'){await activationPage.locator('#water').focus();await activationPage.keyboard.press('Enter');}
+      else if(gesture==='rain toolbar')await activationPage.locator('#rain').click();
+      else await activationPage.mouse.click(195,410);
+      if(gesture==='audio unavailable'){
+        assert(await activationPage.evaluate(()=>WaterGarden.inspect().energy>.001));assert((await activationPage.locator('#notice').textContent()).includes('无法播放声音'));
+      }else{
+        await activationPage.waitForFunction(()=>WaterGarden.inspect().audioState==='running');
+        if(gesture==='rain toolbar')assert(await activationPage.evaluate(()=>WaterGarden.inspect().rainAudio&&WaterGarden.inspect().rainLevel===1));
+        else await activationPage.waitForFunction(()=>WaterGarden.inspect().tapPlayed===1);
+      }
+      reports.push({scenario:'automatic sound activation: '+gesture,result:'passed'});await activationContext.close();
+    }
     // A file URL needs no HTTP server, network permission, module loader or external asset.
     const offlineContext = await browser.newContext({viewport:{width:390,height:844}}), offlinePage = await offlineContext.newPage();
     let networkRequests = 0; offlinePage.on('request',request => { if (/^https?:/.test(request.url())) networkRequests++; });
@@ -612,12 +629,12 @@ async function run() {
     await offlinePage.goto(pathToFileURL(path.join(root, 'src/index.html')).href); await offlinePage.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 5);
     await offlinePage.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
     await offlinePage.mouse.click(195,410); assert(await offlinePage.evaluate(() => WaterGarden.inspect().energy > .001)); assert.equal(networkRequests,0);
-    await offlinePage.locator('#sound').click();await offlinePage.waitForFunction(()=>WaterGarden.inspect().tapReady&&WaterGarden.inspect().strokeReady);
-    await offlinePage.mouse.click(195,410);assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapPlayed),1);
+    await offlinePage.waitForFunction(()=>WaterGarden.inspect().tapReady&&WaterGarden.inspect().strokeReady&&WaterGarden.inspect().tapPlayed===1);
+    assert.equal(await offlinePage.locator('#sound').count(),0);
     await offlinePage.mouse.move(120,410);await offlinePage.mouse.down();await offlinePage.mouse.move(270,410,{steps:12});
     assert(await offlinePage.evaluate(()=>WaterGarden.inspect().strokeAudio));await offlinePage.mouse.up();
-    await offlinePage.locator('#sound').click();assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapVoices),0);
-    await offlinePage.locator('#rain').click();await offlinePage.locator('[data-rain="4"]').click();await offlinePage.locator('#sound').click();
+    await offlinePage.locator('#reset').click();assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapVoices),0);
+    await offlinePage.locator('#rain').click();await offlinePage.locator('[data-rain="4"]').click();
     await offlinePage.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);assert.equal(networkRequests,0);
     await offlinePage.locator('#reset').click();await offlinePage.locator('[data-mode="stone"]').click();
     await offlinePage.waitForFunction(()=>WaterGarden.inspect().stoneReady);await offlinePage.mouse.click(195,410);

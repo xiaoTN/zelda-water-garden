@@ -1,0 +1,31 @@
+
+> zelda-water-garden@1.11.16 test:browser
+> node scripts/render-recovery-check.cjs && node scripts/browser-check.cjs && node scripts/nature-browser-check.cjs && node scripts/displacement-browser-check.cjs
+
+{
+  kind: 'snow',
+  renderer: 'webgl',
+  quality: 'low',
+  lost: false,
+  status: '',
+  hidden: true
+}
+{
+  kind: 'cloud',
+  renderer: 'webgl',
+  quality: 'low',
+  lost: false,
+  status: '',
+  hidden: true
+}
+{
+  kind: 'water',
+  renderer: 'webgl',
+  quality: 'low',
+  lost: false,
+  status: '',
+  hidden: true
+}
+Browser checks passed: four viewports, rain transitions, recorded audio, falling stones, lifecycle, context recovery, unavailable state and offline file URL.
+Nature browser checks passed: snow, footprints, rolling balls, cloud part/gather, persistence, resize, audio, light, weather, reset, touch cancel, lifecycle, actual 3D geometry, offline WebGL and unsupported hardware.
+Displacement browser checks passed: both world-space height directions, conserved material, complete repeated sweeps for snow and clouds.
