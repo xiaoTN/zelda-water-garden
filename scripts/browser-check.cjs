@@ -243,17 +243,19 @@ async function run() {
         // Observe the application's short rain response and touch solver on the same rendered field.
         await page.evaluate(()=>{
           const proto=WaterCore.WaveField.prototype,disturb=proto.disturb,rainImpact=proto.rainImpact,stroke=proto.stroke,update=WaterWeather.System.prototype.update;
-          window.rainProbe={fields:new Set(),impulses:0,strokes:0,disturb,rainImpact,stroke,update,inRain:false};
+          window.rainProbe={fields:new Set(),scales:new Set(),impulses:0,strokes:0,disturb,rainImpact,stroke,update,inRain:false};
           WaterWeather.System.prototype.update=function(dt,low,reduced,impact,thunder){
+            rainProbe.level=this.level;
             return update.call(this,dt,low,reduced,(...args)=>{rainProbe.inRain=true;try{return impact(...args);}finally{rainProbe.inRain=false;}},thunder);
           };
           proto.disturb=function(...args){const accepted=disturb.apply(this,args);if(accepted){rainProbe.fields.add(this);if(rainProbe.inRain)rainProbe.impulses++;}return accepted;};
-          proto.rainImpact=function(...args){const accepted=rainImpact.apply(this,args);if(accepted){rainProbe.fields.add(this);rainProbe.impulses++;}return accepted;};
+          proto.rainImpact=function(...args){const accepted=rainImpact.apply(this,args);if(accepted){rainProbe.fields.add(this);if(rainProbe.level===4)rainProbe.scales.add(args[4]);rainProbe.impulses++;}return accepted;};
           proto.stroke=function(...args){rainProbe.fields.add(this);rainProbe.strokes++;return stroke.apply(this,args);};
         });
         await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();
         await page.waitForTimeout(1800);state=await inspect();
-        const rainWaves=await page.evaluate(()=>({hits:WaterGarden.inspect().rainImpacts,impulses:rainProbe.impulses,fields:rainProbe.fields.size}));
+        const rainWaves=await page.evaluate(()=>({hits:WaterGarden.inspect().rainImpacts,impulses:rainProbe.impulses,fields:rainProbe.fields.size,scales:Array.from(rainProbe.scales)}));
+        assert.deepEqual(rainWaves.scales,[2],'real storm landings must use twice the light-rain ripple radius');
         assert(rainWaves.hits>300,'storm must inject hundreds of actual water waves');
         assert.equal(rainWaves.impulses,rainWaves.hits,'every accepted rain drop must disturb the simulated water');
         assert.equal(rainWaves.fields,1);assert(state.energy>.001,'small rain ripples must move the real water surface');

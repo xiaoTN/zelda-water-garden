@@ -41,13 +41,36 @@ test('storm rain has a fixed work budget in both quality modes',()=>{
   for(const low of [false,true]){
     const f=new WaveField(90,192,.462),w=new Weather(seededRandom(87));w.setLevel(4);
     for(let i=0;i<120;i++){
-      w.update(1/30,low,false,(u,v,s)=>f.rainImpact(u,v,s,low));f.updateRain(1/30);
+      w.update(1/30,low,false,(u,v,s,scale)=>f.rainImpact(u,v,s,low,scale));f.updateRain(1/30);
       assert(f.rainRipples.filter(r=>r.age<r.life).length<=(low?160:384));
       assert(f.rainHeight.every(Number.isFinite));
     }
     assert(w.hits>200);assert(f.energy()>.001);
     for(let i=0;i<20;i++)f.updateRain(1/30);assert.equal(f.energy(),0);
   }
+});
+
+test('rain presets expand actual height ripples progressively, with storm radius twice light rain',()=>{
+  const radii=[];
+  for(let level=1;level<=4;level++){
+    const weather=new Weather(seededRandom(4)),field=new WaveField(384,384,1);let landed=false;
+    weather.setLevel(level);
+    for(let frame=0;frame<60&&!landed;frame++)weather.update(1/60,false,false,(u,v,strength,scale)=>{
+      if(landed)return false;landed=field.rainImpact(.5,.49,strength,false,scale);return landed;
+    });
+    assert(landed);for(let frame=0;frame<15;frame++)field.updateRain(1/60);
+    let weight=0,weightedRadius=0;
+    for(let y=0;y<384;y++)for(let x=0;x<384;x++){
+      const energy=field.rainHeight[y*384+x]**2;
+      weight+=energy;weightedRadius+=energy*((x/383-.5)**2+(y/383-.49)**2);
+    }
+    radii.push(Math.sqrt(weightedRadius/weight));
+    assert.equal(field.current.every(v=>v===0),true,'larger rain must remain independent of the long-lived finger solver');
+    for(let frame=0;frame<16;frame++)field.updateRain(1/60);assert.equal(field.energy(),0,'every rain level fades within half a second');
+  }
+  for(let i=1;i<4;i++)assert(radii[i]>radii[i-1]*1.15,'each rain level must produce a measurably wider height ripple');
+  assert(Math.abs(radii[1]/radii[0]-4/3)<.05);assert(Math.abs(radii[2]/radii[0]-5/3)<.05);
+  assert(Math.abs(radii[3]/radii[0]-2)<.05,'storm radius must be twice light rain in the actual sampled height field');
 });
 
 test('sliding water sound reuses its voices, follows speed and releases every node',()=>{

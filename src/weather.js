@@ -2,11 +2,11 @@
   'use strict';
   // Visual presets, not meteorological rainfall measurements. Timing uses simulation time.
   var profiles = [
-    { name: '停雨', count: 0, speed: 0, length: 0, wind: 0, cloud: 0, impacts: 0, thunder: 0 },
-    { name: '小雨', count: 48, speed: .85, length: .8, wind: .02, cloud: .035, impacts: 20, thunder: 0 },
-    { name: '中雨', count: 168, speed: 1.1, length: 1, wind: .035, cloud: .075, impacts: 100, thunder: .38, interval: [18, 30] },
-    { name: '大雨', count: 420, speed: 1.45, length: 1.2, wind: .05, cloud: .14, impacts: 280, thunder: .68, interval: [8, 14] },
-    { name: '暴雨', count: 840, speed: 1.85, length: 1.4, wind: .07, cloud: .23, impacts: 640, thunder: 1, interval: [2.8, 5.6] }
+    { name: '停雨', count: 0, speed: 0, length: 0, wind: 0, cloud: 0, impacts: 0, thunder: 0, rippleScale: 1 },
+    { name: '小雨', count: 48, speed: .85, length: .8, wind: .02, cloud: .035, impacts: 20, thunder: 0, rippleScale: 1 },
+    { name: '中雨', count: 168, speed: 1.1, length: 1, wind: .035, cloud: .075, impacts: 100, thunder: .38, interval: [18, 30], rippleScale: 4 / 3 },
+    { name: '大雨', count: 420, speed: 1.45, length: 1.2, wind: .05, cloud: .14, impacts: 280, thunder: .68, interval: [8, 14], rippleScale: 5 / 3 },
+    { name: '暴雨', count: 840, speed: 1.85, length: 1.4, wind: .07, cloud: .23, impacts: 640, thunder: 1, interval: [2.8, 5.6], rippleScale: 2 }
   ];
   function Weather(random) {
     this.random = random || Math.random; this.level = 0; this.count = 0; this.cloud = 0; this.credit = 0;
@@ -55,7 +55,7 @@
       if (p.altitude <= 0) {
         // Every accepted landing adds a local, short-lived ripple to the water surface.
         if (this.credit >= 1 && impact) {
-          if (impact(p.u, p.v, .075 + this.level * .018 + p.depth * .025)) {
+          if (impact(p.u, p.v, .075 + this.level * .018 + p.depth * .025, profile.rippleScale)) {
             this.credit--; this.hits++;
           }
         }

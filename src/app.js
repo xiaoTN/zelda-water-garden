@@ -334,7 +334,7 @@
     if (fallbackMode) for (var rainIndex = 0; rainIndex < field.rainRipples.length; rainIndex++) {
       var rainRipple = field.rainRipples[rainIndex];
       if (rainRipple.age >= rainRipple.life || field.ice.sample(rainRipple.u, rainRipple.v) > .45) continue;
-      var rainRadius = (.003 + rainRipple.age * .042) * height;
+      var rainRadius = core.rainRadius(rainRipple.age, rainRipple.scale) * height;
       var rainX = rainRipple.u * width, rainY = rainRipple.v * height;
       var terrain = fallbackTerrain;
       if (stoneDrops.blocks(rainRipple.u, rainRipple.v) || (terrain && terrain.blocks(rainRipple.u, rainRipple.v))) continue;
@@ -349,7 +349,7 @@
         rainPen = rainWet;
       }
       ctx.strokeStyle = 'rgba(232,255,245,' + (.3 * Math.pow(1 - rainRipple.age / rainRipple.life, 2)) + ')';
-      ctx.lineWidth = .7; ctx.stroke();
+      ctx.lineWidth = .7 * rainRipple.scale; ctx.stroke();
     }
     for (var i = rings.length - 1; i >= 0; i--) {
       var ring = rings[i], age = now - ring.born;
@@ -407,13 +407,13 @@
     ctx.shadowBlur = 0;
     weather.draw(ctx, width, height, reduced);
   }
-  function rainImpact(u, v, strength) {
+  function rainImpact(u, v, strength, scale) {
     if (u < 0 || u > 1 || v < 0 || v > 1 || core.shore(u, v) >= -.015 || field.ice.sample(u, v) > .45) return false;
     var cell = Math.round(v * (field.height - 1)) * field.width + Math.round(u * (field.width - 1));
     if (!field.mask[cell]) return false;
     var terrain = renderer ? renderer.terrain : fallbackTerrain;
     if (terrain && terrain.blocks(u, v)) return false;
-    return field.rainImpact(u, v, strength, quality !== 'normal');
+    return field.rainImpact(u, v, strength, quality !== 'normal', scale);
   }
   function thunder(strength) { if (!muted && weatherAudio) weatherAudio.thunder(strength); }
   function tick(time) {

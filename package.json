@@ -1,6 +1,6 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.9.7",
+  "version": "1.9.8",
   "private": true,
   "description": "海拉鲁水之庭：塞尔达风格的离线交互水面",
   "engines": {

@@ -1,6 +1,7 @@
 (function (root) {
   'use strict';
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+  function rainRadius(age, scale) { return (.003 + age * .042) * scale; }
   function shore(u, v) {
     var x = (u - 0.5) / 0.465, y = (v - 0.49) / 0.35;
     var angle = Math.atan2(y, x);
@@ -15,7 +16,7 @@
     // Injecting it into the long-lived touch solver makes every drop a large wave.
     this.rainHeight = new Float32Array(width * height);
     this.rainRipples = []; this.rainCursor = 0;
-    for (var r = 0; r < 384; r++) this.rainRipples.push({ u: 0, v: 0, age: 1, life: 0, strength: 0 });
+    for (var r = 0; r < 384; r++) this.rainRipples.push({ u: 0, v: 0, age: 1, life: 0, strength: 0, scale: 1 });
     this.mask = new Uint8Array(width * height);
     this.depthScale = new Float32Array(width * height); this.depthScale.fill(1);
     this.pixels = new Uint8Array(width * height * 4);
@@ -62,7 +63,7 @@
     var count = Math.min(24, Math.max(1, Math.ceil(distance / 0.009)));
     for (var n = 1; n <= count; n++) this.disturb(u0 + (u1 - u0) * n / count, v0 + (v1 - v0) * n / count, strength, 0.015);
   };
-  WaveField.prototype.rainImpact = function (u, v, strength, low) {
+  WaveField.prototype.rainImpact = function (u, v, strength, low, scale) {
     if (!Number.isFinite(u) || !Number.isFinite(v) || !Number.isFinite(strength) || strength <= 0 || shore(u, v) >= -.015 || this.ice.sample(u, v) > .45) return false;
     var i = Math.round(v * (this.height - 1)) * this.width + Math.round(u * (this.width - 1));
     if (!this.mask[i]) return false;
@@ -70,18 +71,20 @@
     this.rainCursor = (this.rainCursor + 1) % (low ? 160 : 384);
     ripple.u = u; ripple.v = v; ripple.age = 0;
     ripple.strength = clamp(strength, .04, .2);
-    ripple.life = .38 + ripple.strength * .55;
+    ripple.scale = Number.isFinite(scale) ? clamp(scale, 1, 2) : 1;
+    // Equal lifetimes keep the radius ratio consistent throughout each ripple's expansion.
+    ripple.life = .46;
     return true;
   };
   WaveField.prototype.updateRain = function (dt) {
     this.rainHeight.fill(0);
-    var w = this.width, h = this.height, band = .004;
+    var w = this.width, h = this.height;
     for (var n = 0; n < this.rainRipples.length; n++) {
       var ripple = this.rainRipples[n];
       if (ripple.age >= ripple.life) continue;
       ripple.age += clamp(dt, 0, .08);
       if (ripple.age >= ripple.life) continue;
-      var radius = .003 + ripple.age * .042, support = radius + band * 2;
+      var band = .004 * ripple.scale, radius = rainRadius(ripple.age, ripple.scale), support = radius + band * 2;
       var amplitude = ripple.strength * .65 * Math.pow(1 - ripple.age / ripple.life, 2);
       var x0 = Math.max(1, Math.floor((ripple.u - support / this.aspect) * (w - 1))), x1 = Math.min(w - 2, Math.ceil((ripple.u + support / this.aspect) * (w - 1)));
       var y0 = Math.max(1, Math.floor((ripple.v - support) * (h - 1))), y1 = Math.min(h - 2, Math.ceil((ripple.v + support) * (h - 1)));
@@ -225,6 +228,6 @@
       mesh.dynamics[i * 2] = field.sample(u,v) * (1 - ice); mesh.dynamics[i * 2 + 1] = ice;
     }
   }
-  root.WaterCore = { WaveField: WaveField, IceField: IceField, shore: shore, clamp: clamp, bufferSize: bufferSize, seededRandom: seededRandom, waterMesh: waterMesh, updateMesh: updateMesh };
+  root.WaterCore = { WaveField: WaveField, IceField: IceField, shore: shore, clamp: clamp, rainRadius: rainRadius, bufferSize: bufferSize, seededRandom: seededRandom, waterMesh: waterMesh, updateMesh: updateMesh };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterCore;
 }(typeof window !== 'undefined' ? window : global));
