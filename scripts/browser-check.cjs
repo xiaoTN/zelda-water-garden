@@ -239,14 +239,15 @@ async function run() {
       if(viewport.width===390){
         await page.locator('#reset').click();
         await page.locator('[data-mode="touch"]').click();
-        // Observe the real application's field, so decorative rain or a second field cannot pass.
+        // Observe the application's short rain response and touch solver on the same rendered field.
         await page.evaluate(()=>{
-          const proto=WaterCore.WaveField.prototype,disturb=proto.disturb,stroke=proto.stroke,update=WaterWeather.System.prototype.update;
-          window.rainProbe={fields:new Set(),impulses:0,strokes:0,disturb,stroke,update,inRain:false};
+          const proto=WaterCore.WaveField.prototype,disturb=proto.disturb,rainImpact=proto.rainImpact,stroke=proto.stroke,update=WaterWeather.System.prototype.update;
+          window.rainProbe={fields:new Set(),impulses:0,strokes:0,disturb,rainImpact,stroke,update,inRain:false};
           WaterWeather.System.prototype.update=function(dt,low,reduced,impact,thunder){
             return update.call(this,dt,low,reduced,(...args)=>{rainProbe.inRain=true;try{return impact(...args);}finally{rainProbe.inRain=false;}},thunder);
           };
           proto.disturb=function(...args){const accepted=disturb.apply(this,args);if(accepted){rainProbe.fields.add(this);if(rainProbe.inRain)rainProbe.impulses++;}return accepted;};
+          proto.rainImpact=function(...args){const accepted=rainImpact.apply(this,args);if(accepted){rainProbe.fields.add(this);rainProbe.impulses++;}return accepted;};
           proto.stroke=function(...args){rainProbe.fields.add(this);rainProbe.strokes++;return stroke.apply(this,args);};
         });
         await page.locator('#rain').click();await page.locator('[data-rain="4"]').click();
@@ -254,14 +255,14 @@ async function run() {
         const rainWaves=await page.evaluate(()=>({hits:WaterGarden.inspect().rainImpacts,impulses:rainProbe.impulses,fields:rainProbe.fields.size}));
         assert(rainWaves.hits>300,'storm must inject hundreds of actual water waves');
         assert.equal(rainWaves.impulses,rainWaves.hits,'every accepted rain drop must disturb the simulated water');
-        assert.equal(rainWaves.fields,1);assert(state.energy>.1,'rain must move the real water surface');
+        assert.equal(rainWaves.fields,1);assert(state.energy>.001,'small rain ripples must move the real water surface');
         assert.equal(state.rings,0,'rain must not substitute decorative overlay rings for water waves');
         await page.screenshot({path:path.join(out,'mobile-topdown-storm.png')});
         await page.mouse.move(x-45,y);await page.mouse.down();await page.mouse.move(x+65,y,{steps:18});await page.mouse.up();
         const shared=await page.evaluate(()=>{
           const p=rainProbe,field=Array.from(p.fields)[0];
           const result={fields:p.fields.size,strokes:p.strokes,energy:field.energy(),finite:Array.from(field.current).every(Number.isFinite)};
-          WaterCore.WaveField.prototype.disturb=p.disturb;WaterCore.WaveField.prototype.stroke=p.stroke;WaterWeather.System.prototype.update=p.update;delete window.rainProbe;return result;
+          WaterCore.WaveField.prototype.disturb=p.disturb;WaterCore.WaveField.prototype.rainImpact=p.rainImpact;WaterCore.WaveField.prototype.stroke=p.stroke;WaterWeather.System.prototype.update=p.update;delete window.rainProbe;return result;
         });
         assert.equal(shared.fields,1,'rain and manual swipes must modify the very same wave field');
         assert(shared.strokes>0&&shared.energy>.1&&shared.finite);
@@ -291,6 +292,17 @@ async function run() {
         reports.push({scenario:'visible rain streaks and repeated storm lightning with delayed WebAudio thunder',streakPixels,state:await inspect(),result:'passed'});
         await page.locator('#sound').click();assert.equal((await inspect()).rainAudio,false);
         await page.waitForTimeout(80);assert.equal((await inspect()).weatherAudioNodes,0);
+        await page.locator('[data-rain="0"]').click();await page.locator('#reset').click();
+        await page.locator('#sound').click();await page.waitForTimeout(120);
+        await page.mouse.move(x-40,y);await page.mouse.down();
+        for(let i=0;i<12;i++){await page.mouse.move(x-40+i*7,y);await page.waitForTimeout(25);}
+        state=await inspect();assert(state.strokeAudio&&state.strokeSpeed>0,'a real swipe must create continuous water sound');
+        await page.waitForTimeout(160);assert.equal((await inspect()).strokeSpeed,0,'holding still must silence the swipe');
+        await page.mouse.move(x+55,y);await page.waitForTimeout(35);assert((await inspect()).strokeSpeed>0);
+        await page.mouse.up();await page.waitForTimeout(550);assert.equal((await inspect()).strokeAudio,false,'release must free the continuous sound graph');
+        await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+25,y);await page.waitForTimeout(40);
+        await page.mouse.up();await page.locator('#sound').click();assert.equal((await inspect()).strokeAudio,false,'muting must release the fading stroke audio immediately');
+        reports.push({scenario:'continuous swipe sound follows motion, fades at rest and releases on mute',result:'passed'});
       }
       await page.locator('#light').click(); assert.equal((await inspect()).light, 1); await page.locator('#light').click(); assert.equal((await inspect()).light, 2);
       if (viewport.width === 390) await page.screenshot({ path: path.join(out, 'mobile-moon-rain.png') });

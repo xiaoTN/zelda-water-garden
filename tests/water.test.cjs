@@ -5,6 +5,68 @@ const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
 const {System: Weather,project:projectRain}=require('../src/weather.js');
 
+test('rain ripples stay local and disappear before a finger wave settles',()=>{
+  for(const [w,h,aspect] of [[90,192,.462],[192,128,1.5],[64,192,.38]]){
+    const rain=new WaveField(w,h,aspect),finger=new WaveField(w,h,aspect);
+    assert(rain.rainImpact(.5,.49,.14));finger.disturb(.5,.49,.32,.019);
+    let peak=0,extent=0;
+    for(let frame=0;frame<60;frame++){
+      rain.updateRain(1/60);rain.step();finger.step();peak=Math.max(peak,rain.energy());
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(Math.abs(rain.rainHeight[y*w+x])>1e-5)
+        extent=Math.max(extent,Math.hypot((x/(w-1)-.5)*aspect,y/(h-1)-.49));
+      assert.equal(rain.sample(.5+.05/aspect,.49),0,'a raindrop cannot reach the wider finger wake');
+    }
+    assert(peak>.001,'rain must displace the actual height field');assert(extent<.033,'rain radius remains small');
+    assert.equal(rain.energy(),0,'rain must be gone within a second');assert(finger.energy()>.01,'finger waves keep propagating');
+    assert(finger.current.some((value,i)=>Math.abs(value)>.0001&&Math.hypot((i%w/(w-1)-.5)*aspect,(Math.floor(i/w)/(h-1)-.49))>.05));
+  }
+});
+
+test('rain height is packed and sampled with touch, masked by rocks and ice, and reset immediately',()=>{
+  const f=new WaveField(128,160,.8);
+  assert(f.rainImpact(.5,.49,.12));f.updateRain(.08);
+  assert(f.rainHeight.some(v=>Math.abs(v)>.001));
+  f.disturb(.5,.49,.2,.015);
+  const packed=f.pack();
+  for(let i=0;i<f.current.length;i++){
+    const decoded=(packed[i*4]*256+packed[i*4+1])/65535*2-1;
+    assert(Math.abs(decoded-f.current[i]-f.rainHeight[i])<.000032);
+  }
+  f.mask.fill(0);f.updateRain(.02);assert(f.rainHeight.every(v=>v===0));assert.equal(f.rainImpact(.5,.49,.1),false);
+  f.mask.fill(1);f.ice.current.fill(1);f.updateRain(.02);assert(f.rainHeight.every(v=>v===0));assert.equal(f.rainImpact(.5,.49,.1),false);
+  f.ice.clear();f.clear();assert.equal(f.energy(),0);f.updateRain(.01);assert.equal(f.energy(),0);
+});
+
+test('storm rain has a fixed work budget in both quality modes',()=>{
+  for(const low of [false,true]){
+    const f=new WaveField(90,192,.462),w=new Weather(seededRandom(87));w.setLevel(4);
+    for(let i=0;i<120;i++){
+      w.update(1/30,low,false,(u,v,s)=>f.rainImpact(u,v,s,low));f.updateRain(1/30);
+      assert(f.rainRipples.filter(r=>r.age<r.life).length<=(low?80:192));
+      assert(f.rainHeight.every(Number.isFinite));
+    }
+    assert(w.hits>200);assert(f.energy()>.001);
+    for(let i=0;i<20;i++)f.updateRain(1/30);assert.equal(f.energy(),0);
+  }
+});
+
+test('sliding water sound reuses its voices, follows speed and releases every node',()=>{
+  const {Stroke}=require('../src/water-audio.js');
+  const nodes=[],targets=[],buffers=[];
+  function parameter(){return {value:0,setTargetAtTime(value,time,fade){targets.push({value,time,fade});}};}
+  function node(){const n={gain:parameter(),frequency:parameter(),Q:parameter(),connect(){},disconnect(){this.disconnected=true;},start(){},stop(){this.stopped=true;}};nodes.push(n);return n;}
+  const context={sampleRate:8000,state:'running',currentTime:0,createBuffer(ch,length){const a=new Float32Array(length);buffers.push(a);return {getChannelData:()=>a};},createBufferSource:node,createBiquadFilter:node,createGain:node};
+  const audio=new Stroke(context,{},seededRandom(28));assert(buffers.every(b=>b.every(Number.isFinite)&&b.some(v=>Math.abs(v)>.01)));
+  audio.stroke(.1);const slow=targets[targets.length-2].value,voice=audio.node;
+  for(let i=0;i<100;i++){context.currentTime+=.016;audio.stroke(1.8);assert.equal(audio.node,voice);}
+  assert.equal(nodes.length,7,'a long swipe must not accumulate sound sources');assert.equal(buffers.length,2,'movement must reuse precomputed buffers');
+  assert(targets[targets.length-2].value>slow*2,'fast strokes sound stronger');assert(targets.every(t=>t.fade>0),'parameter changes must be smoothed');
+  context.currentTime+=.11;audio.update();assert.equal(audio.speed,0);assert.equal(targets[targets.length-1].value,0,'stationary fingers must fade to silence');
+  context.currentTime+=.4;audio.update();assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
+  audio.stroke(.8);audio.stop();assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
+  context.state='suspended';audio.stroke(1);assert.equal(audio.node,null);
+});
+
 test('overhead rain converges to its own ground point from every side of the optical center',()=>{
   for(const [u,v] of [[.15,.2],[.85,.2],[.15,.8],[.85,.8],[.5,.49]]){
     const near=projectRain(u,v,.7,0,{}),far=projectRain(u,v,.1,0,{}),landed=projectRain(u,v,0,.07,{});

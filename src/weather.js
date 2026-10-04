@@ -52,7 +52,7 @@
     for (i = 0; i < count; i++) {
       var p = this.particles[i]; p.altitude -= p.speed * dt;
       if (p.altitude <= 0) {
-        // Every accepted landing injects a wave into the same water field as touch input.
+        // Every accepted landing adds a local, short-lived ripple to the water surface.
         if (this.credit >= 1 && impact) {
           if (impact(p.u, p.v, .075 + this.level * .018 + p.depth * .025)) {
             this.credit--; this.hits++;

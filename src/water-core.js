@@ -11,6 +11,11 @@
     this.current = new Float32Array(width * height);
     this.previous = new Float32Array(width * height);
     this.next = new Float32Array(width * height);
+    // Rain shares the rendered height field, but has a short, bounded response.
+    // Injecting it into the long-lived touch solver makes every drop a large wave.
+    this.rainHeight = new Float32Array(width * height);
+    this.rainRipples = []; this.rainCursor = 0;
+    for (var r = 0; r < 192; r++) this.rainRipples.push({ u: 0, v: 0, age: 1, life: 0, strength: 0 });
     this.mask = new Uint8Array(width * height);
     this.depthScale = new Float32Array(width * height); this.depthScale.fill(1);
     this.pixels = new Uint8Array(width * height * 4);
@@ -57,6 +62,40 @@
     var count = Math.min(24, Math.max(1, Math.ceil(distance / 0.009)));
     for (var n = 1; n <= count; n++) this.disturb(u0 + (u1 - u0) * n / count, v0 + (v1 - v0) * n / count, strength, 0.015);
   };
+  WaveField.prototype.rainImpact = function (u, v, strength, low) {
+    if (!Number.isFinite(u) || !Number.isFinite(v) || !Number.isFinite(strength) || strength <= 0 || shore(u, v) >= -.015 || this.ice.sample(u, v) > .45) return false;
+    var i = Math.round(v * (this.height - 1)) * this.width + Math.round(u * (this.width - 1));
+    if (!this.mask[i]) return false;
+    var ripple = this.rainRipples[this.rainCursor];
+    this.rainCursor = (this.rainCursor + 1) % (low ? 80 : 192);
+    ripple.u = u; ripple.v = v; ripple.age = 0;
+    ripple.strength = clamp(strength, .04, .2);
+    ripple.life = .38 + ripple.strength * .55;
+    return true;
+  };
+  WaveField.prototype.updateRain = function (dt) {
+    this.rainHeight.fill(0);
+    var w = this.width, h = this.height, band = .004;
+    for (var n = 0; n < this.rainRipples.length; n++) {
+      var ripple = this.rainRipples[n];
+      if (ripple.age >= ripple.life) continue;
+      ripple.age += clamp(dt, 0, .08);
+      if (ripple.age >= ripple.life) continue;
+      var radius = .003 + ripple.age * .042, support = radius + band * 2;
+      var amplitude = ripple.strength * .65 * Math.pow(1 - ripple.age / ripple.life, 2);
+      var x0 = Math.max(1, Math.floor((ripple.u - support / this.aspect) * (w - 1))), x1 = Math.min(w - 2, Math.ceil((ripple.u + support / this.aspect) * (w - 1)));
+      var y0 = Math.max(1, Math.floor((ripple.v - support) * (h - 1))), y1 = Math.min(h - 2, Math.ceil((ripple.v + support) * (h - 1)));
+      for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) {
+        var i = y * w + x;
+        if (!this.mask[i] || this.ice.current[i] > .45) continue;
+        var dx = (x / (w - 1) - ripple.u) * this.aspect, dy = y / (h - 1) - ripple.v;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > support) continue;
+        var crest = (distance - radius) / band, trough = (distance - radius + band * 1.2) / band;
+        this.rainHeight[i] += amplitude * (Math.exp(-crest * crest * 2) - .55 * Math.exp(-trough * trough * 2));
+      }
+    }
+  };
   WaveField.prototype.stoneImpact = function (u, v, radius) {
     if (!Number.isFinite(radius) || radius <= 0) return false;
     // Even the smallest stone displaces a much broader patch than a finger.
@@ -85,7 +124,7 @@
   WaveField.prototype.pack = function () {
     for (var i = 0; i < this.current.length; i++) {
       // Two bytes preserve small wave normals after the large splash has settled.
-      var code = Math.round((clamp(this.current[i], -1, 1) * 0.5 + 0.5) * 65535), p = i * 4;
+      var code = Math.round((clamp(this.current[i] + this.rainHeight[i], -1, 1) * 0.5 + 0.5) * 65535), p = i * 4;
       this.pixels[p] = code >> 8; this.pixels[p + 1] = code & 255;
       this.pixels[p + 2] = Math.round(this.ice.current[i] * 255); this.pixels[p + 3] = 255;
     }
@@ -94,14 +133,18 @@
   WaveField.prototype.sample = function (u, v) {
     var x = clamp(u * (this.width - 1), 1, this.width - 2), y = clamp(v * (this.height - 1), 1, this.height - 2);
     var ix = Math.floor(x), iy = Math.floor(y), i = iy * this.width + ix, tx = x - ix, ty = y - iy;
-    return (this.current[i] * (1 - tx) + this.current[i + 1] * tx) * (1 - ty) + (this.current[i + this.width] * (1 - tx) + this.current[i + this.width + 1] * tx) * ty;
+    var a = this.current, r = this.rainHeight, w = this.width;
+    return ((a[i] + r[i]) * (1 - tx) + (a[i + 1] + r[i + 1]) * tx) * (1 - ty) + ((a[i + w] + r[i + w]) * (1 - tx) + (a[i + w + 1] + r[i + w + 1]) * tx) * ty;
   };
   WaveField.prototype.energy = function () {
     var total = 0;
-    for (var i = 0; i < this.current.length; i++) { var v = this.current[i] - this.previous[i]; total += this.current[i] * this.current[i] + v * v; }
+    for (var i = 0; i < this.current.length; i++) { var v = this.current[i] - this.previous[i], height = this.current[i] + this.rainHeight[i]; total += height * height + v * v; }
     return total;
   };
-  WaveField.prototype.clear = function () { this.current.fill(0); this.previous.fill(0); this.next.fill(0); };
+  WaveField.prototype.clear = function () {
+    this.current.fill(0); this.previous.fill(0); this.next.fill(0); this.rainHeight.fill(0); this.rainCursor = 0;
+    for (var i = 0; i < this.rainRipples.length; i++) this.rainRipples[i].age = this.rainRipples[i].life;
+  };
   // Fixed-size ice state shares the water grid. Delayed cells form a growing front;
   // cutting a cell cancels its scheduled freeze, so a broken hole cannot regrow.
   function IceField(width, height, aspect) {
