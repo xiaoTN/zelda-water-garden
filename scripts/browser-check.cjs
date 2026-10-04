@@ -266,6 +266,11 @@ async function run() {
       await page.waitForFunction(()=>{const s=WaterGarden.inspect().stones[0];return s&&s.y<1&&s.y>.05;});
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-airborne.png')});
       await page.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);state=await inspect();assert(state.energy>.1,'impact must disturb water');
+      assert.equal(state.rings,0,'stone waves must come from the water simulation without drawn rings');assert.equal(state.drops,0);
+      if(viewport.width===390){
+        await page.screenshot({path:path.join(out,'stone-impact.png')});
+        await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'stone-ripples.png')});
+      }
       await page.waitForFunction(()=>WaterGarden.inspect().stones[0].settled);state=await inspect();
       assert(state.stoneDepth>-.21,'settled stone must update actual water depth');assert.equal(state.stoneImpacts,1);
       await page.mouse.click(x,y);await page.mouse.click(x,y);
@@ -282,6 +287,15 @@ async function run() {
         await page.waitForFunction(()=>WaterGarden.inspect().stones.every(s=>s.settled));
         await page.setViewportSize(viewport);await page.waitForFunction(()=>WaterGarden.inspect().width===390);
       }
+      for(let n=3;n<10;n++)await page.mouse.click(x,y);
+      const fullQueue=(await inspect()).stones.map(s=>s.radius);
+      assert.equal(fullQueue.length,10);
+      await page.mouse.click(x,y);state=await inspect();
+      assert.equal(state.stones.length,10,'capacity must recycle the oldest stone');
+      assert.deepEqual(state.stones.slice(0,9).map(s=>s.radius),fullQueue.slice(1),'replacement must preserve insertion order');
+      assert(state.stones[9].y>1,'the next click must still launch a new stone');
+      assert(!(await page.locator('#notice').textContent()).includes('石头已经够多了'));
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-capacity.png')});
       await page.locator('#reset').click();assert.equal((await inspect()).stones.length,0);
       await page.mouse.click(x,y);await page.locator('#reset').click();await page.waitForTimeout(1100);assert.equal((await inspect()).stoneImpacts,0);
       await page.locator('[data-mode="ice"]').click();await page.locator('#freeze-all').click();await page.waitForFunction(()=>WaterGarden.inspect().iceCoverage>.99);
@@ -362,7 +376,7 @@ async function run() {
     reports.push({scenario:'synthetic slow timing normal → low → Canvas 2D',result:'passed'}); await slowContext.close();
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-04',errors,reports},null,2)+'\n');
-    console.log('Browser checks passed: four viewports, four rain levels, airborne streak pixels, repeated lightning, delayed thunder, rain audio lifecycle, ice, touch, stones, reset, safe areas, context recovery, Canvas fallback and offline file URL.');
+    console.log('Browser checks passed: four viewports, four rain levels, airborne streak pixels, repeated lightning, delayed thunder, rain audio lifecycle, ice, touch, broad stone waves, oldest-stone recycling, reset, safe areas, context recovery, Canvas fallback and offline file URL.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }
 run().catch(error => {console.error(error);process.exitCode=1;});

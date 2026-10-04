@@ -53,6 +53,39 @@ test('low quality reduces rain work while keeping storms and rain visible',()=>{
   w.update(1/60,true,true);assert(w.count<100);
 });
 
+test('even small stone waves spread wider and carry much more energy than a finger stroke',()=>{
+  for(const aspect of [.38,.462,1,2.2]){
+    const w=aspect>=1?192:Math.max(64,Math.round(192*aspect)),h=aspect>=1?Math.max(64,Math.round(192/aspect)):192;
+    const finger=new WaveField(w,h,aspect),small=new WaveField(w,h,aspect),large=new WaveField(w,h,aspect);
+    finger.stroke(.4,.49,.6,.49,.17);
+    small.stoneImpact(.5,.49,.075*Math.sqrt(Math.min(aspect,1)));
+    large.stoneImpact(.5,.49,.185*Math.sqrt(Math.min(aspect,1)));
+    const widthAcrossStroke=field=>{
+      let low=h,high=0;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(Math.abs(field.current[y*w+x])>.02){low=Math.min(low,y);high=Math.max(high,y);}
+      return high-low;
+    };
+    assert(widthAcrossStroke(small)>widthAcrossStroke(finger)*3,'the smallest rock needs a broad displacement, not a narrow finger wake');
+    assert(large.energy()>small.energy()*2,'larger rocks must displace more water');
+    let stoneEnergy=0,fingerEnergy=0;
+    for(let frame=0;frame<=30;frame++){
+      stoneEnergy+=small.energy();fingerEnergy+=finger.energy();
+      small.step();large.step();finger.step();
+    }
+    assert(stoneEnergy>fingerEnergy*4,'stone waves need much more energy over the first half-second, including troughs between crests');
+  }
+});
+
+test('stone entry still pushes surrounding water when an existing rock blocks its center',()=>{
+  const field=new WaveField(128,128,1);
+  field.setBathymetry({heightAt:(u,v)=>Math.hypot(u-.5,v-.49)<.035?.1:-.16});
+  assert.equal(field.disturb(.5,.49,.95,.06),false);
+  assert.equal(field.stoneImpact(.5,.49,.075),true);
+  assert(field.energy()>1,'the exposed perimeter must receive the impact');
+  for(let frame=0;frame<60;frame++)field.step();
+  for(let i=0;i<field.mask.length;i++)if(!field.mask[i])assert.equal(field.current[i],0);
+});
+
 test('compressed stones settle without ground contact chatter or spontaneous wakes',()=>{
   const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(6*713);
   s.attach(.462,terrain.bathymetry(scene,.462,true),scene);
@@ -179,8 +212,31 @@ test('random stone sizes, capacity and cancellation are bounded',()=>{
   assert(stones.add(.35,.45));assert.equal(stones.add(0,0),false);
   stones.clear();let events=0;stones.add(.5,.49);stones.update(.08);stones.clear();for(let i=0;i<100;i++)stones.update(.04,()=>events++);assert.equal(events,0);
   for(const v of [.28,.48,.68])for(const u of [.2,.4,.6,.8])stones.add(u,v,()=>0);
-  assert.equal(stones.items.length,stoneLimit);assert.equal(stones.add(.5,.49),false);
+  assert.equal(stones.items.length,stoneLimit);
+  const existing=stones.items.slice(),bodyCount=stones.world.bodies.length;
+  assert.equal(stones.add(0,0),false);assert.deepEqual(stones.items,existing,'invalid targets must not remove a stone');
+  for(let i=0;i<stoneLimit+2;i++){
+    const oldest=stones.items[0],next=stones.items[1],added=stones.add(.5,.49,()=>.3);
+    assert(added);assert.equal(stones.items.length,stoneLimit);assert.equal(stones.items[0],next);
+    assert.equal(stones.items[stoneLimit-1],added);assert(!stones.world.bodies.includes(oldest.body));
+    assert.equal(stones.world.bodies.length,bodyCount,'replacement must release the old physics body');
+  }
   const before=stones.items[0].y;stones.update(0);assert.equal(stones.items[0].y,before);
+});
+
+test('replacing the oldest stone wakes its resting support group without stale members',()=>{
+  const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(2*713);
+  s.attach(.462,terrain.bathymetry(scene,.462,true),scene);
+  for(let i=0;i<3;i++)s.add(.5,.49,random);
+  for(let i=0;i<2400;i++)s.update(1/120);
+  const oldest=s.items[0],neighbour=s.items[1],unrelated=s.items[2];
+  assert(oldest.restGroup.includes(neighbour));assert(neighbour.settled);
+  while(s.items.length<stoneLimit)assert(s.add(.75,.4,()=>0));
+  assert(s.add(.75,.4,()=>0));
+  assert(!s.world.bodies.includes(oldest.body));assert(!neighbour.settled);assert.equal(neighbour.restGroup,null);
+  assert(unrelated.settled,'unrelated resting rocks should remain asleep');
+  s.update(1/120);
+  for(const stone of s.items)assert(!stone.restGroup||!stone.restGroup.includes(oldest));
 });
 
 test('fixed physics steps agree across frame rates and ten overlapping drops stay bounded',()=>{
