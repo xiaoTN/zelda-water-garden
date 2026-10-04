@@ -17,6 +17,8 @@ async function run() {
       const select = kind => page.locator('button[data-scene="' + kind + '"]').click();
       const x = viewport.width * .48, y = viewport.height * .49;
       await select('snow'); assert.equal((await state()).scene, 'snow');
+      assert.equal((await state()).renderer,'webgl','the reference surface must compile and render, not silently fall back');
+      assert((await state()).triangles<=100000 && (await state()).triangles>50000);
       assert(await page.locator('#nature').isVisible()); assert.equal(await page.locator('#water').isVisible(), false);
       for (const selector of ['button[data-scene="snow"]','[data-nature="0"]','[data-nature="1"]','[data-nature="2"]','#reset']) {
         const b = await page.locator(selector).boundingBox(); assert(b.x >= 0 && b.x + b.width <= viewport.width && b.y >= 0 && b.y + b.height <= viewport.height, selector + ' must fit viewport'); assert(b.width >= 44 && b.height >= 44);
@@ -38,6 +40,7 @@ async function run() {
       const opacity = (await state()).cloud.opacity;
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.move(x+70,y,{steps:15}); await page.mouse.up();
       s = await state(); assert(s.cloud.opacity < opacity - .5); assert(s.cloud.motion > 0);
+      assert(s.cloudCarve>10,'parting must deform the actual cloud surface');
       if (viewport.width === 390 || viewport.width === 1440) await page.screenshot({path:path.join(out,viewport.width===390?'cloud-mobile.png':'cloud-desktop.png')});
       await page.locator('[data-nature="1"]').click(); await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up(); assert((await state()).cloud.motion > .02);
       await page.locator('[data-nature="2"]').click(); await page.mouse.move(x-60,y); await page.mouse.down(); await page.mouse.move(x+90,y-30,{steps:12}); await page.mouse.up(); assert((await state()).cloud.motion > .1);
@@ -62,6 +65,9 @@ async function run() {
         const clock=(await state()).cloud.time; await page.waitForTimeout(120); assert.equal((await state()).cloud.time,clock);
         await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});
         await page.waitForTimeout(130); assert((await state()).cloud.time>clock);
+        await page.evaluate(()=>{const draw=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){NatureSurface.prototype.draw=draw;this.gl.getExtension('WEBGL_lose_context').loseContext();return false;};});
+        await page.waitForFunction(()=>NatureGarden.inspect().renderer==='canvas2d');
+        await select('snow');await page.locator('[data-nature="0"]').click();const before=(await state()).snow.markedCells;await page.touchscreen.tap(240,530);assert((await state()).snow.markedCells>before);await select('cloud');
       }
       await page.locator('#reset').click(); assert.equal((await state()).weather,false); assert.equal((await state()).cloud.count,72);
       await select('water'); await page.mouse.click(x,y); assert(await page.evaluate(()=>WaterGarden.inspect().energy>0));
@@ -74,6 +80,7 @@ async function run() {
     await page.addInitScript(()=>{window.PointerEvent=undefined;const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type){return type==='webgl'?null:original.apply(this,arguments);};});
     await page.goto(pathToFileURL(path.join(root,'src/index.html')).href);await page.waitForFunction(()=>window.NatureGarden);
     await page.locator('button[data-scene="snow"]').click(); await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().snow.markedCells>0));
+    assert.equal(await page.evaluate(()=>NatureGarden.inspect().renderer),'canvas2d');
     await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().cloud.opacity<72));
     await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloud.time),0);assert.equal(requests,0);
     reports.push({scenario:'offline, no WebGL, touch fallback, reduced motion',result:'passed',networkRequests:requests});await context.close();

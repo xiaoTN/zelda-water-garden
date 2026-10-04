@@ -55,3 +55,17 @@ test('reduced motion suppresses ambient drift while direct cloud interaction sti
   clouds.update(.05, false, true); assert(clouds.items[0].u > first);
   clouds.clear(); assert.equal(clouds.inspect().motion, 0); assert.equal(clouds.inspect().opacity, 72);
 });
+test('cloud sea channels retain displaced rims and refill while snow channels persist', () => {
+  const cloud=new Clouds(),snow=new Snow();cloud.aspect=.46;snow.aspect=.46;
+  cloud.touch(.5,.5,'part',0,0,.2);snow.stamp(.5,.5,.03,.8);
+  assert(cloud.field.depth.some(d=>d<0),'a cloud channel has displaced material at its edge');
+  const before=cloud.field.inspect().depth, snowBefore=snow.inspect().depth;
+  cloud.update(2,false,true);snow.update(2,false);
+  assert(cloud.field.inspect().depth<before);assert.equal(snow.inspect().depth,snowBefore);
+  cloud.touch(.5,.5,'gather',0,0,.6);assert(cloud.field.inspect().depth<before*.5);
+  cloud.clear();assert.equal(cloud.field.inspect().depth,0);assert.equal(cloud.flowX,0);
+});
+test('breeze and direct vertical wind move the continuous cloud material',()=>{
+  const calm=new Clouds(),breeze=new Clouds();calm.update(1,false,false);breeze.update(1,true,false);assert(breeze.flowX>calm.flowX*2);
+  const wind=new Clouds();wind.touch(.5,.5,'wind',0,-.1,.1);wind.update(.2,false,true);assert(wind.flowY<0);
+});

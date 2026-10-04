@@ -21,7 +21,7 @@
   };
   var natureHints = {
     snow: ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹', '轻点放下雪球 · 拖着滚动，越滚越大'],
-    cloud: ['轻点拨开云雾 · 滑动露出一线晴空', '按住聚拢云团 · 缓缓拖动，带着云走', '拖动送出一阵风 · 松手后云团随风漂移']
+    cloud: ['轻点推开云海 · 滑动划出云间小径', '按住聚拢云团 · 缓缓拖动，带着云走', '拖动送出一阵风 · 松手后云团随风漂移']
   };
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function notice(text) {
@@ -153,7 +153,7 @@
   function breakAt(u, v) { iceEffects.breakAt(u, v, iceRadius() * .9, now); sound(.8, true, true); }
   function begin(id, x, y) {
     var p = point(x, y);
-    if (sceneKind !== 'water') { beginNature(id, p); return; }
+    if (sceneKind !== 'water') { if(natureRenderer.surface)p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds); beginNature(id, p); return; }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
     if (mode!=='stone' && renderer && renderer.terrain.blocks(p.u, p.v)) return;
     if (core.shore(p.u, p.v) >= -.025) { notice('轻触池中的青绿水面'); return; }
@@ -173,7 +173,7 @@
   function move(id, x, y) {
     var f = fingers[id]; if (!f) return;
     var p = point(x, y), dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, distance = Math.sqrt(dx * dx + dy * dy);
-    if (sceneKind !== 'water') { moveNature(f, p, distance); return; }
+    if (sceneKind !== 'water') { if(natureRenderer.surface)p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds); distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height); moveNature(f, p, distance); return; }
     f.travel += distance;
     if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
@@ -517,7 +517,7 @@
       if (frameTotal / frameSamples > .045) slowFrames++; else slowFrames = 0;
       frameSamples = 0; frameTotal = 0;
       if (slowFrames >= 2 && quality === 'normal') { quality = 'low'; if (renderer) { renderer.low = true; renderer.resize(width, height); } natureRenderer.resize(width, height, true); drops.length = 0; slowFrames = 0; }
-      else if (slowFrames >= 2 && quality === 'low' && sceneKind === 'water') { fallbackOn('已换成轻量水面，让指尖更自在'); slowFrames = 0; }
+      else if (slowFrames >= 2 && quality === 'low') { natureRenderer.fallback(); fallbackOn('已换成轻量画面，让指尖更自在'); slowFrames = 0; }
     }
     frameId = requestAnimationFrame(tick);
   }
@@ -536,7 +536,7 @@
   });
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return { ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0, iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length, stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}), stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null, mode: mode, light: light, rain: rain, muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length, energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'canvas2d', surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0, waterMaps: renderer ? renderer.mapsLoaded : 0, width: width, height: height, bufferWidth: renderer ? canvas.width : fallback.width, bufferHeight: renderer ? canvas.height : fallback.height, activePointers: Object.keys(fingers).length }; } };
-  window.NatureGarden = { inspect: function () { return { scene: sceneKind, renderLight: natureRenderer.light, mode: natureModes[sceneKind], weather: sceneKind === 'water' ? rain : weather[sceneKind], snow: snow.inspect(), cloud: clouds.inspect(), activePointers: Object.keys(fingers).length, bufferWidth: natureCanvas.width, bufferHeight: natureCanvas.height }; } };
+  window.NatureGarden = { inspect: function () { return { scene: sceneKind, renderLight: natureRenderer.light, renderer: natureRenderer.surface ? 'webgl' : 'canvas2d', triangles: natureRenderer.surface ? natureRenderer.surface.count / 3 : 0, cloudCarve: clouds.field.inspect().depth, mode: natureModes[sceneKind], weather: sceneKind === 'water' ? rain : weather[sceneKind], snow: snow.inspect(), cloud: clouds.inspect(), activePointers: Object.keys(fingers).length, bufferWidth: natureCanvas.width, bufferHeight: natureCanvas.height }; } };
   resize();
   requestAnimationFrame(function () { garden.classList.add('ready'); frameId = requestAnimationFrame(tick); });
 }());

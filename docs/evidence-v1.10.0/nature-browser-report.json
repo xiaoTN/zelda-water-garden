@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-04",
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "offline, no WebGL, touch fallback, reduced motion",
+      "result": "passed",
+      "networkRequests": 0
+    }
+  ]
+}

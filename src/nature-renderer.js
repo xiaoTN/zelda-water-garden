@@ -12,6 +12,8 @@
     this.background = surface(1, 1); this.tracks = surface(snow.size, snow.size);
     this.trackContext = this.tracks.getContext('2d'); this.trackPixels = this.trackContext.createImageData(snow.size, snow.size);
     this.sprites = []; this.kind = ''; this.light = -1; this.revision = -1; this.width = 1; this.height = 1;
+    this.surface = null; this.surfaceCanvas = surface(1, 1);
+    try { this.surface = new window.NatureSurface(this.surfaceCanvas); } catch (error) { this.surface = null; }
   }
   Renderer.prototype.resize = function (width, height, low) {
     var size = window.WaterCore.bufferSize(width, height, window.devicePixelRatio, low);
@@ -19,9 +21,12 @@
     this.scale = size.scale; this.background.width = size.width; this.background.height = size.height;
     this.snow.aspect = width / height; this.clouds.aspect = width / height;
     this.kind = ''; this.revision = -1;
+    if(this.surface)this.surface.resize(size.width,size.height,low);
   };
+  Renderer.prototype.fallback = function () { if(this.surface)this.surface.destroy();this.surface=null;this.kind=''; };
   Renderer.prototype.prepare = function (kind, light) {
     this.kind = kind; this.light = light;
+    if(this.surface&&!this.surface.lost)return;
     var w = this.width, h = this.height, p = palettes[light], c = this.background.getContext('2d'), rng = window.GardenNature.random(5148);
     c.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     var sky = c.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, p.sky); sky.addColorStop(.35, p.horizon); sky.addColorStop(1, p.shade);
@@ -108,10 +113,12 @@
     if (kind !== this.kind || light !== this.light) this.prepare(kind, light);
     var c = this.ctx, w = this.width, h = this.height, p = palettes[light];
     c.setTransform(this.scale, 0, 0, this.scale, 0, 0); c.globalAlpha = 1;
-    c.drawImage(this.background, 0, 0, w, h);
+    var solid=this.surface&&this.surface.draw(kind,light,this.snow,this.clouds);
+    if(this.surface&&!solid){this.surface.destroy();this.surface=null;this.prepare(kind,light);}
+    if(solid)c.drawImage(this.surfaceCanvas,0,0,w,h);
+    else c.drawImage(this.background, 0, 0, w, h);
     if (kind === 'snow') {
-      if (this.revision !== this.snow.revision) this.drawTracks();
-      c.drawImage(this.tracks, 0, 0, w, h);
+      if(!solid){if (this.revision !== this.snow.revision) this.drawTracks();c.drawImage(this.tracks, 0, 0, w, h);}
       for (var i = 0; i < this.snow.balls.length; i++) {
         var ball = this.snow.balls[i], r = ball.radius * h, x = ball.u * w, y = ball.v * h;
         ellipse(c, x + r * .4, y + r * .25, r * 1.3, r * .45, 'rgba(39,69,98,.22)');
@@ -126,7 +133,7 @@
         var fy = (i * 91.3 + time * (13 + i % 5 * 5)) % h;
         ellipse(c, fx, fy, .8 + i % 3 * .55, .8 + i % 3 * .55, 'rgba(255,255,249,.75)');
       }
-    } else {
+    } else if(!solid) {
       var items = this.clouds.items, clock = this.clouds.time;
       for (i = 0; i < items.length; i++) {
         var cloud = items[i], size = cloud.size * Math.min(w, h) * 3.1;

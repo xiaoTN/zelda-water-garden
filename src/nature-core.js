@@ -22,7 +22,8 @@
       var dx = (x / n - u) * aspect, dy = y / n - v;
       var xx = (dx * ca + dy * sa) / (radius * (narrow || 1)), yy = (-dx * sa + dy * ca) / radius;
       var d = Math.sqrt(xx * xx + yy * yy), at = y * n + x;
-      if (d < 1) this.depth[at] = Math.max(this.depth[at], strength * Math.pow(1 - d * d, .65));
+      // A compressed floor and a steep shoulder, with displaced snow piled along the rim.
+      if (d < 1) { var edge = clamp((1 - d) / .55, 0, 1); this.depth[at] = Math.max(this.depth[at], strength * edge * edge * (3 - 2 * edge)); }
       else if (d < 1.35 && this.depth[at] <= 0) this.depth[at] = Math.min(this.depth[at], -.14 * strength * Math.sin((d - 1) / .35 * Math.PI));
     }
     this.revision++;
@@ -68,9 +69,9 @@
     for (var i = 0; i < this.depth.length; i++) if (this.depth[i] > .01) { cells++; depth += this.depth[i]; }
     return { markedCells: cells, depth: depth, footprints: this.foot, balls: this.balls.map(function (b) { return { u: b.u, v: b.v, radius: b.radius }; }) };
   };
-  function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.clear(); }
+  function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.drift = 0; this.clear(); }
   Clouds.prototype.clear = function () {
-    this.items.length = 0; this.time = 0;
+    this.items.length = 0; this.time = 0; this.field.clear(); this.drift = 0; this.driftY = 0; this.flowX = 0; this.flowY = 0;
     var rng = random(10426);
     for (var i = 0; i < 72; i++) {
       var u = rng(), v = .27 + rng() * .58;
@@ -79,6 +80,17 @@
   };
   Clouds.prototype.touch = function (u, v, mode, dx, dy, dt) {
     var radius = Math.min(this.aspect, 1) * .32;
+    this.field.aspect = this.aspect;
+    if (mode === 'part' || mode === 'wind') this.field.stamp(u, v, radius * (mode === 'part' ? .27 : .20), mode === 'part' ? .98 : .55);
+    else {
+      var n = this.field.size, r = radius * .36;
+      for (var gy = Math.max(0, Math.floor((v-r)*n)); gy < Math.min(n, Math.ceil((v+r)*n)); gy++) for (var gx = Math.max(0, Math.floor((u-r/this.aspect)*n)); gx < Math.min(n, Math.ceil((u+r/this.aspect)*n)); gx++) {
+        var distance = Math.hypot((gx/n-u)*this.aspect, gy/n-v)/r;
+        if(distance<1) this.field.depth[gy*n+gx] = Math.max(-.65,this.field.depth[gy*n+gx]-dt*(1-distance)*3);
+      }
+      this.field.revision++;
+    }
+    if(mode==='wind') { this.drift = clamp(this.drift + dx * 1.8,-.6,.6); this.driftY = clamp(this.driftY + dy * 1.8,-.6,.6); }
     for (var i = 0; i < this.items.length; i++) {
       var p = this.items[i], x = (p.u - u) * this.aspect, y = p.v - v, d = Math.hypot(x, y);
       if (d > radius) continue;
@@ -98,6 +110,9 @@
   };
   Clouds.prototype.update = function (dt, breeze, reduced) {
     if (!reduced) this.time += dt;
+    this.field.update(dt * 2.8, true); this.drift *= Math.exp(-dt*.7); this.driftY *= Math.exp(-dt*.7);
+    this.flowX += dt * ((reduced ? 0 : breeze ? .009 : .003) + this.drift*.035);
+    this.flowY += dt * ((reduced ? 0 : .0015) + this.driftY*.035);
     for (var i = 0; i < this.items.length; i++) {
       var p = this.items[i], friction = Math.exp(-dt * 1.7);
       p.vx *= friction; p.vy *= friction;
