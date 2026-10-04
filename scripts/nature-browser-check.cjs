@@ -31,7 +31,7 @@ async function run() {
       await page.mouse.move(x - viewport.width * .2,y); await page.mouse.down(); await page.mouse.move(x + viewport.width * .2,y + 20,{steps:20}); await page.mouse.up();
       let s = await state(); assert(s.snow.markedCells > 100); assert.equal(s.activePointers,0); assert(s.bufferWidth*s.bufferHeight <= 2000000);
       assert.equal(await page.evaluate(() => WaterGarden.inspect().steps), steps, 'inactive water simulation pauses');
-      const depth = s.snow.depth; await page.waitForTimeout(150); assert.equal((await state()).snow.depth,depth);
+      const depth = s.snow.depth; await page.waitForTimeout(150); assert((await state()).snow.depth<depth);
       await page.locator('[data-nature="1"]').click(); await page.mouse.move(x-viewport.width*.2,y+viewport.height*.1); await page.mouse.down(); await page.mouse.move(x+viewport.width*.2,y+viewport.height*.14,{steps:15}); await page.mouse.up(); assert((await state()).snow.footprints >= 3);
       await page.locator('[data-nature="2"]').click(); await page.mouse.move(x,y-65); await page.mouse.down(); const radius = (await state()).snow.balls[0].radius;
       await page.mouse.move(x+80,y-35,{steps:12}); await page.mouse.up(); s = await state(); assert(s.snow.balls[0].radius > radius);
@@ -54,10 +54,10 @@ async function run() {
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snow-oblique.png')});
       await page.locator('#view-3d').click();
       const saved = (await state()).snow;
-      await select('cloud'); await select('snow'); assert.deepEqual((await state()).snow,saved,'scene switching preserves snow');
-      await page.locator('#rain').click(); await page.waitForTimeout(250); assert((await state()).snow.depth < saved.depth);
+      await select('cloud'); await select('snow'); assert.deepEqual((await state()).snow.balls,saved.balls,'scene switching preserves snowballs');assert((await state()).snow.depth>0);
+      assert.equal(await page.locator('#rain').isVisible(),false); await page.waitForTimeout(250); assert((await state()).snow.depth < saved.depth);
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snowfall-mobile.png')});
-      await page.locator('#reset').click(); assert.equal((await state()).snow.markedCells,0); assert.equal((await state()).snow.balls.length,0); assert.equal((await state()).weather,false);
+      await page.locator('#reset').click(); assert.equal((await state()).snow.markedCells,0); assert.equal((await state()).snow.balls.length,0); assert.equal((await state()).weather,true);
       await select('cloud'); await page.locator('#reset').click();
       const opacity = (await state()).cloud.opacity;
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.move(x+70,y,{steps:15}); await page.mouse.up();
@@ -69,7 +69,7 @@ async function run() {
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up();
       assert(await page.evaluate(p=>{const f=testSurface3D.clouds.field;return f.depth[f.index(p.u,p.v)]<0;},gatherPoint),'gather raises the touched cloud surface');
       assert.equal(await page.locator('[data-nature="2"]').isVisible(),false,'cloud has no wind tool');
-      await page.locator('#rain').click(); assert.equal((await state()).weather,true);
+      assert.equal(await page.locator('#rain').isVisible(),false); assert.equal((await state()).weather,true);
       await page.locator('#light').click(); assert.equal(await page.evaluate(() => WaterGarden.inspect().light),1);
       await page.waitForFunction(() => NatureGarden.inspect().renderLight === 1);
       if (viewport.width===390) await page.screenshot({path:path.join(out,'cloud-sunset.png')});
@@ -101,13 +101,16 @@ async function run() {
           return {closed,budgets};
         });
         assert(geometry.closed,'cloud volume has two incident triangles at every edge');
-        for(const b of geometry.budgets){assert.equal(b.flakes,b.low?150:360);assert(b.reducedHidesFlakes);assert(b.picked&&b.depth,'visible sphere is picked in the depth-tested world');assert(b.snow<=(b.low?50000:100000)&&b.cloud<=(b.low?50000:100000));assert(b.calls<=(b.low?50:100));assert(b.pixels<=(b.low?1000000:2000000));}
+        for(const b of geometry.budgets){assert.equal(b.flakes,b.low?300:720);assert(b.reducedHidesFlakes);assert(b.picked&&b.depth,'visible sphere is picked in the depth-tested world');assert(b.snow<=(b.low?50000:100000)&&b.cloud<=(b.low?50000:100000));assert(b.calls<=(b.low?50:100));assert(b.pixels<=(b.low?1000000:2000000));}
         reports.push({scenario:'closed 3D cloud volume, 12 sphere meshes, ray picking, depth and both GPU budgets',result:'passed',geometry});
         const cdp = await context.newCDPSession(page);
         await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:130,y:390,id:1},{x:260,y:460,id:2}]}); assert.equal((await state()).activePointers,2);
         await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]}); assert.equal((await state()).activePointers,0); await cdp.detach();
         await select('snow'); await page.locator('[data-nature="0"]').click(); await page.touchscreen.tap(x,y); const snow = (await state()).snow;
-        await page.setViewportSize({width:844,height:390}); await page.waitForFunction(()=>WaterGarden.inspect().width===844); assert.deepEqual((await state()).snow,snow);
+        await page.evaluate(()=>{window.snowBeforeResize=testSurface3D.snow.depth;});
+        await page.setViewportSize({width:844,height:390}); await page.waitForFunction(()=>WaterGarden.inspect().width===844);
+        assert(await page.evaluate(()=>snowBeforeResize===testSurface3D.snow.depth),'resize preserves the height field while ambient snowfall continues');
+        assert((await state()).snow.depth>0&&(await state()).snow.depth<=snow.depth);
         await page.setViewportSize(viewport); await page.waitForFunction(()=>WaterGarden.inspect().width===390);
         await select('cloud');
         await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
@@ -122,7 +125,7 @@ async function run() {
         await page.waitForFunction(()=>NatureGarden.inspect().triangles<=50000);
         await select('snow');await page.locator('[data-nature="0"]').click();const before=(await state()).snow.markedCells;await page.touchscreen.tap(240,530);assert((await state()).snow.markedCells>before);await select('cloud');
       }
-      await page.locator('#reset').click(); assert.equal((await state()).weather,false); assert.equal((await state()).cloud.count,72);
+      await page.locator('#reset').click(); assert.equal((await state()).weather,true); assert.equal((await state()).cloud.count,72);
       await select('water'); await page.mouse.click(x,y); assert(await page.evaluate(()=>WaterGarden.inspect().energy>0));
       reports.push({viewport,result:'passed'}); await context.close();
     }

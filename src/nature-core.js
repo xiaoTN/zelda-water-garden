@@ -18,7 +18,7 @@
     if(this.filterRevision===this.revision)return this.filtered;
     var n=this.size,input=this.depth,work=this.filterWork,out=this.filtered;
     // Two separable, symmetric diffusion steps smooth the height itself and conserve its sum.
-    for(var pass=0;pass<2;pass++){
+    for(var pass=0;pass<(this.soft?4:2);pass++){
       for(var y=0;y<n;y++)for(var x=0;x<n;x++){var at=y*n+x;work[at]=input[at]*.5+(input[y*n+Math.max(0,x-1)]+input[y*n+Math.min(n-1,x+1)])*.25;}
       for(y=0;y<n;y++)for(x=0;x<n;x++){at=y*n+x;out[at]=work[at]*.5+(work[Math.max(0,y-1)*n+x]+work[Math.min(n-1,y+1)*n+x])*.25;}
       input=out;
@@ -51,7 +51,7 @@
         var target=strength*(.5+.5*Math.cos(d*Math.PI));
         if(footSide)target=strength*(1-Math.pow(clamp((d-.55)/.45,0,1),2));
         if(this.soft)target=strength*Math.pow(1-d*d,2);
-        var amount=Math.max(0,target-direction*this.depth[at])*(gather?clamp(rate===undefined?1:rate,0,1):1);
+        var amount=Math.max(0,target-direction*this.depth[at])*clamp(rate===undefined?1:rate,0,1);
         if(amount>0){cutIndices[cuts]=at;cutAmounts[cuts++]=amount;removed+=amount;}
       }else if(d<1.8){
         var weight=Math.pow(Math.sin((d-1)/.8*Math.PI),2),room=1+direction*this.depth[at];
@@ -140,7 +140,7 @@
     if(mode!=='part'&&mode!=='gather')return;
     var radius = Math.min(this.aspect, 1) * .32 / 3;
     this.field.aspect = this.aspect;
-    if (mode === 'part') this.field.stamp(u, v, radius * .27, .98,0,1,false,1,Math.hypot(dx,dy)>1e-5?Math.atan2(dy,dx*this.aspect):undefined);
+    if (mode === 'part') this.field.stamp(u, v, radius * .27, .82,0,1,false,1-Math.exp(-dt*9),Math.hypot(dx,dy)>1e-5?Math.atan2(dy,dx*this.aspect):undefined);
     else this.field.stamp(u,v,radius*.36,.65,0,1,true,dt*6);
     for (var i = 0; i < this.items.length; i++) {
       var p = this.items[i], x = (p.u - u) * this.aspect, y = p.v - v, d = Math.hypot(x, y);

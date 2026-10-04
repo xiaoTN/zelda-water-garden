@@ -14,7 +14,7 @@
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
   var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
   var natureRenderer = new window.NatureRenderer(natureCanvas, snow, clouds);
-  var natureModes = { snow: 0, cloud: 0 }, weather = { snow: false, cloud: false };
+  var natureModes = { snow: 0, cloud: 0 }, weather = { snow: true, cloud: true };
   var natureIcons = {
     snow: ['M3 17c3-8 5 7 9-2s5 3 9-8M4 21c3-5 5 3 8-2', 'M7 3c-4 0-4 10-1 10s4-10 1-10ZM16 8c-4 0-4 10-1 10s4-10 1-10ZM4 16v3h3v-3Zm9 5h3', 'M20 12a8 8 0 1 1-16 0 8 8 0 1 1 16 0ZM7 11c0-3 2-4 4-4M4 21h12'],
     cloud: ['M8 16H6a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9h-2M9 12l-3 3 3 3m6-6 3 3-3 3', 'M6 17a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9M3 21h6l-2-2m14 2h-6l2-2', 'M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 17h5a3 3 0 1 1-3 3']
@@ -270,7 +270,7 @@
     hint.textContent = water ? hints[mode] : natureHints[sceneKind][natureModes[sceneKind]];
     natureCanvas.setAttribute('aria-label', (sceneKind === 'snow' ? '交互雪地，' : '交互云层，') + hint.textContent + '；空格或回车触碰中央');
     var weatherName = water ? '细雨' : sceneKind === 'snow' ? '飘雪' : '微风', enabled = water ? rain : weather[sceneKind];
-    var rainButton = document.getElementById('rain'); rainButton.querySelector('span').textContent = weatherName;
+    var rainButton = document.getElementById('rain'); rainButton.hidden = !water; rainButton.querySelector('span').textContent = weatherName;
     rainButton.querySelector('svg').innerHTML = '<path d="' + (water ? 'M6 14a4 4 0 0 1-1-8 6 6 0 0 1 11-1 4 4 0 0 1 2 9M7 16l-1 4m6-4-1 4m6-4-1 4' : sceneKind === 'snow' ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3M4 10l4-1-1-4M17 19l-1-4 4-1' : natureIcons.cloud[2]) + '"/>';
     rainButton.setAttribute('aria-label', (enabled ? '关闭' : '开启') + weatherName); rainButton.setAttribute('aria-pressed', String(enabled));
     var soundName = water ? '水声' : sceneKind === 'snow' ? '雪声' : '风声';
@@ -316,7 +316,7 @@
       if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
       else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
       else { f.ball = snow.ball(p.u, p.v, r * .042); if (!f.ball) notice('已有十二个雪球，轻点「新雪」重新开始'); }
-    } else clouds.touch(p.u, p.v, ['part','gather'][selected], .018, 0, .22);
+    } else clouds.touch(p.u, p.v, ['part','gather'][selected], .018, 0, selected===0 ? .04 : .22);
     sound(.22, false);
   }
   function moveNature(f, p, distance) {
@@ -333,7 +333,7 @@
       } else if (f.ball) snow.roll(f.ball, p.u, p.v);
     } else {
       var count = Math.min(24, Math.max(1, Math.ceil(distance / 8)));
-      for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, ['part','gather'][selected], (p.u - f.u) / count, (p.v - f.v) / count, .045);
+      for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, ['part','gather'][selected], (p.u - f.u) / count, (p.v - f.v) / count, selected===0 ? .016 : .045);
     }
     if (distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }
     f.travel += distance; f.u = p.u; f.v = p.v;
@@ -383,7 +383,7 @@
     syncNatureControls();
   });
   document.getElementById('reset').addEventListener('click', function () {
-    if (sceneKind !== 'water') { fingers = {}; weather[sceneKind] = false; if (sceneKind === 'snow') snow.clear(); else clouds.clear(); syncNatureControls(); notice(sceneKind === 'snow' ? '一场新雪，等你留下足迹' : '云海重新铺开'); return; }
+    if (sceneKind !== 'water') { fingers = {}; weather[sceneKind] = true; if (sceneKind === 'snow') snow.clear(); else clouds.clear(); syncNatureControls(); notice(sceneKind === 'snow' ? '一场新雪，等你留下足迹' : '云海重新铺开'); return; }
     field.clear(); field.ice.clear(); iceEffects.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {}; rain = false; rainTimer = 0;
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
     document.getElementById('rain').setAttribute('aria-pressed', 'false'); document.getElementById('rain').setAttribute('aria-label', '开启细雨');

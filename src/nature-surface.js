@@ -6,7 +6,7 @@
     'uniform vec4 uBall;uniform mediump vec4 uRotation; varying mediump vec3 vNormal,vWorld,vLocal; varying mediump float vCut,vNoise;',
     'float noiseAt(vec2 uv){vec2 n=texture2D(uNoise,vec2(uv.x*uAspect,uv.y)*mix(.85,1.9,uCloud)+uFlow*uCloud).rg;return n.r+n.g/255.;}',
     'vec2 trackAt(vec2 uv){vec2 p=(uv-vec2(uFieldDomain.x))/uFieldDomain.y;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.)return vec2(0.);return texture2D(uTracks,p).rg;}',
-    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*1.0,uCloud);return base+(t.g-t.r)*mix(.38,.55,uCloud);}',
+    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*.65,uCloud);return base+(t.g-t.r)*mix(.38,.28,uCloud);}',
     'vec3 rotate(vec3 p){return p+2.*cross(uRotation.xyz,cross(uRotation.xyz,p)+uRotation.w*p);}',
     'void main(){vec3 p;vTint=aColor;vCut=0.;vNoise=.5;vLocal=aPosition;',
     'if(uObject<.5){vec2 uv=aPosition.xy;float h=heightAt(uv);float e=.0025;',
@@ -16,7 +16,7 @@
     '}else if(uObject<1.5){vec3 n=normalize(aPosition);float rough=1.+.018*sin(n.x*23.)*sin(n.y*19.)*sin(n.z*27.)+.008*sin(n.x*51.+n.z*39.);',
     'p=uBall.xyz+rotate(n*rough)*uBall.w;vNormal=rotate(n);',
     '}else if(uObject>2.5){p=aPosition;vNormal=aNormal;}else {p=aPosition;p.x*=uAspect;p.y=mod(p.y-uTime*(.5+fract(p.x)*.6),6.);p.z+=sin(uTime*.3+p.x)*.15;vNormal=vec3(0.,1.,0.);}',
-    'vWorld=p;gl_Position=uCamera*vec4(p,1.);gl_PointSize=clamp(48./gl_Position.w,1.5,4.5);}'
+    'vWorld=p;gl_Position=uCamera*vec4(p,1.);gl_PointSize=clamp(96./gl_Position.w,3.,9.);}'
   ].join('\n');
   var fragment = [
     'precision mediump float;uniform float uCloud,uLight,uObject,uShadowCount;uniform vec4 uShadows[12];',
@@ -29,9 +29,9 @@
     'float grain=sin(vLocal.x*197.+sin(vLocal.y*171.))*sin(vLocal.z*187.+vLocal.y*93.);',
     'if(uObject>.5&&uObject<1.5)lit=clamp(lit+grain*.025,0.,1.);float shadow=1.,contact=1.;',
     'if(uObject<.5&&uCloud<.5){for(int i=0;i<12;i++){if(float(i)>=uShadowCount)break;vec3 d=uShadows[i].xyz-vWorld;float along=dot(d,sun);float perp=length(d-sun*along);float r=uShadows[i].w;float softness=r*.04+max(0.,along-r)*.12;if(along>0.)shadow*=smoothstep(r-softness,r+softness,perp);float gap=max(0.,length(d)-r);contact*=1.-.22*exp(-gap/max(.001,r*.12));}}',
-    'vec3 shade=mix(vec3(.40,.53,.69),vec3(.57,.60,.75),uCloud),white=vec3(1.,.99,.96);',
+    'vec3 shade=mix(vec3(.40,.53,.69),vec3(.61,.67,.80),uCloud),white=vec3(1.,.99,.96);',
     'if(uLight>.5&&uLight<1.5){shade=vec3(.41,.32,.53);white=vec3(1.,.85,.72);}if(uLight>1.5){shade=vec3(.10,.17,.29);white=vec3(.62,.75,.88);}',
-    'float ambient=mix(.20,.12,uCloud);vec3 col=mix(shade,white,ambient+lit*shadow*(1.-ambient))*contact;',
+    'lit=mix(lit,.25+.75*lit,uCloud);float ambient=mix(.20,.25,uCloud);vec3 col=mix(shade,white,ambient+lit*shadow*(1.-ambient))*contact;',
     'if(uCloud<.5&&uObject<1.5)col*=.48+albedo*.62;col*=1.-vCut*.1;col+=(grain*.003)*(1.-uCloud);',
     'if(uObject>1.5&&uObject<2.5){if(length(gl_PointCoord-.5)>.5)discard;col=white;}',
     'if(uObject>2.5)col=vTint*(.68+.32*lit)*mix(vec3(1.),white,step(.5,uLight)*.6);float fog=(1.-smoothstep(-13.,3.,vWorld.z))*.38;col=mix(col,mix(vec3(.76,.85,.89),vec3(.19,.29,.40),step(1.5,uLight)),fog);',
@@ -143,7 +143,7 @@
     for(var y=0;y<=ny;y++)for(var x=0;x<=nx;x++){var a=x/nx*Math.PI*2,b=y/ny*Math.PI;vertices.push(Math.sin(b)*Math.cos(a),Math.cos(b),Math.sin(b)*Math.sin(a));}
     for(y=0;y<ny;y++)for(x=0;x<nx;x++){var k=y*(nx+1)+x;indices.push(k,k+nx+1,k+1,k+1,k+nx+1,k+nx+2);}
     this.ballMesh=this.mesh(vertices,indices);this.treeMesh=this.trees();
-    var rng=window.GardenNature.random(551),flakes=[];for(var i=0;i<(this.low?150:360);i++)flakes.push((rng()-.5)*14,rng()*6,(rng()-.5)*15);
+    var rng=window.GardenNature.random(551),flakes=[];for(var i=0;i<(this.low?300:720);i++)flakes.push((rng()-.5)*14,rng()*6,(rng()-.5)*15);
     this.flakeMesh=this.mesh(flakes,[]);this.meshQuality=this.low;this.meshAspect=this.aspect;this.meshView=!!this.oblique;
   };
   Surface.prototype.sample=function(u,v){
@@ -158,8 +158,8 @@
       var heights=field.renderDepth?field.renderDepth():field.depth;var tx=(u-field.origin)/field.span*field.size-.5,ty=(v-field.origin)/field.span*field.size-.5,ix=Math.floor(tx),iy=Math.floor(ty),fx=tx-ix,fy=ty-iy;
       for(var j=0;j<2;j++)for(var i=0;i<2;i++){var val=heights[Math.max(0,Math.min(field.size-1,iy+j))*field.size+Math.max(0,Math.min(field.size-1,ix+i))],weight=(i?fx:1-fx)*(j?fy:1-fy);cut+=Math.max(0,val)*weight;rim+=Math.max(0,-val)*weight;}
     }
-    var base=cloud ? .28+Math.pow(n,1.3)*1.0 : .16+n*.045;
-    return base+(rim-cut)*(cloud ? .55:.38);
+    var base=cloud ? .28+Math.pow(n,1.3)*.65 : .16+n*.045;
+    return base+(rim-cut)*(cloud ? .28:.38);
   };
   Surface.prototype.point=function(u,v,kind,clouds,pickBall){
     var self=this,field=kind==='snow'?this.snow:clouds.field;
