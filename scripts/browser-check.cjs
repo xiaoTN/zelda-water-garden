@@ -24,10 +24,38 @@ async function run() {
       const inspect = () => page.evaluate(() => window.WaterGarden.inspect());
       assert.equal(await page.locator('[data-mode]').count(),4); assert.equal(await page.getByText('落石',{exact:true}).count(),1);
       let state = await inspect(); assert.equal(state.renderer, 'webgl'); assert(state.bufferWidth * state.bufferHeight <= 2000000);
+      assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
+      const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
       await page.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
       assert(state.surfaceVertices > 4000 && state.surfaceVertices < 65536);
       assert(state.surfaceTriangles > 8000 && state.surfaceTriangles <= 32768);
       if(viewport.width === 390) {
+        const fishCheck=await page.evaluate(()=>{
+          const canvas=document.createElement('canvas'),field=new WaterCore.WaveField(96,96,1);
+          const renderer=new WaterRenderer(canvas,WaterScene.create(1),field),school=new WaterFish.System();
+          renderer.resize(480,480);school.attach(1);school.update(.08,field.bathymetry,false);
+          const gl=renderer.gl,read=enabled=>{
+            renderer.fishSystem=enabled?school:null;renderer.draw(0,0);
+            const pixels=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;
+          };
+          const difference=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>6)n++;return n;};
+          try{
+            const visible=difference(read(true),read(false));
+            const poseA=read(true);school.clock+=.3;const animated=difference(poseA,read(true));
+            field.ice.paint(.5,.49,1,true,true);for(let i=0;i<90;i++)field.ice.update(1/30);
+            const frozen=difference(read(true),read(false));field.ice.clear();
+            // An opaque solid above all fish must fully occlude their underwater draw pass.
+            const cover=[];for(const p of [[-1,-1],[-1,1],[1,-1],[1,-1],[-1,1],[1,1]])cover.push(p[0],.05,p[1],.5+p[0]/2,.5+p[1]*.433,0,1,0,.4,.5,.3);
+            renderer.terrain.stones=new Float32Array(cover);gl.bindBuffer(gl.ARRAY_BUFFER,renderer.stones);gl.bufferData(gl.ARRAY_BUFFER,renderer.terrain.stones,gl.STATIC_DRAW);
+            const occluded=difference(read(true),read(false));
+            return {visible,animated,frozen,occluded,error:gl.getError()};
+          }finally{renderer.destroy();}
+        });
+        assert(fishCheck.visible>100,'Blender fish must be visible underwater');
+        assert(fishCheck.animated>50,'the baked tail pose must change visible pixels');
+        assert.equal(fishCheck.frozen,0,'opaque ice must hide fish');assert.equal(fishCheck.occluded,0,'rocks must hide fish');assert.equal(fishCheck.error,0);
+        reports.push({scenario:'Blender fish animation, underwater visibility and occlusion',...fishCheck,result:'passed'});
+        await page.screenshot({path:path.join(out,'fish-mobile.png')});
         const waveEdges=await page.evaluate(()=>{
           const canvas=document.createElement('canvas'),field=new WaterCore.WaveField(32,32,1);
           const proto=WebGLRenderingContext.prototype,source=proto.shaderSource;let renderer;

@@ -43,6 +43,12 @@
     '}',
     'float iceAt(vec2 uv){vec2 t=uTexel*.65;return texture2D(uWave,uv).b*.5+(texture2D(uWave,uv+vec2(t.x,0.)).b+texture2D(uWave,uv-vec2(t.x,0.)).b+texture2D(uWave,uv+vec2(0.,t.y)).b+texture2D(uWave,uv-vec2(0.,t.y)).b)*.125;}',
     'void main(){',
+    ' if(uPass>4.5){',
+    '  float ice=iceAt(vUV);float sun=abs(dot(normalize(vNormal),normalize(vec3(-.45,1.,-.35))));',
+    '  vec3 fish=mix(vColor*(.72+sun*.28),vec3(.18,.60,.65),.26);',
+    '  if(uLight>.5&&uLight<1.5)fish*=vec3(1.08,.88,.78);if(uLight>1.5)fish*=vec3(.43,.63,.83);',
+    '  gl_FragColor=vec4(fish,.78*(1.-smoothstep(.08,.75,ice)));return;',
+    ' }',
     ' if(uPass>3.5){float opacity=(1.-smoothstep(.08,.5,length(vUV-.5)))*.30*vColor.r;gl_FragColor=vec4(.025,.055,.035,opacity);return;}',
     ' vec2 uv=vUV;float d=shore(uv);vec3 land=texture2D(uScene,uv).rgb;vec3 col=land;float alpha=1.;',
     ' if(uPass>1.5){',
@@ -155,6 +161,7 @@
       this.positions=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW); this.dynamics=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW); this.indices=buffer(gl.ELEMENT_ARRAY_BUFFER,4,gl.STATIC_DRAW);
       this.ground=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);this.stones=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);
       this.shadows=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);
+      this.fishBuffer=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);
       this.dropped=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropShadows=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropRevision=-1;this.dropCount=0;this.dropShadowCount=0;
       this.buffers=buffers; this.uniforms={};
       var names=['uScene','uWave','uNoise','uIce','uNormal','uFoam','uBed','uBedTexel','uTexel','uShorePixel','uTime','uAspect','uLight','uDetail','uPass','uViewProjection'];
@@ -250,6 +257,12 @@
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.indices);gl.uniform1f(this.uniforms.uPass,1);gl.drawElements(gl.TRIANGLES,this.mesh.indices.length,gl.UNSIGNED_SHORT,0);
     if(this.dropShadowCount)this.drawSolid(this.dropShadows,this.dropShadowCount,4);
+    if(this.fishSystem){
+      var fish=this.fishSystem.geometry(this.field);
+      gl.bindBuffer(gl.ARRAY_BUFFER,this.fishBuffer);gl.bufferData(gl.ARRAY_BUFFER,fish,gl.DYNAMIC_DRAW);
+      // Underwater color is composed above the translucent water, but solid depth still occludes fish.
+      gl.depthMask(true);this.drawSolid(this.fishBuffer,fish.length/11,5);
+    }
     gl.depthMask(true);gl.disable(gl.BLEND);
   };
   Renderer.prototype.destroy=function(){

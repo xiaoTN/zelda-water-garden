@@ -3,6 +3,51 @@ const assert = require('node:assert/strict');
 const { WaveField, IceField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = require('../src/water-core.js');
 const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
+const fishAsset=require('../src/fish-asset.js');
+const {System: FishSchool}=require('../src/fish.js');
+
+test('Blender fish asset contains a closed swim cycle with stronger tail movement and an animated GLB',()=>{
+  assert.equal(fishAsset.poses.length,24);
+  assert.equal(fishAsset.materials.length,fishAsset.indices.length/3);
+  assert(fishAsset.indices.every(i=>i>=0&&i<fishAsset.vertexCount));
+  assert(fishAsset.poses.every(p=>p.length===fishAsset.vertexCount*3&&p.every(Number.isFinite)));
+  const motion=index=>{const zs=fishAsset.poses.map(p=>p[index*3+2]);return Math.max(...zs)-Math.min(...zs);};
+  const rest=fishAsset.poses[0];let head=0,tail=0;
+  for(let i=0;i<fishAsset.vertexCount;i++){if(rest[i*3]>.35*fishAsset.scale)head=Math.max(head,motion(i));if(rest[i*3]<-.75*fishAsset.scale)tail=Math.max(tail,motion(i));}
+  assert(tail>head*5,'tail must visibly bend relative to the head');
+  const distance=(a,b)=>Math.sqrt(a.reduce((s,x,i)=>s+(x-b[i])**2,0));
+  const seam=distance(fishAsset.poses[23],fishAsset.poses[0]);
+  const largestStep=Math.max(...fishAsset.poses.slice(1).map((p,i)=>distance(p,fishAsset.poses[i])));
+  assert(seam<=largestStep*1.05,'loop wrap must be no larger than an ordinary frame step');
+  const bytes=require('fs').readFileSync(require('path').join(__dirname,'../assets-source/fish/garden-koi.glb'));
+  assert.equal(bytes.toString('ascii',0,4),'glTF');
+  const gltf=JSON.parse(bytes.toString('utf8',20,20+bytes.readUInt32LE(12)).trim());
+  assert(gltf.skins.length>0&&gltf.animations[0].channels.length>=3,'GLB must preserve the animated rig');
+});
+
+test('fish keep a bounded underwater footprint around banks and obstacles across aspect ratios',()=>{
+  for(const aspect of [.38,.462,1,2.2]){
+    const school=new FishSchool();school.attach(aspect);
+    const bed={heightAt:(u,v)=>Math.hypot((u-.5)*aspect*2,(v-.49)/.4330127)<.075?0:-.22};
+    let moved=0;
+    for(let step=0;step<2400;step++){
+      const before=school.items.map(f=>[f.u,f.v]);school.update(1/30,bed,false);
+      school.items.forEach((f,i)=>{
+        const d=Math.hypot((f.u-before[i][0])*aspect*2,(f.v-before[i][1])/.4330127);
+        assert(d<.002,'movement cannot teleport');moved+=d;
+        assert(school.clearAt(f.u,f.v,f.size*school.scale,bed),'fish footprint must remain in clear water');
+      });
+    }
+    assert(moved>1,'fish must continue swimming');
+    const vertices=school.geometry();assert.equal(vertices.length/33,1175);
+    assert(vertices.every(Number.isFinite));
+    for(let i=1;i<vertices.length;i+=11)assert(vertices[i]<-.035,'the entire fish must remain underwater');
+    const frozen=Array.from(vertices),clock=school.clock;
+    school.update(.08,bed,true);assert.equal(school.clock,clock);assert.deepEqual(Array.from(school.geometry()),frozen);
+    school.update(.08,bed,false);assert.equal(school.geometry(),vertices,'reuse the animation buffer');
+    assert.notDeepEqual(Array.from(vertices),frozen);
+  }
+});
 
 test('even small stone waves spread wider and carry much more energy than a finger stroke',()=>{
   for(const aspect of [.38,.462,1,2.2]){
