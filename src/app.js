@@ -63,7 +63,7 @@
   function fallbackOn(message) {
     if (renderer) renderer.destroy(); renderer = null; fallbackMode = true; quality = 'unavailable';
     canvas.style.display = 'none'; fallback.style.display = 'none';
-    document.getElementById('render-status').textContent='3D 画面暂不可用，请启用硬件加速或刷新后重试。';
+    document.getElementById('render-status').textContent=message || '3D 场景初始化失败，请刷新重试。';
     if (field) {
       scene = window.WaterScene.create(field.aspect, true);
       prepareFallbackStones();
@@ -85,7 +85,7 @@
     field = new core.WaveField(nx, ny, aspect); field.ice.restore(previousIce); scene = window.WaterScene.create(aspect, fallbackMode);
     if (!fallbackMode) {
       try { renderer = new window.WaterRenderer(canvas, scene, field); renderer.dropSystem = stoneDrops; renderer.low = quality === 'low'; renderer.resize(width, height); }
-      catch (error) { fallbackOn('此设备暂时无法运行 3D 水面'); }
+      catch (error) { fallbackOn('3D 水面初始化失败，请刷新重试。'); }
     }
     if(!field.bathymetry)prepareFallbackStones();
     fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0;
@@ -94,7 +94,7 @@
     dust.length = 0;
     var random = core.seededRandom(93412);
     for (var i = 0; i < 24; i++) dust.push({ u: random(), v: random(), phase: random() * 6.28, size: .5 + random() * 1.2 });
-    accumulator = 0; lastFrame = 0; lastRender = 0; resized = false;
+    accumulator = 0; lastFrame = 0; lastRender = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; resized = false;
     syncSurfaces();
   }
   function prepareFallbackStones() {
@@ -280,7 +280,7 @@
   }
   function setScene(kind) {
     if (kind === sceneKind) return;
-    fingers = {}; cursor.style.display = 'none'; accumulator = 0; stopAudio(); sceneKind = kind;
+    fingers = {}; cursor.style.display = 'none'; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; stopAudio(); sceneKind = kind;
     garden.setAttribute('data-scene', kind); garden.classList.remove('touched');
     var titles = { water: '水之庭', snow: '雪之野', cloud: '云之境' };
     document.getElementById('scene-title').textContent = titles[kind]; document.title = '海拉鲁 · ' + titles[kind];
@@ -491,13 +491,14 @@
       drawLife(dt);
       }
     }
-    // Measure delivered RAF timing; downgrade only after sustained slow windows.
+    // Slow callback delivery can also come from the host scheduler. Lower quality,
+    // but never treat it as proof that WebGL is unavailable or stop simulation.
     if (frameDt > 0) { frameTotal += frameDt; frameSamples++; }
     if (frameSamples >= 90) {
       if (frameTotal / frameSamples > .045) slowFrames++; else slowFrames = 0;
       frameSamples = 0; frameTotal = 0;
       if (slowFrames >= 2 && quality === 'normal') { quality = 'low'; if (renderer) { renderer.low = true; renderer.resize(width, height); } natureRenderer.resize(width, height, true); drops.length = 0; slowFrames = 0; }
-      else if (slowFrames >= 2 && quality === 'low') { if(sceneKind==='water')fallbackOn('3D 渲染已暂停，请刷新重试');else{natureRenderer.fallback();quality='unavailable';} slowFrames = 0; }
+      if (quality !== 'normal') slowFrames = 0;
     }
     frameId = requestAnimationFrame(tick);
   }
@@ -512,7 +513,7 @@
   window.addEventListener('blur', function () { fingers = {}; cursor.style.display = 'none'; });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) { cancelAnimationFrame(frameId); frameId = 0; fingers = {}; clearTimeout(noticeTimer); document.getElementById('notice').classList.remove('show'); stopAudio(); }
-    else { lastFrame = 0; lastRender = 0; accumulator = 0; if (!muted && audio) audio.resume().catch(function () {}); if (!frameId) frameId = requestAnimationFrame(tick); }
+    else { lastFrame = 0; lastRender = 0; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; if (!muted && audio) audio.resume().catch(function () {}); if (!frameId) frameId = requestAnimationFrame(tick); }
   });
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return { ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0, iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length, stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}), stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null, mode: mode, light: light, rain: rain, muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length, energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'unavailable', surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0, waterMaps: renderer ? renderer.mapsLoaded : 0, width: width, height: height, bufferWidth: renderer ? canvas.width : fallback.width, bufferHeight: renderer ? canvas.height : fallback.height, activePointers: Object.keys(fingers).length }; } };

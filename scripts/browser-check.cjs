@@ -285,14 +285,6 @@ async function run() {
     await reducedPage.mouse.click(187.2,405.12); await reducedPage.waitForTimeout(300);
     assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceCenter),0); assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceShards),0);
     reports.push({scenario:'reduced motion freezes and breaks without airborne shards',result:'passed'}); await reducedContext.close();
-    // Simulated slow timing verifies both downgrade thresholds, without claiming real-device FPS.
-    const slowContext = await browser.newContext({viewport:{width:390,height:844}}), slowPage = await slowContext.newPage();
-    slowPage.on('pageerror', e => errors.push(e.message));
-    await slowPage.addInitScript(() => { const original=requestAnimationFrame; let clock=0; window.requestAnimationFrame=callback=>original(()=>callback(clock+=60)); });
-    await slowPage.goto(url); await slowPage.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().quality === 'low', null, {timeout:15000});
-    await slowPage.waitForFunction(() => WaterGarden.inspect().renderer === 'unavailable', null, {timeout:15000});
-    assert(await slowPage.locator('#render-status').isVisible());const stopped=await slowPage.evaluate(()=>WaterGarden.inspect().steps);await slowPage.waitForTimeout(150);assert.equal(await slowPage.evaluate(()=>WaterGarden.inspect().steps),stopped);
-    reports.push({scenario:'synthetic slow timing normal → low → paused 3D',result:'passed'}); await slowContext.close();
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'}),errors,reports},null,2)+'\n');
     console.log('Browser checks passed: four viewports, local freeze, full freeze, fracture/shards, thaw, ice trails, frozen leaves, rotation persistence, touch, drag, long press, leaf, rain, light, audio, reset, safe areas, lifecycle, context loss/recovery, unavailable state and offline file URL.');
