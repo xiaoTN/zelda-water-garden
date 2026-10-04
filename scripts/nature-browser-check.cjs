@@ -106,6 +106,7 @@ async function run() {
           snow.balls.length=0;snow.ball(.5,.5,.025);
           for(const low of [false,true]){
             const size=WaterCore.bufferSize(390,844,devicePixelRatio,low);surface.resize(size.width,size.height,low);surface.draw('snow',0,snow,clouds,0,true,false);
+            if(surface.drawCalls!==3||surface.count!==surface.snowMesh.count+surface.ballMesh.count)throw new Error('Snow must draw only the surface, one snowball and snowfall, without decorative trees');
             const ball=snow.balls[0],position=surface.ballPosition(ball),screen=surface.camera.project(position),picked=surface.point(screen.u,screen.v,'snow',clouds,true);
             budgets.push({low,snow:surface.count/3,calls:surface.drawCalls,flakes:surface.flakeMesh.vertices,picked:!!picked&&picked.ball===ball,depth:surface.gl.isEnabled(surface.gl.DEPTH_TEST),pixels:surface.canvas.width*surface.canvas.height});
             const snowfallCalls=surface.drawCalls;surface.draw('snow',0,snow,clouds,0,true,true);

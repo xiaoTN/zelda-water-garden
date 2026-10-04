@@ -1,26 +1,26 @@
 (function () {
   'use strict';
   var vertex = [
-    'precision highp float; attribute vec3 aPosition,aNormal,aColor; varying mediump vec3 vTint; uniform mat4 uCamera;',
+    'precision highp float; attribute vec3 aPosition; uniform mat4 uCamera;',
     'uniform sampler2D uNoise,uTracks; uniform float uAspect,uTime; uniform mediump float uCloud,uObject; uniform vec2 uFlow,uFieldDomain;',
     'uniform vec4 uBall;uniform mediump vec4 uRotation; varying mediump vec3 vNormal,vWorld,vLocal; varying mediump float vCut,vNoise,vBottom;',
     'float noiseAt(vec2 uv){vec2 n=texture2D(uNoise,vec2(uv.x*uAspect,uv.y)*mix(.85,1.9,uCloud)+uFlow*uCloud).rg;return n.r+n.g/255.;}',
     'vec2 trackAt(vec2 uv){vec2 p=(uv-vec2(uFieldDomain.x))/uFieldDomain.y;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.)return vec2(0.);return texture2D(uTracks,p).rg;}',
     'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*.65,uCloud);return base+(t.g-t.r)*mix(.38,.62,uCloud);}',
     'vec3 rotate(vec3 p){return p+2.*cross(uRotation.xyz,cross(uRotation.xyz,p)+uRotation.w*p);}',
-    'void main(){vec3 p;vTint=aColor;vBottom=0.;vCut=0.;vNoise=.5;vLocal=aPosition;',
+    'void main(){vec3 p;vBottom=0.;vCut=0.;vNoise=.5;vLocal=aPosition;',
     'if(uObject<.5){vec2 uv=aPosition.xy;float h=heightAt(uv);float e=.0025;',
     'float dx=(heightAt(uv+vec2(e,0.))-heightAt(uv-vec2(e,0.)))/(24.*e*uAspect);float dz=(heightAt(uv+vec2(0.,e))-heightAt(uv-vec2(0.,e)))/(24.*e);',
     'vNormal=normalize(vec3(-dx,1.,-dz));vNoise=noiseAt(uv);vCut=trackAt(uv).r;',
     'if(aPosition.z<-.5){vBottom=1.;h=-.65-vNoise*.3;vNormal=vec3(0.,-1.,0.);}p=vec3((uv.x-.5)*12.*uAspect,h,(uv.y-.5)*12.);',
     '}else if(uObject<1.5){vec3 n=normalize(aPosition);float rough=1.+.018*sin(n.x*23.)*sin(n.y*19.)*sin(n.z*27.)+.008*sin(n.x*51.+n.z*39.);',
     'p=uBall.xyz+rotate(n*rough)*uBall.w;vNormal=rotate(n);',
-    '}else if(uObject>2.5){p=aPosition;vNormal=aNormal;}else {p=aPosition;p.x*=uAspect;p.y=mod(p.y-uTime*(.5+fract(p.x)*.6),6.);p.z+=sin(uTime*.3+p.x)*.15;vNormal=vec3(0.,1.,0.);}',
+    '}else if(uObject>3.5){p=aPosition;vNormal=vec3(0.,1.,0.);}else {p=aPosition;p.x*=uAspect;p.y=mod(p.y-uTime*(.5+fract(p.x)*.6),6.);p.z+=sin(uTime*.3+p.x)*.15;vNormal=vec3(0.,1.,0.);}',
     'vWorld=p;gl_Position=uCamera*vec4(p,1.);gl_PointSize=clamp(96./gl_Position.w,3.,9.);}'
   ].join('\n');
   var fragment = [
     'precision mediump float;uniform float uCloud,uLight,uObject,uShadowCount;uniform vec4 uShadows[12];',
-    'varying vec3 vNormal,vWorld,vLocal,vTint;varying float vCut,vNoise,vBottom;',
+    'varying vec3 vNormal,vWorld,vLocal;varying float vCut,vNoise,vBottom;',
     'uniform sampler2D uSnowColor,uSnowNormal,uLand;uniform float uLandAspect;uniform mediump vec4 uRotation;',
     'vec3 snowRotate(vec3 p){return p+2.*cross(uRotation.xyz,cross(uRotation.xyz,p)+uRotation.w*p);}',
     'vec3 snowColor(vec3 p,vec3 w){return texture2D(uSnowColor,p.yz).rgb*w.x+texture2D(uSnowColor,p.xz).rgb*w.y+texture2D(uSnowColor,p.xy).rgb*w.z;}',
@@ -34,7 +34,7 @@
     'lit=mix(lit,.25+.75*lit,uCloud);float ambient=mix(.20,.25,uCloud);vec3 col=mix(shade,white,ambient+lit*shadow*(1.-ambient))*contact;',
     'if(uCloud<.5&&uObject<1.5)col*=.48+albedo*.62;col*=1.-vCut*.1;col+=(grain*.003)*(1.-uCloud);',
     'if(uObject>1.5&&uObject<2.5){if(length(gl_PointCoord-.5)>.5)discard;col=white;}',
-    'if(uObject>2.5)col=vTint*(.68+.32*lit)*mix(vec3(1.),white,step(.5,uLight)*.6);float fog=(1.-smoothstep(-13.,3.,vWorld.z))*.38;col=mix(col,mix(vec3(.76,.85,.89),vec3(.19,.29,.40),step(1.5,uLight)),fog);',
+    'float fog=(1.-smoothstep(-13.,3.,vWorld.z))*.38;col=mix(col,mix(vec3(.76,.85,.89),vec3(.19,.29,.40),step(1.5,uLight)),fog);',
     'float alpha=1.;if(uCloud>.5&&uObject<.5){float fringe=sin(vWorld.x*19.+vWorld.z*23.)*sin(vWorld.z*17.-vWorld.x*11.);float opening=smoothstep(.015,.50,vCut*(.85+.30*vNoise)+fringe*.045*smoothstep(.01,.10,vCut));alpha=(.22+.78*smoothstep(.30,.44,vNoise))*(1.-opening*.985);if(alpha<.02)discard;}gl_FragColor=vec4(col,alpha);}'
   ].join('\n');
   function noiseData() {
@@ -73,7 +73,7 @@
       for(var i=0;i<2;i++){var s=gl.createShader(i?gl.FRAGMENT_SHADER:gl.VERTEX_SHADER);shaders.push(s);gl.shaderSource(s,sources[i]);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));}
       this.program=gl.createProgram();shaders.forEach(function(s){gl.attachShader(this.program,s);},this);gl.linkProgram(this.program);
       if(!gl.getProgramParameter(this.program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(this.program));
-      this.attribute=gl.getAttribLocation(this.program,'aPosition');this.normalAttribute=gl.getAttribLocation(this.program,'aNormal');this.colorAttribute=gl.getAttribLocation(this.program,'aColor');this.uniforms={};
+      this.attribute=gl.getAttribLocation(this.program,'aPosition');this.uniforms={};
       var names=['uCamera','uFieldDomain','uNoise','uTracks','uAspect','uCloud','uObject','uTime','uFlow','uBall','uRotation','uLight','uShadowCount','uShadows[0]','uSnowColor','uSnowNormal','uLand','uLandAspect'];
       names.forEach(function(n){this.uniforms[n]=gl.getUniformLocation(this.program,n);},this);
       for(i=0;i<2;i++){
@@ -123,22 +123,6 @@
     }
     return this.mesh(vertices,indices);
   };
-  Surface.prototype.trees=function(){
-    var vertices=[],indices=[],self=this;
-    function triangle(a,b,c,color){
-      var x=b.map(function(v,i){return v-a[i];}),y=c.map(function(v,i){return v-a[i];});
-      var normal=[x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]],length=Math.hypot.apply(Math,normal);
-      normal=normal.map(function(v){return -v/length;});
-      [a,b,c].forEach(function(p){indices.push(vertices.length/9);vertices.push(p[0],p[1],p[2],normal[0],normal[1],normal[2],color[0],color[1],color[2]);});
-    }
-    function cone(x,z,y,r,h,color){for(var i=0;i<10;i++){var a=i/10*Math.PI*2,b=(i+1)/10*Math.PI*2;triangle([x,y+h,z],[x+Math.cos(a)*r,y,z+Math.sin(a)*r],[x+Math.cos(b)*r,y,z+Math.sin(b)*r],color);}}
-    for(var i=0;i<8;i++){
-      var x=(i%2?-1:1)*(4.8+(i%3)*.7)*self.aspect,z=-4.2+Math.floor(i/2)*2.2,scale=.7+(i%3)*.18;
-      cone(x,z,.15,.14,1.4*scale,[.26,.31,.29]);
-      for(var j=0;j<3;j++){var y=.4+j*.44*scale,r=(.67-j*.15)*scale,h=.95*scale;cone(x,z,y,r,h,[.22,.36,.35]);cone(x,z,y+.16,r*.84,h-.12,[.92,.96,.96]);}
-    }
-    return this.mesh(vertices,indices,9);
-  };
   Surface.prototype.resize=function(w,h,low){
     this.canvas.width=w;this.canvas.height=h;this.aspect=w/h;this.camera=new window.Nature3D.Camera(this.aspect,this.oblique);this.low=!!low;
     if(this.lost||this.meshQuality===this.low&&this.meshAspect===this.aspect&&this.meshView===!!this.oblique)return;
@@ -148,7 +132,7 @@
     var vertices=[],indices=[],nx=low?20:28,ny=low?14:18;
     for(var y=0;y<=ny;y++)for(var x=0;x<=nx;x++){var a=x/nx*Math.PI*2,b=y/ny*Math.PI;vertices.push(Math.sin(b)*Math.cos(a),Math.cos(b),Math.sin(b)*Math.sin(a));}
     for(y=0;y<ny;y++)for(x=0;x<nx;x++){var k=y*(nx+1)+x;indices.push(k,k+nx+1,k+1,k+1,k+nx+1,k+nx+2);}
-    this.ballMesh=this.mesh(vertices,indices);this.treeMesh=this.trees();
+    this.ballMesh=this.mesh(vertices,indices);
     var rng=window.GardenNature.random(551),flakes=[];for(var i=0;i<(this.low?300:720);i++)flakes.push((rng()-.5)*14,rng()*6,(rng()-.5)*15);
     this.flakeMesh=this.mesh(flakes,[]);this.meshQuality=this.low;this.meshAspect=this.aspect;this.meshView=!!this.oblique;
   };
@@ -191,8 +175,6 @@
   };
   Surface.prototype.bind=function(mesh){
     var gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertex);gl.enableVertexAttribArray(this.attribute);gl.vertexAttribPointer(this.attribute,3,gl.FLOAT,false,mesh.stride*4,0);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.index);
-    if(mesh.stride===9){gl.enableVertexAttribArray(this.normalAttribute);gl.vertexAttribPointer(this.normalAttribute,3,gl.FLOAT,false,36,12);gl.enableVertexAttribArray(this.colorAttribute);gl.vertexAttribPointer(this.colorAttribute,3,gl.FLOAT,false,36,24);}
-    else{gl.disableVertexAttribArray(this.normalAttribute);gl.vertexAttrib3f(this.normalAttribute,0,1,0);gl.disableVertexAttribArray(this.colorAttribute);gl.vertexAttrib3f(this.colorAttribute,1,1,1);}
   };
   Surface.prototype.draw=function(kind,light,snow,clouds,time,weather,reduced){
     if(this.lost)return false;
@@ -224,7 +206,6 @@
     this.bind(mesh);gl.drawElements(gl.TRIANGLES,mesh.count,gl.UNSIGNED_SHORT,0);this.count+=mesh.count;this.drawCalls++;
     gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
     if(kind==='snow'){
-      this.bind(this.treeMesh);gl.uniform1f(U.uObject,3);gl.drawElements(gl.TRIANGLES,this.treeMesh.count,gl.UNSIGNED_SHORT,0);this.count+=this.treeMesh.count;this.drawCalls++;
       this.bind(this.ballMesh);gl.uniform1f(U.uObject,1);
       for(i=0;i<snow.balls.length;i++){
         var ball=snow.balls[i];gl.uniform4fv(U.uBall,this.shadowData.subarray(i*4,i*4+4));gl.uniform4fv(U.uRotation,ball.rotation||[0,0,0,1]);gl.drawElements(gl.TRIANGLES,this.ballMesh.count,gl.UNSIGNED_SHORT,0);this.count+=this.ballMesh.count;this.drawCalls++;
