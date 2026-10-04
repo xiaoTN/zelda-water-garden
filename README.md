@@ -34,7 +34,7 @@ npm run build
 
 交付代码为 Chrome 61 / ES2017 基线的经典脚本，运行时不请求网络。开发构建依赖固定版本的 Cannon-es 与 esbuild，`npm run build` 自动重新打包物理引擎，也可单独运行 `npm run physics`。浏览器验证使用环境已有的 Playwright 与 Edge；可用 `CODEX_NODE_MODULES`、`BROWSER_CHANNEL` 指定验证运行时。
 
-上传包：`artifacts/zelda-water-garden-minitool-v1.9.4.zip`。`src/` 的 16 个静态文件进入 ZIP，入口位于包根。v1.9.4 整合四档俯视降雨、共享水波、雷电与主分支的锦鲤、水面抗锯齿及落石避让，见 `docs/release-v1.9.4.md`。雨效历史保留在 `docs/release-v1.9.0.md` 至 `docs/release-v1.9.3.md`；同期主分支的锦鲤发布记录与证据保存在 `docs/fish-history/`。Blender 制作源文件在 `assets-source/fish/`；水面边缘平滑记录见 `docs/release-v1.8.6.md`。
+上传包：`artifacts/zelda-water-garden-minitool-v1.9.5.zip`。`src/` 的 16 个静态文件进入 ZIP，入口位于包根。v1.9.5 消除鱼身硬色块，使用连续背腹配色和平滑光照，见 `docs/release-v1.9.5.md`。v1.9.4 整合四档俯视降雨、共享水波、雷电与主分支的锦鲤、水面抗锯齿及落石避让，见 `docs/release-v1.9.4.md`。雨效历史保留在 `docs/release-v1.9.0.md` 至 `docs/release-v1.9.3.md`；同期主分支的锦鲤发布记录与证据保存在 `docs/fish-history/`。Blender 制作源文件在 `assets-source/fish/`；水面边缘平滑记录见 `docs/release-v1.8.6.md`。
 
 WebGL 1 用于真正的三维水面网格、顶点位移、实时法线与卡通光照；能力不足、持续慢帧或上下文丢失会进入 Canvas 2D 水面。纹理最长边 1024，默认画布 DPR ≤ 1.5、像素 ≤ 200 万，低档 DPR ≤ 1、像素 ≤ 100 万；基础场景每帧 6 次 draw call（含鱼群的 1 次 / 1175 个三角形），动态落石最多增加 2 次和 420 个三角形。立体池岸、144 块几何岸石、动态石头、阴影与半透明水面共用深度缓冲。石头露出部分遮挡水面、水下部分透出水色；草叶与蕨类仍为地形材质。页面隐藏时暂停模拟与音频。
 

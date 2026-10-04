@@ -78,6 +78,30 @@ test('low quality reduces rain work while keeping storms and rain visible',()=>{
 const fishAsset=require('../src/fish-asset.js');
 const {System: FishSchool}=require('../src/fish.js');
 
+test('fish body shading stays continuous across shared mesh edges while retaining natural color variation',()=>{
+  const school=new FishSchool();school.attach(1);
+  for(const swim of [0,.37,.82]){
+    school.items.forEach(f=>{f.swim=swim;});
+    const data=school.geometry();
+    for(let fish=0;fish<school.items.length;fish++){
+      const seen=new Map(),colors=new Set();
+      for(let corner=0;corner<fishAsset.indices.length;corner++){
+        if(fishAsset.materials[Math.floor(corner/3)]>1)continue;
+        const vertex=fishAsset.indices[corner],offset=(fish*fishAsset.indices.length+corner)*11;
+        const shade=Array.from(data.subarray(offset+5,offset+11));
+        assert(Math.abs(Math.hypot(...shade.slice(0,3))-1)<1e-5,'body normals must remain normalized after animation');
+        if(seen.has(vertex)){
+          const other=seen.get(vertex);
+          assert(Math.hypot(...shade.slice(3).map((v,i)=>v-other[i+3]))<1e-6,'fish body colors must not jump at a polygon boundary');
+          assert(Math.hypot(...shade.slice(0,3).map((v,i)=>v-other[i]))<1e-6,'fish body lighting must not form flat polygon blocks');
+        }
+        seen.set(vertex,shade);colors.add(shade.slice(3).map(v=>v.toFixed(3)).join(','));
+      }
+      assert(colors.size>12,'the fish still needs graduated body color, rather than a flat silhouette');
+    }
+  }
+});
+
 test('animated fish geometry raises displayed water depth and clears old footprints without altering the solid bed',()=>{
   for(const low of [false,true]){
     const aspect=.6,bed=terrain.bathymetry(terrain.create(aspect,low),aspect,low),school=new FishSchool();school.attach(aspect);

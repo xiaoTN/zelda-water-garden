@@ -7,6 +7,19 @@
     for(var i=0;i<starts.length;i++)this.items.push({u:starts[i][0],v:starts[i][1],angle:starts[i][2],phase:i*1.73,swim:i*.23,size:.095+i*.006,y:-.085-i*.006,kind:i%3,fear:0,threatU:0,threatV:0,speed:.030+i*.002,flowX:0,flowZ:0,bank:0,wake:0});
     this.vertices=new Float32Array(this.items.length*asset.indices.length*11);
     this.palettes=[[[.91,.86,.70],[.84,.28,.12],[.82,.77,.55],[.025,.048,.038]],[[.91,.68,.29],[.98,.87,.60],[.82,.65,.31],[.025,.048,.038]],[[.84,.88,.78],[.24,.38,.35],[.72,.79,.65],[.025,.048,.038]]];
+    this.bodyColors=new Float32Array(this.palettes.length*asset.vertexCount*3);
+    this.bodyNormals=new Float32Array(this.items.length*asset.vertexCount*3);
+    // Color belongs to the shared skin vertices, not the rectangular material faces.
+    // Bake the gentle back-to-belly gradient once so it follows the animated skin.
+    for(var kind=0;kind<this.palettes.length;kind++)for(var vertex=0;vertex<asset.vertexCount;vertex++){
+      var up=asset.poses[0][vertex*3+1],side=asset.poses[0][vertex*3+2]*.76;
+      var dorsal=.5+.5*up/(Math.sqrt(up*up+side*side)||1),tint=.22*dorsal*dorsal;
+      for(var channel=0;channel<3;channel++){
+        var base=this.palettes[kind][0][channel],back=this.palettes[kind][1][channel];
+        var skin=base+(back-base)*tint;
+        this.bodyColors[(kind*asset.vertexCount+vertex)*3+channel]=skin+(1-skin)*.12*(1-dorsal);
+      }
+    }
   }
   System.prototype.attach=function(aspect){this.aspect=aspect;this.scale=Math.sqrt(Math.min(aspect,1));};
   System.prototype.calm=function(){
@@ -115,7 +128,7 @@
     }
   };
   System.prototype.geometry=function(field){
-    var out=this.vertices,at=0;
+    var out=this.vertices,at=0,normals=this.bodyNormals;normals.fill(0);
     for(var i=0;i<this.items.length;i++){
       var fish=this.items[i],s=fish.size*this.scale,c=Math.cos(fish.angle),sn=Math.sin(fish.angle);
       var frame=fish.swim*asset.fps,base=Math.floor(frame),blend=frame-base;
@@ -130,16 +143,31 @@
         var wx=cx+(x*c-z*sn)*s+refract,wy=fish.y+(y+z*fish.bank)*s,wz=cz+(x*sn+z*c)*s;
         out[at]=wx;out[at+1]=wy;out[at+2]=wz;
         out[at+3]=.5+wx/(2*this.aspect);out[at+4]=.5+wz*.4330127-wy*.25;
-        var color=this.palettes[fish.kind][asset.materials[Math.floor(j/3)]];
-        out[at+8]=color[0];out[at+9]=color[1];out[at+10]=color[2];at+=11;
+        var material=asset.materials[Math.floor(j/3)],color=this.palettes[fish.kind][material];
+        var skinIndex=(fish.kind*asset.vertexCount+asset.indices[j])*3;
+        for(var channel=0;channel<3;channel++)out[at+8+channel]=material<=1?this.bodyColors[skinIndex+channel]:color[channel];
+        at+=11;
       }
     }
-    // Recompute face normals after bending; reuse the packed array for both renderers.
+    // Area-weighted normals join body faces after bending. Separate fins and eyes
+    // keep their own face normals, so smoothing does not soften their silhouette.
     for(at=0;at<out.length;at+=33){
       var ax=out[at+11]-out[at],ay=out[at+12]-out[at+1],az=out[at+13]-out[at+2];
       var bx=out[at+22]-out[at],by=out[at+23]-out[at+1],bz=out[at+24]-out[at+2];
       var nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,len=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
       for(var n=0;n<3;n++){out[at+n*11+5]=nx/len;out[at+n*11+6]=ny/len;out[at+n*11+7]=nz/len;}
+      var triangle=Math.floor(at/33)%asset.materials.length,fishIndex=Math.floor(at/(asset.indices.length*11));
+      if(asset.materials[triangle]<=1)for(n=0;n<3;n++){
+        var normalIndex=(fishIndex*asset.vertexCount+asset.indices[triangle*3+n])*3;
+        normals[normalIndex]+=nx;normals[normalIndex+1]+=ny;normals[normalIndex+2]+=nz;
+      }
+    }
+    for(at=0;at<out.length;at+=11){
+      var corner=Math.floor(at/11)%asset.indices.length;
+      if(asset.materials[Math.floor(corner/3)]>1)continue;
+      var fishIndex=Math.floor(at/(asset.indices.length*11)),normalIndex=(fishIndex*asset.vertexCount+asset.indices[corner])*3;
+      var nx=normals[normalIndex],ny=normals[normalIndex+1],nz=normals[normalIndex+2],len=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+      out[at+5]=nx/len;out[at+6]=ny/len;out[at+7]=nz/len;
     }
     return out;
   };
@@ -150,13 +178,16 @@
       var u=(data[at+3]+data[at+14]+data[at+25])/3,v=(data[at+4]+data[at+15]+data[at+26])/3;
       if(field.bathymetry&&field.bathymetry.heightAt(u,v)>data[at+1])continue;
       var alpha=1-field.ice.sample(u,v);if(alpha<.02)continue;
-      var shade=.72+Math.max(0,-data[at+5]*.4+ny*.8-nz*.3)*.25;
+      var nx=(data[at+5]+data[at+16]+data[at+27])/3;
+      ny=(ny+data[at+17]+data[at+28])/3;nz=(nz+data[at+18]+data[at+29])/3;
+      var shade=.72+Math.max(0,-nx*.4+ny*.8-nz*.3)*.25;
       // Lightweight projection of the same shallow/deep water palette over the actual fish surface.
       var depth=Math.max(0,-(data[at+1]+data[at+12]+data[at+23])/3),t=core.clamp((depth-.012)/.063,0,1);t=t*t*(3-2*t);
       var wr=.63+(.24-.63)*t,wg=.90+(.72-.90)*t,wb=.82+(.73-.82)*t;
       t=core.clamp((depth-.12)/.08,0,1);t=t*t*(3-2*t);wr+=(.16-wr)*t;wg+=(.59-wg)*t;wb+=(.68-wb)*t;
       t=core.clamp((depth-.008)/.172,0,1);t=t*t*(3-2*t);var waterAlpha=.62+.32*t;
-      var r=(data[at+8]*shade*(1-waterAlpha)+wr*waterAlpha)*255,g=(data[at+9]*shade*(1-waterAlpha)+wg*waterAlpha)*255,b=(data[at+10]*shade*(1-waterAlpha)+wb*waterAlpha)*255;
+      var red=(data[at+8]+data[at+19]+data[at+30])/3,green=(data[at+9]+data[at+20]+data[at+31])/3,blue=(data[at+10]+data[at+21]+data[at+32])/3;
+      var r=(red*shade*(1-waterAlpha)+wr*waterAlpha)*255,g=(green*shade*(1-waterAlpha)+wg*waterAlpha)*255,b=(blue*shade*(1-waterAlpha)+wb*waterAlpha)*255;
       if(light===1){r*=1.05;g*=.88;b*=.8;}if(light===2){r*=.43;g*=.63;b*=.83;}
       ctx.fillStyle='rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+','+alpha+')';ctx.beginPath();
       for(var j=0;j<3;j++){var k=at+j*11;if(!j)ctx.moveTo(data[k+3]*width,data[k+4]*height);else ctx.lineTo(data[k+3]*width,data[k+4]*height);}
