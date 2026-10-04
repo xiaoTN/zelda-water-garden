@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-04",
+  "origin": "User-provided signed Aigei download URLs; originals preserved without modification.",
+  "encoding": "Full duration, mono, 22050 Hz, MP3 32 kbps; no trimming or normalization.",
+  "tracks": {
+    "water": {
+      "origin": "https://s2.aigei.com/src/aud/mp3/8c/8c7247cee6f24112b7dcb36d8de9bf5d.mp3",
+      "original": {
+        "bytes": 902626,
+        "sha256": "d656dc8798aa68ecafa954ac448cc08ed934e718332ce0ac73d21a90b9e0e794",
+        "duration": 112.720499,
+        "sampleRate": 22050,
+        "channels": 2
+      },
+      "runtime": {
+        "bytes": 451413,
+        "sha256": "ef5d6e7abb3dd80e4a403d7f7c086f904be113d5e63515cf8df319f10c08a709",
+        "duration": 112.720499,
+        "sampleRate": 22050,
+        "channels": 1
+      }
+    },
+    "snow": {
+      "origin": "https://s8.aigei.com/src/aud/mp3/6f/6fef120da6c84af2a38246b5bdd0dfcc.mp3",
+      "original": {
+        "bytes": 997085,
+        "sha256": "435e6a139648378ff2861cc105f04014ff4421c1601cbaa6e9d383c77370e6b5",
+        "duration": 124.529977,
+        "sampleRate": 22050,
+        "channels": 2
+      },
+      "runtime": {
+        "bytes": 498642,
+        "sha256": "db8f24afca9a08d90b457d9d03962d9c3e875807df99352fef36a936d4fa080e",
+        "duration": 124.529977,
+        "sampleRate": 22050,
+        "channels": 1
+      }
+    },
+    "cloud": {
+      "origin": "https://s8.aigei.com/src/aud/mp3/43/43213dd532ed44afad49c8aa13559297.mp3",
+      "original": {
+        "bytes": 491401,
+        "sha256": "fb21048f67e506928bf74a32bbcd6d0b607fde083fe243ae8e5afe8c86f5f2b9",
+        "duration": 61.285714,
+        "sampleRate": 22050,
+        "channels": 2
+      },
+      "runtime": {
+        "bytes": 245673,
+        "sha256": "b4dfce53ccefdae2a42236cacf67f83fd688303542c7369964bf593a6ba1ff20",
+        "duration": 61.285714,
+        "sampleRate": 22050,
+        "channels": 1
+      }
+    }
+  }
+}

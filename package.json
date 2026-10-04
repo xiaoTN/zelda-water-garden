@@ -1,6 +1,6 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.11.20",
+  "version": "1.11.21",
   "private": true,
   "description": "海拉鲁自然交互：离线体验水面、雪地与云层",
   "engines": {
@@ -13,10 +13,11 @@
     "assets:land": "node scripts/prepare-hyrule-background.cjs",
     "physics": "node scripts/bundle-physics.cjs",
     "audio": "node scripts/bundle-audio.cjs",
-    "test": "node --test tests/water.test.cjs tests/nature.test.cjs tests/nature-3d.test.cjs",
+    "audio:music": "node scripts/prepare-music.cjs && node scripts/bundle-audio.cjs",
+    "test": "node --test tests/water.test.cjs tests/nature.test.cjs tests/nature-3d.test.cjs tests/music.test.cjs",
     "check": "node scripts/verify-package.cjs",
     "build": "node scripts/build.cjs",
-    "test:browser": "node scripts/render-recovery-check.cjs && node scripts/browser-check.cjs && node scripts/nature-browser-check.cjs && node scripts/displacement-browser-check.cjs",
+    "test:browser": "node scripts/music-browser-check.cjs && node scripts/render-recovery-check.cjs && node scripts/browser-check.cjs && node scripts/nature-browser-check.cjs && node scripts/displacement-browser-check.cjs",
     "test:nature-browser": "node scripts/nature-browser-check.cjs"
   },
   "dependencies": {
