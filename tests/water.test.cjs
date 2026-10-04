@@ -6,6 +6,46 @@ const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js
 const fishAsset=require('../src/fish-asset.js');
 const {System: FishSchool}=require('../src/fish.js');
 
+test('nearby strokes startle fish, accelerate the Blender swim cycle and then decay',()=>{
+  const calm=new FishSchool(),scared=new FishSchool();calm.attach(1);scared.attach(1);
+  const f=scared.items[0],u=f.u-.045,v=f.v,bed={heightAt:()=>-.22};
+  scared.scare(u,v,1,u-.2,v);
+  assert(f.fear>.5);assert.equal(scared.items[3].fear,0,'distant fish should stay calm');
+  const before=Math.hypot(f.u-u,(f.v-v)/.866);
+  for(let i=0;i<45;i++){calm.update(1/30,bed,false);scared.update(1/30,bed,false);}
+  assert(f.speed>calm.items[0].speed*1.5);
+  assert(f.swim>calm.items[0].swim*1.4,'existing Blender animation must play faster without a phase jump');
+  assert(f.y<calm.items[0].y-.015,'startled fish dive');
+  assert(Math.hypot(f.u-u,(f.v-v)/.866)>before+.03,'fish swim away from the hand');
+  for(let i=0;i<360;i++)scared.update(1/30,bed,false);
+  assert(f.fear<.002);assert(f.speed<.06,'fish return to a gentle cruise');
+});
+
+test('water moves fish and shallow fish feed back bounded wakes without repainting pool depth',()=>{
+  const flat=new FishSchool(),wave=new FishSchool();flat.attach(1);wave.attach(1);
+  const bed={heightAt:()=>-.22},still={sample:()=>0,ice:{sample:()=>0},disturb:()=>{}},sloped={sample:(u,v)=>(u-.3)*2,ice:{sample:()=>0},disturb:()=>{}};
+  for(let i=0;i<30;i++){flat.update(1/30,bed,false,still);wave.update(1/30,bed,false,sloped);}
+  assert(wave.items[0].flowX<-.025,'wave slope pushes the body');
+  assert(wave.items[0].u<flat.items[0].u-.006,'water must change the actual position, not just its appearance');
+  const field=new WaveField(96,96,1);field.setBathymetry(bed);const school=new FishSchool();school.attach(1);
+  const originalMask=Array.from(field.mask),originalDepth=Array.from(field.depthScale);
+  let maximum=0;
+  for(let i=0;i<600;i++){school.update(1/30,bed,false,field);field.step();field.step();maximum=Math.max(maximum,field.energy());}
+  assert(maximum>.00001&&maximum<1,'swimming must make small stable waves');
+  assert(school.items.every(f=>f.fear===0),'fish must not panic from their own small wakes');
+  assert.deepEqual(Array.from(field.mask),originalMask);assert.deepEqual(Array.from(field.depthScale),originalDepth);
+  field.clear();school.calm();school.update(.08,bed,false,field);assert.equal(field.energy(),0);
+  field.ice.current.fill(1);for(let i=0;i<90;i++)school.update(1/30,bed,false,field);assert.equal(field.energy(),0,'fish cannot disturb solid ice');
+});
+
+test('a new stone overlapping a fish does not trap it forever or teleport it',()=>{
+  const school=new FishSchool();school.attach(1);const f=school.items[0],u=f.u,v=f.v;
+  const bed={heightAt:(x,y)=>Math.hypot((x-u)*2,(y-v)/.4330127)<.13?.03:-.22};
+  school.scare(u,v,1.5);
+  for(let i=0;i<600;i++){const a=f.u,b=f.v;school.update(1/30,bed,false);assert(Math.hypot((f.u-a)*2,(f.v-b)/.4330127)<.01);}
+  assert(school.clearAt(f.u,f.v,f.size,bed),'fish must be able to leave a newly occupied footprint');
+});
+
 test('Blender fish asset contains a closed swim cycle with stronger tail movement and an animated GLB',()=>{
   assert.equal(fishAsset.poses.length,24);
   assert.equal(fishAsset.materials.length,fishAsset.indices.length/3);

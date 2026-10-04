@@ -26,6 +26,15 @@ async function run() {
       let state = await inspect(); assert.equal(state.renderer, 'webgl'); assert(state.bufferWidth * state.bufferHeight <= 2000000);
       assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
       const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
+      const beforeScare=(await inspect()).fish[0],fx=beforeScare.u*viewport.width,fy=(beforeScare.v-beforeScare.y*.25)*viewport.height;
+      await page.mouse.move(fx-24,fy);await page.mouse.down();await page.mouse.move(fx+24,fy,{steps:8});await page.mouse.up();
+      const alarm=(await inspect()).fish[0];assert(alarm.fear>.4,'a real pointer stroke near the fish must frighten it');
+      await page.waitForTimeout(350);const fleeing=(await inspect()).fish[0];
+      assert(fleeing.speed>beforeScare.speed*1.4,'nearby fish accelerate');assert(fleeing.y<beforeScare.y-.004,'nearby fish dive');
+      assert.equal((await inspect()).rings,0,'swimming and fleeing must not add drawn rings');
+      if(viewport.width===390)await page.screenshot({path:path.join(out,'fish-startled.png')});
+      reports.push({scenario:'pointer stroke startles fish',viewport,before:beforeScare,alarm,fleeing,result:'passed'});
+      await page.locator('#reset').click();assert((await inspect()).fish.every(f=>f.fear===0));
       await page.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
       assert(state.surfaceVertices > 4000 && state.surfaceVertices < 65536);
       assert(state.surfaceTriangles > 8000 && state.surfaceTriangles <= 32768);
@@ -41,7 +50,7 @@ async function run() {
           const difference=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>6)n++;return n;};
           try{
             const visible=difference(read(true),read(false));
-            const poseA=read(true);school.clock+=.3;const animated=difference(poseA,read(true));
+            const poseA=read(true);for(let n=0;n<4;n++)school.update(.075,field.bathymetry,false);const animated=difference(poseA,read(true));
             field.ice.paint(.5,.49,1,true,true);for(let i=0;i<90;i++)field.ice.update(1/30);
             const frozen=difference(read(true),read(false));field.ice.clear();
             // An opaque solid above all fish must fully occlude their underwater draw pass.
@@ -220,7 +229,7 @@ async function run() {
         const box = await page.locator(selector).boundingBox(); assert(box.x >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height, 'ice controls must fit viewport'); assert(box.width >= 44 && box.height >= 44);
       }
       await page.touchscreen.tap(x,y); await page.waitForFunction(() => WaterGarden.inspect().iceCenter > .95);
-      state = await inspect(); assert(state.iceCoverage > .01 && state.iceCoverage < .4); assert.equal(state.energy,0);
+      state = await inspect(); assert(state.iceCoverage > .01 && state.iceCoverage < .4); assert(state.energy<.03,'only small ambient fish wakes may remain outside local ice');
       if (viewport.width === 390) await page.screenshot({path:path.join(out,'mobile-local-ice.png')});
       await page.touchscreen.tap(x,y); await page.waitForTimeout(250);
       state = await inspect(); assert.equal(state.iceCenter,0); assert(state.iceShards > 0); assert(state.energy > .001);
