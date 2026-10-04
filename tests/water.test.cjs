@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { WaveField, IceField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = require('../src/water-core.js');
+const { WaveField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = require('../src/water-core.js');
 const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
 const {System: Weather,project:projectRain}=require('../src/weather.js');
@@ -22,7 +22,7 @@ test('rain ripples stay local and disappear before a finger wave settles',()=>{
   }
 });
 
-test('rain height is packed and sampled with touch, masked by rocks and ice, and reset immediately',()=>{
+test('rain height is packed and sampled with touch, masked by rocks, and reset immediately',()=>{
   const f=new WaveField(128,160,.8);
   assert(f.rainImpact(.5,.49,.12));f.updateRain(.08);
   assert(f.rainHeight.some(v=>Math.abs(v)>.001));
@@ -33,8 +33,7 @@ test('rain height is packed and sampled with touch, masked by rocks and ice, and
     assert(Math.abs(decoded-f.current[i]-f.rainHeight[i])<.000032);
   }
   f.mask.fill(0);f.updateRain(.02);assert(f.rainHeight.every(v=>v===0));assert.equal(f.rainImpact(.5,.49,.1),false);
-  f.mask.fill(1);f.ice.current.fill(1);f.updateRain(.02);assert(f.rainHeight.every(v=>v===0));assert.equal(f.rainImpact(.5,.49,.1),false);
-  f.ice.clear();f.clear();assert.equal(f.energy(),0);f.updateRain(.01);assert.equal(f.energy(),0);
+  f.clear();assert.equal(f.energy(),0);f.updateRain(.01);assert.equal(f.energy(),0);
 });
 
 test('storm rain has a fixed work budget in both quality modes',()=>{
@@ -220,7 +219,7 @@ test('nearby strokes startle fish, accelerate the Blender swim cycle and then de
 
 test('water moves fish and shallow fish feed back bounded wakes without repainting pool depth',()=>{
   const flat=new FishSchool(),wave=new FishSchool();flat.attach(1);wave.attach(1);
-  const bed={heightAt:()=>-.22},still={sample:()=>0,ice:{sample:()=>0},disturb:()=>{}},sloped={sample:(u,v)=>(u-.3)*2,ice:{sample:()=>0},disturb:()=>{}};
+  const bed={heightAt:()=>-.22},still={sample:()=>0,disturb:()=>{}},sloped={sample:(u,v)=>(u-.3)*2,disturb:()=>{}};
   for(let i=0;i<30;i++){flat.update(1/30,bed,false,still);wave.update(1/30,bed,false,sloped);}
   assert(wave.items[0].flowX<-.025,'wave slope pushes the body');
   assert(wave.items[0].u<flat.items[0].u-.006,'water must change the actual position, not just its appearance');
@@ -232,7 +231,6 @@ test('water moves fish and shallow fish feed back bounded wakes without repainti
   assert(school.items.every(f=>f.fear===0),'fish must not panic from their own small wakes');
   assert.deepEqual(Array.from(field.mask),originalMask);assert.deepEqual(Array.from(field.depthScale),originalDepth);
   field.clear();school.calm();school.update(.08,bed,false,field);assert.equal(field.energy(),0);
-  field.ice.current.fill(1);for(let i=0;i<90;i++)school.update(1/30,bed,false,field);assert.equal(field.energy(),0,'fish cannot disturb solid ice');
 });
 
 test('a new stone overlapping a fish does not trap it forever or teleport it',()=>{
@@ -260,7 +258,7 @@ test('fast underwater swimming and sharp turns create balanced wakes that settle
     const school=new FishSchool();school.attach(1);school.items=school.items.slice(0,1);
     const f=school.items[0];f.speed=.35;f.fear=1;f.y=-.16;f.angle=0;f.wake=1;
     f.threatU=f.u+(turn?.1:-.1);f.threatV=f.v;
-    const impulses=[];school.update(1/30,bed,false,{sample:()=>0,ice:{sample:()=>0},disturb:(u,v,s,r)=>impulses.push(s)});
+    const impulses=[];school.update(1/30,bed,false,{sample:()=>0,disturb:(u,v,s,r)=>impulses.push(s)});
     assert(Math.abs(impulses.reduce((a,b)=>a+b,0))<1e-8);return impulses;
   }
   const straight=wakes(false),turn=wakes(true);
@@ -568,7 +566,7 @@ test('displayed underwater depth reconstructs diagonal edges without large stair
   }
 });
 
-test('bathymetry comes from stone triangles and blocks waves and ice at dry footprints', () => {
+test('bathymetry comes from stone triangles and blocks waves at dry footprints', () => {
   const mesh=terrain.create(.8,false),bed=terrain.bathymetry(mesh,.8,false),field=new WaveField(128,160,.8);
   field.setBathymetry(bed);
   let raisedWet=0,blocked=0;
@@ -590,9 +588,7 @@ test('bathymetry comes from stone triangles and blocks waves and ice at dry foot
   }
   assert(blocked>20);
   field.stroke(.07,.2,.15,.75,.5);for(let i=0;i<180;i++)field.step();
-  field.ice.paint(.5,.49,2,true,true);for(let i=0;i<50;i++)field.ice.update(.1);
-  assert(field.ice.coverage()>.999);
-  for(let i=0;i<field.mask.length;i++)if(!field.mask[i]){assert.equal(field.current[i],0);assert.equal(field.ice.current[i],0);}
+  for(let i=0;i<field.mask.length;i++)if(!field.mask[i]){assert.equal(field.current[i],0);}
 });
 
 test('solid barriers reflect instead of transmitting, including the finger brush', () => {
@@ -652,13 +648,13 @@ test('3D water mesh has valid topology, camera alignment and bounded low quality
   }
 });
 
-test('mesh receives touch heights and frozen vertices stop displacing', () => {
+test('mesh receives touch and rain heights, and reset clears displacement', () => {
   const field=new WaveField(96,128,.75), mesh=waterMesh(.75,false);
   field.disturb(.5,.5,.8,.08); updateMesh(mesh,field);
-  assert(mesh.dynamics.some((value,index)=>index%2===0 && value>.5));
-  field.ice.paint(.5,.5,1,true,true);for(let i=0;i<30;i++)field.ice.update(.1);
-  updateMesh(mesh,field);
-  for(let i=0;i<mesh.count;i++)if(mesh.dynamics[i*2+1]===1)assert.equal(mesh.dynamics[i*2],0);
+  assert(mesh.dynamics.some(value=>value>.5));
+  field.clear();field.rainImpact(.5,.49,.2,false,2);field.updateRain(.1);updateMesh(mesh,field);
+  assert(mesh.dynamics.some(value=>Math.abs(value)>.001));
+  field.clear();updateMesh(mesh,field);assert(mesh.dynamics.every(value=>value===0));
 });
 
 test('a calm pool remains calm; shoreline rejects land touches', () => {
@@ -718,58 +714,5 @@ test('all viewport sizes obey pixel and DPR budgets', () => {
       assert(result.width * result.height <= (low ? 1000000 : 2000000));
       assert(result.scale <= (low ? 1 : 1.5));
     }
-  }
-});
-
-function settleIce(ice, seconds = 2) { for (let n = 0; n < seconds * 60; n++) ice.update(1 / 60); }
-
-test('local frost grows outward, stays inside the pool and blocks water impulses', () => {
-  const field = new WaveField(128, 128, 1), ice = field.ice;
-  ice.paint(.5, .49, .12, true, false);
-  settleIce(ice, .2);
-  assert(ice.sample(.5, .49) > ice.sample(.59, .49), 'the center freezes before the perimeter');
-  settleIce(ice);
-  assert.equal(ice.sample(.5, .49), 1); assert.equal(ice.sample(.8, .49), 0);
-  assert(ice.coverage() > .06 && ice.coverage() < .16);
-  assert.equal(field.disturb(.5, .49, 1), false);
-  assert.equal(field.disturb(.8, .49, 1), true);
-  for (let i = 0; i < 120; i++) field.step();
-  assert.equal(field.sample(.5, .49), 0);
-});
-
-test('whole-pool ice can be shattered locally without delayed refreezing', () => {
-  const ice = new IceField(128, 128, 1);
-  ice.paint(.5, .49, 1, true, true); settleIce(ice);
-  assert.equal(ice.coverage(), 1); assert.equal(ice.sample(0, 0), 0);
-  ice.paint(.5, .49, .12, false, false);
-  assert.equal(ice.sample(.5, .49), 0); assert.equal(ice.sample(.8, .49), 1);
-  settleIce(ice); assert.equal(ice.sample(.5, .49), 0); assert(ice.coverage() < .95);
-  ice.paint(.5, .49, .12, true, false); ice.paint(.5, .49, .12, false, false);
-  settleIce(ice); assert.equal(ice.sample(.5, .49), 0, 'a fast second tap cancels pending freeze cells');
-  ice.paint(.5, .49, 1, false, true); settleIce(ice); assert.equal(ice.coverage(), 0);
-});
-
-test('frozen state and holes survive viewport changes; reset clears pending growth', () => {
-  const ice = new IceField(80, 160, .5);
-  ice.paint(.5, .49, 1, true, true); settleIce(ice);
-  ice.paint(.5, .49, .08, false, false);
-  const landscape = new IceField(160, 80, 2); landscape.restore(ice);
-  assert.equal(landscape.sample(.5, .49), 0); assert.equal(landscape.sample(.8, .49), 1);
-  landscape.paint(.5, .49, .1, true, false); landscape.clear(); settleIce(landscape);
-  assert.equal(landscape.coverage(), 0);
-});
-
-test('overlapping freeze and shatter gestures keep simulation finite and texture packing independent', () => {
-  const field = new WaveField(80, 128, .625);
-  for (let n = 0; n < 160; n++) {
-    const u = .5 + Math.sin(n) * .25, v = .49 + Math.cos(n) * .2;
-    field.ice.paint(u, v, .08, n % 3 !== 0, false); field.ice.update(.04); field.disturb(u, v, .8); field.step();
-  }
-  const packed = field.pack();
-  for (let i = 0; i < field.current.length; i++) {
-    assert(Number.isFinite(field.current[i])); assert(Math.abs(field.current[i]) <= .971);
-    assert(field.ice.current[i] >= 0 && field.ice.current[i] <= 1);
-    assert.equal(packed[i * 4 + 2], Math.round(field.ice.current[i] * 255));
-    if (!field.mask[i]) assert.equal(field.ice.current[i], 0);
   }
 });

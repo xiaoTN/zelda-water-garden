@@ -58,14 +58,13 @@
     if(reduced)return;
     dt=Math.min(.08,Math.max(0,dt));this.clock+=dt;this.quiet=Math.max(0,this.quiet-dt);
     for(var i=0;i<this.items.length;i++){
-      var fish=this.items[i],r=fish.size*this.scale,wave=0,gx=0,gz=0,liquid=1;
+      var fish=this.items[i],r=fish.size*this.scale,wave=0,gx=0,gz=0;
       fish.fear*=Math.exp(-dt/1.65);
       if(field){
-        liquid=1-field.ice.sample(fish.u,fish.v);
         var ex=.014*this.scale/(2*this.aspect),ez=.014*this.scale*.4330127;
-        wave=field.sample(fish.u,fish.v)*liquid;
-        gx=(field.sample(fish.u+ex,fish.v)-field.sample(fish.u-ex,fish.v))*liquid;
-        gz=(field.sample(fish.u,fish.v+ez)-field.sample(fish.u,fish.v-ez))*liquid;
+        wave=field.sample(fish.u,fish.v);
+        gx=(field.sample(fish.u+ex,fish.v)-field.sample(fish.u-ex,fish.v));
+        gz=(field.sample(fish.u,fish.v+ez)-field.sample(fish.u,fish.v-ez));
         // Strong external waves startle fish; their own small wakes stay below this threshold.
         if(Math.abs(wave)>.24&&Math.abs(gx)+Math.abs(gz)>.07&&fish.fear<.35){
           fish.fear=.35;fish.threatU=fish.u+gx*.3/this.aspect;fish.threatV=fish.v+gz*.3;
@@ -112,7 +111,7 @@
       fish.wake+=dt;
       // Fast strokes and abrupt turns transmit a stronger wake even during an escape dive.
       var fast=core.clamp((fish.speed/this.scale-.055)/.28,0,1),turning=core.clamp(Math.abs(turned)/Math.max(dt,.001)/7,0,1)*fast;
-      if(field&&(moved||turning>.15)&&fish.wake>=.12-fast*.055&&(this.quiet===0||fish.fear>.4)&&liquid>.8){
+      if(field&&(moved||turning>.15)&&fish.wake>=.12-fast*.055&&(this.quiet===0||fish.fear>.4)){
         fish.wake=0;
         var nearSurface=core.clamp((fish.y+.13)/.065,0,1),strength=(.006+fish.speed/this.scale*.06)*nearSurface*nearSurface+(.10*fast*fast+.09*turning)*(.35+.65*nearSurface);
         var ox=Math.cos(fish.angle)*r*.42/(2*this.aspect),oz=Math.sin(fish.angle)*r*.42*.4330127;
@@ -177,7 +176,6 @@
       var ny=data[at+6],nz=data[at+7];if(ny*.866-nz*.5<0)continue;
       var u=(data[at+3]+data[at+14]+data[at+25])/3,v=(data[at+4]+data[at+15]+data[at+26])/3;
       if(field.bathymetry&&field.bathymetry.heightAt(u,v)>data[at+1])continue;
-      var alpha=1-field.ice.sample(u,v);if(alpha<.02)continue;
       var nx=(data[at+5]+data[at+16]+data[at+27])/3;
       ny=(ny+data[at+17]+data[at+28])/3;nz=(nz+data[at+18]+data[at+29])/3;
       var shade=.72+Math.max(0,-nx*.4+ny*.8-nz*.3)*.25;
@@ -189,7 +187,7 @@
       var red=(data[at+8]+data[at+19]+data[at+30])/3,green=(data[at+9]+data[at+20]+data[at+31])/3,blue=(data[at+10]+data[at+21]+data[at+32])/3;
       var r=(red*shade*(1-waterAlpha)+wr*waterAlpha)*255,g=(green*shade*(1-waterAlpha)+wg*waterAlpha)*255,b=(blue*shade*(1-waterAlpha)+wb*waterAlpha)*255;
       if(light===1){r*=1.05;g*=.88;b*=.8;}if(light===2){r*=.43;g*=.63;b*=.83;}
-      ctx.fillStyle='rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+','+alpha+')';ctx.beginPath();
+      ctx.fillStyle='rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+',1)';ctx.beginPath();
       for(var j=0;j<3;j++){var k=at+j*11;if(!j)ctx.moveTo(data[k+3]*width,data[k+4]*height);else ctx.lineTo(data[k+3]*width,data[k+4]*height);}
       ctx.closePath();ctx.fill();
     }

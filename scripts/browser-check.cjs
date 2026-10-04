@@ -22,7 +22,9 @@ async function run() {
       page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
       const before = Date.now(); await page.goto(url); await page.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 10); await page.waitForTimeout(700);
       const inspect = () => page.evaluate(() => window.WaterGarden.inspect());
-      assert.equal(await page.locator('[data-mode]').count(),4); assert.equal(await page.getByText('落石',{exact:true}).count(),1);
+      assert.equal(await page.locator('[data-mode]').count(),3); assert.equal(await page.getByText('落石',{exact:true}).count(),1);
+      assert.deepEqual(await page.locator('[data-mode]').evaluateAll(buttons=>buttons.map(b=>b.dataset.mode)),['touch','leaf','stone']);
+      assert.equal(await page.locator('#ice-actions, #freeze-all, #thaw-all').count(),0);
       let state = await inspect(); assert.equal(state.renderer, 'webgl'); assert(state.bufferWidth * state.bufferHeight <= 2000000);
       assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
       const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
@@ -54,19 +56,17 @@ async function run() {
             renderer.drawSolid=function(buffer,count,pass){if(pass!==5)solidDraw.call(this,buffer,count,pass);};
             const shallowWater=difference(read(true),read(false));renderer.drawSolid=solidDraw;
             const poseA=read(true);for(let n=0;n<4;n++)school.update(.075,field.bathymetry,false);const animated=difference(poseA,read(true));
-            field.ice.paint(.5,.49,1,true,true);for(let i=0;i<90;i++)field.ice.update(1/30);
-            const frozen=difference(read(true),read(false));field.ice.clear();
             // An opaque solid above all fish must fully occlude their underwater draw pass.
             const cover=[];for(const p of [[-1,-1],[-1,1],[1,-1],[1,-1],[-1,1],[1,1]])cover.push(p[0],.05,p[1],.5+p[0]/2,.5+p[1]*.433,0,1,0,.4,.5,.3);
             renderer.terrain.stones=new Float32Array(cover);gl.bindBuffer(gl.ARRAY_BUFFER,renderer.stones);gl.bufferData(gl.ARRAY_BUFFER,renderer.terrain.stones,gl.STATIC_DRAW);
             const occluded=difference(read(true),read(false));
-            return {visible,shallowWater,animated,frozen,occluded,error:gl.getError()};
+            return {visible,shallowWater,animated,occluded,error:gl.getError()};
           }finally{renderer.destroy();}
         });
         assert(fishCheck.visible>100,'Blender fish must be visible underwater');
         assert(fishCheck.shallowWater>100,'fish geometry must change the existing water material even when its color pass is hidden');
         assert(fishCheck.animated>50,'the baked tail pose must change visible pixels');
-        assert.equal(fishCheck.frozen,0,'opaque ice must hide fish');assert.equal(fishCheck.occluded,0,'rocks must hide fish');assert.equal(fishCheck.error,0);
+        assert.equal(fishCheck.occluded,0,'rocks must hide fish');assert.equal(fishCheck.error,0);
         reports.push({scenario:'Blender fish animation, underwater visibility and occlusion',...fishCheck,result:'passed'});
         await page.screenshot({path:path.join(out,'fish-mobile.png')});
         const waveEdges=await page.evaluate(()=>{
@@ -139,23 +139,21 @@ async function run() {
             renderer=new WaterRenderer(canvas,WaterScene.create(.8),field);proto.shaderSource=source;renderer.resize(320,400);
             const gl=renderer.gl,read=()=>{renderer.draw(4,0);const pixels=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;};
             proto.drawElements=function(){};const solid=read();proto.drawElements=drawElements;
-            const water=read();field.ice.paint(.5,.49,2,true,true);for(let i=0;i<40;i++)field.ice.update(.1);const frozen=read();
-            let dry=0,dryCovered=0,wet=0,wetTinted=0,iceCovered=0;
+            const water=read();
+            let dry=0,dryCovered=0,wet=0,wetTinted=0;
             for(let i=0;i<solid.length;i+=4) {
               if(solid[i]===255&&solid[i+1]===0&&solid[i+2]===0) {
                 dry++;if(water[i]<250||water[i+1]>5||water[i+2]>5)dryCovered++;
-                if(frozen[i]<250||frozen[i+1]>5||frozen[i+2]>5)iceCovered++;
               }
               if(solid[i]===0&&solid[i+1]===0&&solid[i+2]===255) {
                 wet++;if(water[i+1]>20&&water[i+2]<250)wetTinted++;
               }
             }
-            return {dry,dryCovered,wet,wetTinted,iceCovered,error:gl.getError()};
+            return {dry,dryCovered,wet,wetTinted,error:gl.getError()};
           } finally {proto.shaderSource=source;proto.drawElements=drawElements;if(renderer)renderer.destroy();}
         });
         assert(depthResult.dry>100&&depthResult.wet>30,'scene must contain both exposed and submerged stone surfaces');
         assert(depthResult.dryCovered/depthResult.dry<.01,'water must not cover dry stone tops');
-        assert(depthResult.iceCovered/depthResult.dry<.01,'ice must not cover dry stone tops');
         assert(depthResult.wetTinted/depthResult.wet>.80,'underwater stone surfaces must show water tint');
         assert.equal(depthResult.error,0);reports.push({scenario:'3D stone and water depth occlusion',...depthResult,result:'passed'});
         const colorDepth = await page.evaluate(() => {
@@ -314,42 +312,7 @@ async function run() {
       assert.equal(state.rainStreaks,0);assert.equal(state.lightningFlash,0);assert.equal(state.thunderPending,false);assert.equal(state.rainAudio,false);
       assert.equal(await page.locator('#rain-options').isVisible(),false);
       await page.locator('#light').click();
-      await page.locator('[data-mode="ice"]').click(); assert.equal((await inspect()).mode, 'ice');
-      assert(await page.locator('#ice-actions').isVisible());
-      for (const selector of ['[data-mode="ice"]','#freeze-all','#thaw-all','#reset']) {
-        const box = await page.locator(selector).boundingBox(); assert(box.x >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height, 'ice controls must fit viewport'); assert(box.width >= 44 && box.height >= 44);
-      }
-      // Fish can flee the freezing gesture outside this patch. Check the frozen cells
-      // themselves, rather than requiring the entire living pool to have no waves.
-      await page.evaluate(()=>{
-        const proto=WaterCore.WaveField.prototype,step=proto.step;
-        window.iceProbe={step,samples:0,maxHeight:0};
-        proto.step=function(){step.call(this);for(let i=0;i<this.current.length;i++)if(this.ice.current[i]>.7){iceProbe.samples++;iceProbe.maxHeight=Math.max(iceProbe.maxHeight,Math.abs(this.current[i]));}};
-      });
-      await page.touchscreen.tap(x,y); await page.waitForFunction(() => WaterGarden.inspect().iceCenter > .95);
-      state = await inspect(); assert(state.iceCoverage > .01 && state.iceCoverage < .4);
-      const frozenCells=await page.evaluate(()=>{const p=iceProbe;WaterCore.WaveField.prototype.step=p.step;delete window.iceProbe;return {samples:p.samples,maxHeight:p.maxHeight};});
-      assert(frozenCells.samples>0);assert.equal(frozenCells.maxHeight,0,'frozen water cells must not displace even with fish wakes outside');
-      reports.push({scenario:'local ice stops displacement while surrounding water remains interactive',viewport,...frozenCells,result:'passed'});
-      if (viewport.width === 390) await page.screenshot({path:path.join(out,'mobile-local-ice.png')});
-      await page.touchscreen.tap(x,y); await page.waitForTimeout(250);
-      state = await inspect(); assert.equal(state.iceCenter,0); assert(state.iceShards > 0); assert(state.energy > .001);
-      await page.locator('#freeze-all').click(); await page.waitForFunction(() => WaterGarden.inspect().iceCoverage > .995);
-      const trappedLeaves = (await inspect()).leafPositions; await page.waitForTimeout(150); assert.deepEqual((await inspect()).leafPositions,trappedLeaves);
-      if (viewport.width === 390 || viewport.width === 1440) await page.screenshot({path:path.join(out,viewport.width === 390 ? 'mobile-frozen.png' : 'desktop-frozen.png')});
-      await page.touchscreen.tap(x,y); await page.waitForTimeout(240);
-      state = await inspect(); assert(state.iceCoverage < .99 && state.iceCoverage > .6); assert.equal(state.iceCenter,0); assert(state.iceShards > 0);
-      if (viewport.width === 390 || viewport.width === 1440) await page.screenshot({path:path.join(out,viewport.width === 390 ? 'mobile-shatter.png' : 'desktop-shatter.png')});
-      await page.locator('#thaw-all').click(); await page.waitForFunction(() => WaterGarden.inspect().iceCoverage === 0);
-      await page.mouse.move(viewport.width * .3,y); await page.mouse.down(); await page.mouse.move(viewport.width * .7,y,{steps:14}); await page.mouse.up();
-      await page.waitForTimeout(1000); assert((await inspect()).iceCoverage > .02); assert.equal((await inspect()).activePointers,0);
-      if (viewport.width === 390) {
-        const coverage = (await inspect()).iceCoverage;
-        await page.setViewportSize({width:844,height:390}); await page.waitForTimeout(350); assert(Math.abs((await inspect()).iceCoverage - coverage) < .025,'rotation preserves ice');
-        await page.setViewportSize(viewport); await page.waitForTimeout(350);
-      }
-      await page.locator('#reset').click(); assert.equal((await inspect()).iceCoverage,0); assert.equal((await inspect()).iceShards,0);
-      await page.locator('[data-mode="touch"]').click(); assert.equal(await page.locator('#ice-actions').isVisible(),false);
+      await page.locator('[data-mode="touch"]').click();
       await page.evaluate(() => { document.documentElement.style.setProperty('--safe-area-inset-top', '44px'); document.documentElement.style.setProperty('--safe-area-inset-bottom', '34px'); });
       const buttonBox = await page.locator('#reset').boundingBox(); assert(buttonBox.x >= 0 && buttonBox.x + buttonBox.width <= viewport.width); assert(buttonBox.y + buttonBox.height <= viewport.height - 34);
       if (viewport.width === 390) {
@@ -365,14 +328,12 @@ async function run() {
         await page.waitForTimeout(170); assert((await inspect()).steps > paused);
         assert((await inspect()).rainAudio);assert.equal((await inspect()).rainLevel,4);
         await page.locator('#sound').click();await page.locator('#reset').click();
-        await page.locator('[data-mode="ice"]').click(); await page.locator('#freeze-all').click(); await page.waitForFunction(() => WaterGarden.inspect().iceCoverage > .995);
         // Lose the actual GL context, then restore it once and verify the usable fallback.
         await page.evaluate(() => { window.testLostContext = document.getElementById('water').getContext('webgl').getExtension('WEBGL_lose_context'); window.testLostContext.loseContext(); });
         await page.waitForTimeout(180); assert.equal((await inspect()).renderer, 'canvas2d');
-        assert((await inspect()).iceCoverage > .99, 'context loss preserves frozen cells');
-        await page.touchscreen.tap(x,y); await page.waitForTimeout(250); assert((await inspect()).energy > .001); assert.equal((await inspect()).iceCenter,0);
+        await page.touchscreen.tap(x,y); assert((await inspect()).energy > .001);
         await page.evaluate(() => window.testLostContext.restoreContext()); await page.waitForTimeout(500); assert.equal((await inspect()).renderer,'webgl');
-        assert((await inspect()).iceCoverage > .6); assert.equal((await inspect()).iceCenter,0,'context restoration preserves broken hole');
+        await page.touchscreen.tap(x,y); assert((await inspect()).energy > .001);
         await page.locator('[data-mode="touch"]').click(); await page.locator('#reset').click();
         const cdp = await context.newCDPSession(page);
         await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:130,y:380,id:1},{x:260,y:460,id:2}]});
@@ -439,9 +400,6 @@ async function run() {
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-capacity.png')});
       await page.locator('#reset').click();assert.equal((await inspect()).stones.length,0);
       await page.mouse.click(x,y);await page.locator('#reset').click();await page.waitForTimeout(1100);assert.equal((await inspect()).stoneImpacts,0);
-      await page.locator('[data-mode="ice"]').click();await page.locator('#freeze-all').click();await page.waitForFunction(()=>WaterGarden.inspect().iceCoverage>.99);
-      await page.locator('[data-mode="stone"]').click();await page.mouse.click(x,y);await page.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);
-      assert((await inspect()).iceCoverage<.999,'stone impact breaks through frozen water');
       await page.locator('#reset').click();await page.locator('[data-mode="touch"]').click();
       reports.push({viewport, readyAndSettleMs, result:'passed', state: await inspect()});
       await context.close();
@@ -469,21 +427,17 @@ async function run() {
     await fallbackPage.mouse.click(190,410); await fallbackPage.waitForTimeout(150); assert(await fallbackPage.evaluate(() => WaterGarden.inspect().energy > .001));
     await fallbackPage.mouse.move(120,410); await fallbackPage.mouse.down(); await fallbackPage.mouse.move(270,420,{steps:12}); await fallbackPage.mouse.up();
     assert(await fallbackPage.evaluate(() => WaterGarden.inspect().drops === 0 && WaterGarden.inspect().energy > .01));
-    await fallbackPage.locator('[data-mode="ice"]').click(); await fallbackPage.locator('#freeze-all').click(); await fallbackPage.waitForFunction(() => WaterGarden.inspect().iceCoverage > .99);
-    await fallbackPage.mouse.click(187.2,405.12); await fallbackPage.waitForTimeout(250); assert.equal(await fallbackPage.evaluate(() => WaterGarden.inspect().iceCenter),0); assert(await fallbackPage.evaluate(() => WaterGarden.inspect().iceShards > 0));
     await fallbackPage.locator('#reset').click();await fallbackPage.locator('[data-mode="stone"]').click();await fallbackPage.mouse.click(195,405);
     assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().stones[0].y>1));await fallbackPage.waitForFunction(()=>WaterGarden.inspect().stones[0].settled);
     assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().stoneImpacts),1);
     await fallbackPage.screenshot({path:path.join(out,'mobile-fallback.png')}); reports.push({scenario:'no WebGL with falling stone',result:'passed'});
-    await fallbackPage.locator('#reset').click();await fallbackPage.locator('[data-mode="ice"]').click();await fallbackPage.locator('#freeze-all').click();
-    await fallbackPage.waitForFunction(()=>WaterGarden.inspect().iceCoverage>.995);
+    await fallbackPage.locator('#reset').click();
     await fallbackPage.locator('#rain').click();await fallbackPage.locator('[data-rain="4"]').click();await fallbackPage.waitForTimeout(700);
-    assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainImpacts),0,'rain cannot create liquid ripples through full ice');
-    assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0),'airborne rain stays visible over ice');
-    await fallbackPage.locator('#thaw-all').click();await fallbackPage.waitForFunction(()=>WaterGarden.inspect().rainImpacts>0);
+    assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainImpacts>0),'rain must create water ripples');
+    assert(await fallbackPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0),'airborne rain stays visible');
     await fallbackPage.screenshot({path:path.join(out,'mobile-fallback-storm.png')});
     await fallbackPage.locator('[data-rain="0"]').click();assert.equal(await fallbackPage.evaluate(()=>WaterGarden.inspect().rain),false);
-    reports.push({scenario:'Canvas rain over ice, thaw and stop',result:'passed'});await fallbackContext.close();
+    reports.push({scenario:'Canvas rain and stop',result:'passed'});await fallbackContext.close();
     // A file URL needs no HTTP server, network permission, module loader or external asset.
     const offlineContext = await browser.newContext({viewport:{width:390,height:844}}), offlinePage = await offlineContext.newPage();
     let networkRequests = 0; offlinePage.on('request',request => { if (/^https?:/.test(request.url())) networkRequests++; });
@@ -491,7 +445,6 @@ async function run() {
     await offlinePage.goto(pathToFileURL(path.join(root, 'src/index.html')).href); await offlinePage.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 5);
     await offlinePage.waitForFunction(() => WaterGarden.inspect().waterMaps === 2);
     await offlinePage.mouse.click(195,410); assert(await offlinePage.evaluate(() => WaterGarden.inspect().energy > .001)); assert.equal(networkRequests,0);
-    await offlinePage.locator('[data-mode="ice"]').click(); await offlinePage.locator('#freeze-all').click(); await offlinePage.waitForFunction(() => WaterGarden.inspect().iceCoverage > .99); assert.equal(networkRequests,0);
     await offlinePage.locator('#rain').click();await offlinePage.locator('[data-rain="4"]').click();await offlinePage.locator('#sound').click();
     await offlinePage.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);assert.equal(networkRequests,0);
     reports.push({scenario:'file URL offline', networkRequests, result:'passed'}); await offlineContext.close();
@@ -501,12 +454,9 @@ async function run() {
     await reducedPage.mouse.move(120,410); await reducedPage.mouse.down(); await reducedPage.mouse.move(270,410,{steps:15}); await reducedPage.mouse.up();
     assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().drops),0);
     assert(await reducedPage.evaluate(() => WaterGarden.inspect().energy > .01));
-    await reducedPage.locator('[data-mode="ice"]').click(); await reducedPage.locator('#freeze-all').click(); await reducedPage.waitForFunction(() => WaterGarden.inspect().iceCoverage > .99);
-    await reducedPage.mouse.click(187.2,405.12); await reducedPage.waitForTimeout(300);
-    assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceCenter),0); assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceShards),0);
     await reducedPage.locator('#rain').click();await reducedPage.locator('[data-rain="4"]').click();await reducedPage.waitForTimeout(300);
     assert(await reducedPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0&&WaterGarden.inspect().rainStreaks<=378));
-    reports.push({scenario:'reduced motion freezes and breaks without airborne shards',result:'passed'}); await reducedContext.close();
+    reports.push({scenario:'reduced motion swipes and rain',result:'passed'}); await reducedContext.close();
     // Simulated slow timing verifies both downgrade thresholds, without claiming real-device FPS.
     const slowContext = await browser.newContext({viewport:{width:390,height:844}}), slowPage = await slowContext.newPage();
     slowPage.on('pageerror', e => errors.push(e.message));
@@ -517,7 +467,7 @@ async function run() {
     reports.push({scenario:'synthetic slow timing normal → low → Canvas 2D',result:'passed'}); await slowContext.close();
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(out,'browser-report.json'),JSON.stringify({browser:await browser.version(),date:'2026-10-04',errors,reports},null,2)+'\n');
-    console.log('Browser checks passed: four viewports, four rain levels, airborne streak pixels, repeated lightning, delayed thunder, rain audio lifecycle, ice, touch, broad stone waves, oldest-stone recycling, reset, safe areas, context recovery, Canvas fallback and offline file URL.');
+    console.log('Browser checks passed: four viewports, four rain levels, airborne streak pixels, repeated lightning, delayed thunder, rain audio lifecycle, touch, broad stone waves, oldest-stone recycling, reset, safe areas, context recovery, Canvas fallback and offline file URL.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }
 run().catch(error => {console.error(error);process.exitCode=1;});

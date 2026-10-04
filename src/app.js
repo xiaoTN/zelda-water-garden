@@ -5,7 +5,6 @@
   var fctx = fallback.getContext('2d'), hint = document.getElementById('hint'), cursor = document.getElementById('cursor');
   var renderer = null, scene, field, width = 1, height = 1, mode = 'touch', light = 0, rain = false, muted = true;
   var leaves = [], drops = [], rings = [], dust = [], fingers = {}, reduced = false;
-  var iceEffects = new window.WaterIce.Effects();
   var weather = new window.WaterWeather.System(), weatherAudio = null, strokeAudio = null;
   var rainOptions = document.getElementById('rain-options'), rainButtons = document.querySelectorAll('[data-rain]');
   var fishSchool = new window.WaterFish.System();
@@ -13,7 +12,7 @@
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
   var audio = null, master = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
-  var hints = { touch: '轻点泛起涟漪 · 滑动拨开水面 · 长按蓄起水波', leaf: '轻点放下一片浮叶 · 滑动水面，推着叶子走', ice: '点水结冰 · 点冰踩碎 · 滑动凝出一条冰径', stone: '轻点选择落点 · 随机石头从高处落下 · 平静可清除' };
+  var hints = { touch: '轻点泛起涟漪 · 滑动拨开水面 · 长按蓄起水波', leaf: '轻点放下一片浮叶 · 滑动水面，推着叶子走', stone: '轻点选择落点 · 随机石头从高处落下 · 平静可清除' };
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function notice(text) {
     var element = document.getElementById('notice'); element.textContent = text; element.classList.add('show');
@@ -31,17 +30,17 @@
       return true;
     } catch (error) { notice('这里暂时无法播放水声，仍可自在玩水'); return false; }
   }
-  function sound(strength, deep, icy) {
+  function sound(strength, deep) {
     if (muted || !audio || audio.state !== 'running' || now - audioLast < .09 || audioNodes.length >= 8) return;
     audioLast = now;
     var length = Math.floor(audio.sampleRate * .22), buffer = audio.createBuffer(1, length, audio.sampleRate), values = buffer.getChannelData(0);
     for (var i = 0; i < length; i++) values[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
     var noise = audio.createBufferSource(), filter = audio.createBiquadFilter(), gain = audio.createGain(), t = audio.currentTime;
-    noise.buffer = buffer; filter.type = icy ? 'highpass' : 'lowpass'; filter.frequency.setValueAtTime(icy ? 1700 : (deep ? 1200 : 2600), t); filter.frequency.exponentialRampToValueAtTime(icy ? 4800 : 180, t + .22);
+    noise.buffer = buffer; filter.type = 'lowpass'; filter.frequency.setValueAtTime(deep ? 1200 : 2600, t); filter.frequency.exponentialRampToValueAtTime(180, t + .22);
     gain.gain.setValueAtTime(Math.min(.25, .05 + strength * .15), t); gain.gain.exponentialRampToValueAtTime(.001, t + .22);
     noise.connect(filter); filter.connect(gain); gain.connect(master); noise.start(t); noise.stop(t + .23);
     var osc = audio.createOscillator(), tone = audio.createGain(); osc.type = 'sine';
-    osc.frequency.setValueAtTime(icy ? 1800 : (deep ? 310 : 650 + Math.random() * 180), t); osc.frequency.exponentialRampToValueAtTime(icy ? 620 : 100, t + .16);
+    osc.frequency.setValueAtTime(deep ? 310 : 650 + Math.random() * 180, t); osc.frequency.exponentialRampToValueAtTime(100, t + .16);
     tone.gain.setValueAtTime(.03 + Math.min(strength, 1) * .08, t); tone.gain.exponentialRampToValueAtTime(.001, t + .18);
     osc.connect(tone); tone.connect(master); osc.start(t); osc.stop(t + .2);
     var node = { noise: noise, filter: filter, gain: gain, osc: osc, tone: tone }; audioNodes.push(node);
@@ -72,8 +71,7 @@
     ctx.setTransform(size.scale, 0, 0, size.scale, 0, 0); fctx.setTransform(size.scale, 0, 0, size.scale, 0, 0);
     if (renderer) renderer.destroy(); renderer = null;
     var aspect = width / height, nx = aspect >= 1 ? 192 : Math.max(64, Math.round(192 * aspect)), ny = aspect >= 1 ? Math.max(64, Math.round(192 / aspect)) : 192;
-    var previousIce = field ? field.ice : null;
-    field = new core.WaveField(nx, ny, aspect); field.ice.restore(previousIce); scene = window.WaterScene.create(aspect, fallbackMode);
+    field = new core.WaveField(nx, ny, aspect); scene = window.WaterScene.create(aspect, fallbackMode);
     fishSchool.attach(aspect);
     if (!fallbackMode) {
       try { renderer = new window.WaterRenderer(canvas, scene, field); renderer.dropSystem = stoneDrops; renderer.fishSystem = fishSchool; renderer.low = quality === 'low'; renderer.resize(width, height); }
@@ -102,8 +100,6 @@
   function stoneEvent(event,stone) {
     stoneBedDirty=true;
     if(event!=='impact')return;
-    if(field.ice.sample(stone.u,stone.v)>.1){iceEffects.breakAt(stone.u,stone.v,Math.max(.05,stone.radius*.7),now);}
-    field.ice.paint(stone.u,stone.v,Math.max(.045,stone.radius*.65),false,false);
     field.stoneImpact(stone.u,stone.v,stone.radius);
     fishSchool.scare(stone.u,stone.v,1.5);
     sound(.9,true);
@@ -118,7 +114,7 @@
     rings.push({ u: u, v: v, born: now, strength: strength });
   }
   function splash(u, v, strength, noSpray, noRing) {
-    if (core.shore(u, v) >= -.015 || field.ice.sample(u, v) > .45) return false;
+    if (core.shore(u, v) >= -.015) return false;
     if (!field.disturb(u, v, strength, .015 + strength * .013)) return false;
     if (!noRing) addRing(u, v, strength);
     var count = reduced || noSpray ? 0 : Math.floor((quality === 'normal' ? 20 : 9) * strength), limit = quality === 'normal' ? 150 : 60;
@@ -135,12 +131,6 @@
       splash(p.u,p.v,.15,true,true); f.rippleDistance %= 10; f.last = now;
     }
   }
-  function iceRadius() { return Math.min(width, height) / height * .16; }
-  function freezeAt(u, v, small) {
-    var radius = iceRadius() * (small ? .62 : 1);
-    field.ice.paint(u, v, radius, true, false); iceEffects.freeze(u, v, radius, now); sound(.18, false, true);
-  }
-  function breakAt(u, v) { iceEffects.breakAt(u, v, iceRadius() * .9, now); sound(.8, true, true); }
   function begin(id, x, y) {
     var p = point(x, y);
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
@@ -155,10 +145,7 @@
     }
     fingers[id] = { u: p.u, v: p.v, startU: p.u, startV: p.v, born: now, last: now, movedAt: now, rippleDistance: 0, travel: 0, charged: false };
     fishSchool.scare(p.u,p.v,.65);
-    if (field.ice.sample(p.u, p.v) > .45 || (mode === 'ice' && field.ice.sample(p.u, p.v, true))) {
-      fingers[id].iceAction = 'break'; breakAt(p.u, p.v);
-    } else if (mode === 'ice') { fingers[id].iceAction = 'freeze'; freezeAt(p.u, p.v, false); }
-    else if (mode === 'leaf') { addLeaf(p.u, p.v); splash(p.u, p.v, .10, true, true); sound(.1, false); }
+    if (mode === 'leaf') { addLeaf(p.u, p.v); splash(p.u, p.v, .10, true, true); sound(.1, false); }
     else { splash(p.u, p.v, .32, true, true); sound(.32, false); }
   }
   function move(id, x, y) {
@@ -167,29 +154,18 @@
     f.travel += distance;
     if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
-      if (f.iceAction || mode === 'ice') {
-        if (f.iceAction === 'freeze' && distance > 1) {
-          var count = Math.min(24, Math.max(1, Math.ceil(distance / 12)));
-          for (var n = 1; n <= count; n++) field.ice.paint(f.u + (p.u - f.u) * n / count, f.v + (p.v - f.v) * n / count, iceRadius() * .62, true, false);
-          if (now - f.last > .12) { iceEffects.freeze(p.u, p.v, iceRadius() * .62, now); sound(.1, false, true); f.last = now; }
-        } else if (f.iceAction === 'break' && distance > 3 && now - f.last > .15 && field.ice.sample(p.u, p.v) > .45) { breakAt(p.u, p.v); f.last = now; }
-      } else if (field.ice.sample(p.u, p.v) > .45) {
-        if (now - f.last > .15) { breakAt(p.u, p.v); f.last = now; }
-
-      } else {
-        fishSchool.scare(p.u,p.v,Math.min(1,.35+distance/65),f.u,f.v);
-        field.stroke(f.u, f.v, p.u, p.v, Math.min(.17, .035 + distance * .002));
-        if (!muted && strokeAudio && distance > .5) strokeAudio.stroke(distance / Math.min(width, height) / Math.max(.016, now - f.movedAt));
-        pushLeaves(p.u, p.v, dx / width, dy / height);
-        swipeRipple(f, p, distance);
-      }
+      fishSchool.scare(p.u,p.v,Math.min(1,.35+distance/65),f.u,f.v);
+      field.stroke(f.u, f.v, p.u, p.v, Math.min(.17, .035 + distance * .002));
+      if (!muted && strokeAudio && distance > .5) strokeAudio.stroke(distance / Math.min(width, height) / Math.max(.016, now - f.movedAt));
+      pushLeaves(p.u, p.v, dx / width, dy / height);
+      swipeRipple(f, p, distance);
     } else { f.rippleDistance = 0; }
     f.u = p.u; f.v = p.v; f.movedAt = now;
   }
   function end(id, cancelled) {
     var f = fingers[id]; if (!f) return;
     if (!cancelled && mode === 'touch' && f.charged) { splash(f.u, f.v, Math.min(1.1, .45 + (now - f.born) * .18), true); sound(1, true); }
-    else if (!cancelled && !f.iceAction && mode !== 'ice' && f.travel < 15 && field.ice.sample(f.u, f.v) < .45) {
+    else if (!cancelled && f.travel < 15) {
       // Wait until release to distinguish a tap from a swipe; swipes have no drawn rings.
       addRing(f.u, f.v, mode === 'leaf' ? .10 : .32);
     }
@@ -233,18 +209,8 @@
   var buttons = document.querySelectorAll('[data-mode]');
   for (var b = 0; b < buttons.length; b++) buttons[b].addEventListener('click', function () {
     fingers = {}; mode = this.getAttribute('data-mode'); hint.textContent = hints[mode];
-    document.getElementById('ice-actions').hidden = mode !== 'ice';
-    canvas.setAttribute('aria-label', mode === 'stone' ? '交互水池，轻点选择落点，石头从高空落下' : mode === 'ice' ? '交互水池，点水结冰，点冰踩碎，滑动生成冰径' : '交互水池，轻点起涟漪，滑动拨水，点冰踩碎');
+    canvas.setAttribute('aria-label', mode === 'stone' ? '交互水池，轻点选择落点，石头从高空落下' : '交互水池，轻点起涟漪，滑动拨水');
     for (var i = 0; i < buttons.length; i++) { var selected = buttons[i] === this; buttons[i].classList.toggle('selected', selected); buttons[i].setAttribute('aria-pressed', String(selected)); }
-  });
-  document.getElementById('freeze-all').addEventListener('click', function () {
-    fingers = {}; iceEffects.clear(); rings.length = 0; drops.length = 0;
-    field.ice.paint(.5, .49, 1, true, true); garden.classList.add('touched');
-    iceEffects.freeze(.5, .49, Math.min(width, height) / height * .42, now);
-    if (!muted) initAudio(); sound(.4, false, true); notice('一池薄冰，试着轻点踩碎');
-  });
-  document.getElementById('thaw-all').addEventListener('click', function () {
-    fingers = {}; iceEffects.clear(); field.ice.paint(.5, .49, 1, false, true); notice('冰霜慢慢融化，水又流动起来');
   });
   document.getElementById('light').addEventListener('click', function () {
     light = (light + 1) % 3; var name = ['晨光','暮色','月夜'][light];
@@ -281,7 +247,7 @@
   });
   document.getElementById('reset').addEventListener('click', function () {
     if (strokeAudio) strokeAudio.stop();
-    field.clear(); field.ice.clear(); iceEffects.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
+    field.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
     setRainLevel(0); weather.clear();
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
     fishSchool.calm();
@@ -308,7 +274,7 @@
         var a = n/180*Math.PI*2, r = 1+.048*Math.sin(a*5+.7)+.024*Math.sin(a*9-.5)+.04*Math.cos(a*3);
         r -= .008 + (1-progress)*.20 + .012*Math.sin(a*11+foamTime*.6);
         var foamU = .5+Math.cos(a)*.465*r, foamV = .49+Math.sin(a)*.35*r;
-        var foamWave = field.sample(foamU,foamV)*(1-field.ice.sample(foamU,foamV));
+        var foamWave = field.sample(foamU,foamV);
         r += core.clamp(foamWave*.14,-.065,.065);
         var x = (.5+Math.cos(a)*.465*r)*width, y = (.49+Math.sin(a)*.35*r)*height;
         if (!n || (Math.sin(a*8-foam+foamTime*.5) < -.1)) fctx.moveTo(x,y); else fctx.lineTo(x,y);
@@ -333,7 +299,7 @@
     // The light Canvas fallback uses the same rain lifetime and radius as the height field.
     if (fallbackMode) for (var rainIndex = 0; rainIndex < field.rainRipples.length; rainIndex++) {
       var rainRipple = field.rainRipples[rainIndex];
-      if (rainRipple.age >= rainRipple.life || field.ice.sample(rainRipple.u, rainRipple.v) > .45) continue;
+      if (rainRipple.age >= rainRipple.life) continue;
       var rainRadius = core.rainRadius(rainRipple.age, rainRipple.scale) * height;
       var rainX = rainRipple.u * width, rainY = rainRipple.v * height;
       var terrain = fallbackTerrain;
@@ -344,7 +310,7 @@
         var rainPX = rainX + Math.cos(rainAngle) * rainRadius, rainPY = rainY + Math.sin(rainAngle) * rainRadius;
         var rainU = rainPX / width, rainV = rainPY / height;
         var rainCell = Math.round(rainV * (field.height - 1)) * field.width + Math.round(rainU * (field.width - 1));
-        var rainWet = field.mask[rainCell] && field.ice.sample(rainU, rainV) < .45;
+        var rainWet = field.mask[rainCell];
         if (rainWet && rainPen) ctx.lineTo(rainPX, rainPY); else ctx.moveTo(rainPX, rainPY);
         rainPen = rainWet;
       }
@@ -366,30 +332,26 @@
           var angle = segment / segments * Math.PI * 2;
           var ripple = rr + Math.sin(angle * 5 + age * 2) * 1.1 + Math.sin(angle * 11 - age) * .5;
           var rx = ring.u * width + Math.cos(angle) * ripple, ry = ring.v * height + Math.sin(angle) * ripple * .84;
-          var lit = Math.sin(angle * 7 + ring.u * 29 + age) + Math.cos(angle * 3 - age * .5) * .5 > -.3 && field.ice.sample(rx / width, ry / height) < .35;
+          var lit = Math.sin(angle * 7 + ring.u * 29 + age) + Math.cos(angle * 3 - age * .5) * .5 > -.3;
           if (lit && pen) ctx.lineTo(rx, ry); else ctx.moveTo(rx, ry);
           pen = lit;
         }
         ctx.stroke();
       }
     }
-    if (fallbackMode) iceEffects.drawFallback(ctx, field.ice, width, height, light);
     for (i = 0; i < leaves.length; i++) {
       var leaf = leaves[i], gx = field.sample(leaf.u + .005, leaf.v) - field.sample(leaf.u - .005, leaf.v), gy = field.sample(leaf.u, leaf.v + .005) - field.sample(leaf.u, leaf.v - .005);
       leaf.vx = core.clamp(leaf.vx * Math.pow(.72, dt) - gx * dt * .045, -.09, .09); leaf.vy = core.clamp(leaf.vy * Math.pow(.72, dt) - gy * dt * .045, -.09, .09);
       var u = leaf.u + (leaf.vx + (reduced ? 0 : .0012 * Math.sin(now * .3 + i))) * dt, v = leaf.v + (leaf.vy + (reduced ? 0 : .0007)) * dt;
-      var trapped = field.ice.sample(leaf.u, leaf.v) > .45;
-      if (trapped) { leaf.vx = 0; leaf.vy = 0; }
-      else if (core.shore(u, v) < -.075 && field.ice.sample(u, v) < .45) { leaf.u = u; leaf.v = v; } else { leaf.vx *= -.45; leaf.vy *= -.45; }
-      if (!trapped) leaf.angle += (leaf.turn + gx * 3) * dt * .15;
+      if (core.shore(u, v) < -.075) { leaf.u = u; leaf.v = v; } else { leaf.vx *= -.45; leaf.vy *= -.45; }
+      leaf.angle += (leaf.turn + gx * 3) * dt * .15;
       var x = leaf.u * width, y = leaf.v * height, s = leaf.size, bob = reduced ? 0 : Math.sin(now * 1.8 + i) * .6;
-      ctx.save(); ctx.globalAlpha = trapped ? .48 : 1; ctx.translate(x, y + (trapped ? 0 : bob)); ctx.rotate(leaf.angle);
+      ctx.save(); ctx.translate(x, y + bob); ctx.rotate(leaf.angle);
       ctx.shadowColor = 'rgba(7,54,40,.5)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 3;
       ctx.beginPath(); ctx.moveTo(-s, 0); ctx.quadraticCurveTo(-s * .6, -s * .7, s, 0); ctx.quadraticCurveTo(-s * .2, s * .65, -s, 0);
       ctx.fillStyle = leaf.hue > .3 ? '#adb871' : '#d0b876'; ctx.fill(); ctx.shadowColor = 'transparent';
       ctx.strokeStyle = '#607650'; ctx.lineWidth = .65; ctx.beginPath(); ctx.moveTo(-s * .9, 0); ctx.lineTo(s * .8, 0); ctx.moveTo(0, 0); ctx.lineTo(-s * .35, -s * .35); ctx.moveTo(s * .25, 0); ctx.lineTo(-s * .05, s * .29); ctx.stroke(); ctx.restore();
     }
-    iceEffects.draw(ctx, field.ice, width, height, now, reduced, light);
     ctx.restore();
     for (i = drops.length - 1; i >= 0; i--) {
       var drop = drops[i], elapsed = now - drop.born;
@@ -408,7 +370,7 @@
     weather.draw(ctx, width, height, reduced);
   }
   function rainImpact(u, v, strength, scale) {
-    if (u < 0 || u > 1 || v < 0 || v > 1 || core.shore(u, v) >= -.015 || field.ice.sample(u, v) > .45) return false;
+    if (u < 0 || u > 1 || v < 0 || v > 1 || core.shore(u, v) >= -.015) return false;
     var cell = Math.round(v * (field.height - 1)) * field.width + Math.round(u * (field.width - 1));
     if (!field.mask[cell]) return false;
     var terrain = renderer ? renderer.terrain : fallbackTerrain;
@@ -431,7 +393,7 @@
       fishSchool.update(dt,field.bathymetry,reduced,field);
       for (var key in fingers) {
         var finger = fingers[key];
-        if (mode === 'touch' && !finger.iceAction && field.ice.sample(finger.u, finger.v) < .45 && finger.travel < 15 && now - finger.born > .55) {
+        if (mode === 'touch' && finger.travel < 15 && now - finger.born > .55) {
           finger.charged = true;
           field.disturb(finger.u, finger.v, -.018, .035);
           if (now - finger.last > .28) { rings.push({u: finger.u, v: finger.v, born: now, strength: .16}); if (rings.length > 48) rings.shift(); finger.last = now; }
@@ -439,10 +401,8 @@
       }
       weather.update(dt, quality !== 'normal', reduced, rainImpact, thunder);
       var steps = 0;
-      field.ice.update(dt);
       field.updateRain(dt);
       if (strokeAudio) strokeAudio.update();
-      iceEffects.update(field.ice, now, reduced, quality !== 'normal', function (u, v) { splash(u, v, .55); });
       while (accumulator >= 1 / 60 && steps < 5) { field.step(); accumulator -= 1 / 60; steps++; }
       if (steps === 5) accumulator = 0;
       if (renderer) renderer.draw(reduced ? 0 : now, light); else drawFallback();
@@ -474,8 +434,7 @@
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return {
     fishTime: fishSchool.clock, fish: fishSchool.items.map(function(f){return {u:f.u,v:f.v,y:f.y,angle:f.angle,fear:f.fear,speed:f.speed,swim:f.swim,flowX:f.flowX,flowZ:f.flowZ};}), fishTriangles: fishSchool.vertices.length/33,
-    ready: !!field, iceCoverage: field ? field.ice.coverage() : 0, iceCenter: field ? field.ice.sample(.48, .48) : 0,
-    iceShards: iceEffects.shards.length, iceFractures: iceEffects.fractures.length,
+    ready: !!field,
     stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}),
     stoneImpacts: stoneDrops.impacts, stoneDepth: field && stoneDrops.items.length ? field.bathymetry.heightAt(stoneDrops.items[0].u,stoneDrops.items[0].v) : null,
     mode: mode, light: light, rain: rain, rainLevel: weather.level, rainStreaks: weather.count, rainImpacts: weather.hits,

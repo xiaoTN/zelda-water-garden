@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
   var vertex = [
-    'attribute vec3 aPosition; attribute vec2 aUV; attribute vec2 aDynamics;',
+    'attribute vec3 aPosition; attribute vec2 aUV; attribute float aDynamics;',
     'attribute vec3 aNormal; attribute vec3 aColor;',
     'uniform mat4 uViewProjection; uniform mediump float uTime; uniform mediump float uPass;',
     'varying mediump vec2 vUV; varying mediump vec3 vNormal;',
@@ -11,23 +11,23 @@
     ' vUV=aUV;vNormal=vec3(0.,1.,0.);vColor=aColor;vHeight=aPosition.y;',
     ' if(uPass<.5){gl_Position=vec4(aPosition.xy,.7,1.);return;}',
     ' if(uPass>1.5){vNormal=aNormal;gl_Position=uViewProjection*vec4(aPosition,1.);return;}',
-    ' vec3 p=aPosition;float wet=smoothstep(.005,.13,-shore(aUV))*(1.-aDynamics.y);',
+    ' vec3 p=aPosition;float wet=smoothstep(.005,.13,-shore(aUV));',
     ' float a=p.x*5.5+p.z*7.-uTime*1.2;',
     ' float b=p.x*-8.+p.z*3.5-uTime*.9;',
     ' float c=p.x*11.+p.z*9.+uTime*1.6;',
     ' float elevation=(sin(a)*.014+sin(b)*.009+sin(c)*.004)*wet;',
-    ' p.y=elevation+aDynamics.x*.065*wet;',
+    ' p.y=elevation+aDynamics*.065*wet;',
     ' vHeight=p.y;',
     ' vNormal=normalize(vec3(-(cos(a)*.077-cos(b)*.072+cos(c)*.044)*wet,1.,-(cos(a)*.098+cos(b)*.0315+cos(c)*.036)*wet));',
     ' gl_Position=uViewProjection*vec4(p,1.);',
     '}'
   ].join('\n');
-  // Toon color bands, shoreline foam and original Cryo-inspired ice.
+  // Toon color bands, shoreline foam.
   var fragment = [
     'precision mediump float;',
     'varying mediump vec2 vUV; varying mediump vec3 vNormal;',
     'varying mediump vec3 vColor; varying mediump float vHeight;',
-    'uniform sampler2D uScene; uniform sampler2D uWave; uniform sampler2D uNoise; uniform sampler2D uIce; uniform sampler2D uNormal; uniform sampler2D uFoam; uniform sampler2D uBed;',
+    'uniform sampler2D uScene; uniform sampler2D uWave; uniform sampler2D uNoise; uniform sampler2D uNormal; uniform sampler2D uFoam; uniform sampler2D uBed;',
     'uniform vec2 uBedTexel;',
     'uniform vec2 uTexel; uniform float uShorePixel; uniform mediump float uTime; uniform float uAspect; uniform float uLight; uniform float uDetail; uniform mediump float uPass;',
     'float shore(vec2 uv){vec2 p=(uv-vec2(.5,.49))/vec2(.465,.35);float a=atan(p.y,p.x);return length(p)-(1.+.048*sin(a*5.+.7)+.024*sin(a*9.-.5)+.04*cos(a*3.));}',
@@ -41,7 +41,6 @@
     ' vec2 g0=w0+w1,g1=w2+w3,a=(i-.5+w1/g0)*uTexel,b=(i+1.5+w3/g1)*uTexel;',
     ' return mix(mix(waveAt(a),waveAt(vec2(b.x,a.y)),g1.x),mix(waveAt(vec2(a.x,b.y)),waveAt(b),g1.x),g1.y);',
     '}',
-    'float iceAt(vec2 uv){vec2 t=uTexel*.65;return texture2D(uWave,uv).b*.5+(texture2D(uWave,uv+vec2(t.x,0.)).b+texture2D(uWave,uv-vec2(t.x,0.)).b+texture2D(uWave,uv+vec2(0.,t.y)).b+texture2D(uWave,uv-vec2(0.,t.y)).b)*.125;}',
     'void main(){',
     ' if(uPass>4.5){',
     '  float sun=abs(dot(normalize(vNormal),normalize(vec3(-.45,1.,-.35))));',
@@ -91,9 +90,8 @@
     '  vec2 boundaryGradient=vec2((texture2D(uBed,uv+vec2(uBedTexel.x,0.)).b-texture2D(uBed,uv-vec2(uBedTexel.x,0.)).b)/(uBedTexel.x*uAspect),(texture2D(uBed,uv+vec2(0.,uBedTexel.y)).b-texture2D(uBed,uv-vec2(0.,uBedTexel.y)).b)/uBedTexel.y);',
     '  vec2 boundaryNormal=normalize(-boundaryGradient+radial*.0001);',
     '  float boundaryDistance=bedSample.b*.25/(.7*min(uAspect,1.));',
-    '  float ice=iceAt(uv);float liquid=1.-smoothstep(.15,.75,ice);',
-    '  float waterHeight=heightAt(uv)*liquid;',
-    '  vec2 flow=vec2(dx/uAspect,dy)*liquid;flow=flow/(1.+length(flow)*3.);',
+    '  float waterHeight=heightAt(uv);',
+    '  vec2 flow=vec2(dx/uAspect,dy);flow=flow/(1.+length(flow)*3.);',
     '  vec2 foamPush=flow*.85+boundaryNormal*waterHeight*.15;',
     '  vec2 foamUV=p*2.8+vec2(uTime*.025,-uTime*.018)+detail*.06-foamPush;',
     '  vec4 foamMap=texture2D(uFoam,foamUV);',
@@ -112,20 +110,7 @@
     '  float lace=foamCells*coastal*(.20+.55*waveFront)*smoothstep(.15,.55,foamMap.g);',
     '  float wetRim=(1.-smoothstep(.005,.033,distanceToShore))*(.18+.55*breakup);',
     '  col=mix(col,vec3(.91,1.,.96),clamp(advancing*.82+lace*.6+wetRim,0.,.90));',
-    '  if(ice>.01){',
-    '   vec3 crystal=texture2D(uIce,uv).rgb;',
-    '   vec3 frozen=mix(vec3(.27,.60,.78),vec3(.75,.90,.96),crystal.b);',
-    '   float frost=texture2D(uNoise,p*vec2(1.4,1.8)).b; frozen=mix(frozen,vec3(.85,.96,1.),smoothstep(.40,.66,frost)*.34);',
-    '   frozen+=vec3(.035,.035,.055)*sin((uv.x*uAspect+uv.y*.7)*9.);',
-    '   frozen=mix(frozen,vec3(.91,.99,1.),crystal.r*.72);',
-    '   frozen+=vec3(.12,.16,.18)*crystal.g;',
-    '   float rim=1.-smoothstep(.45,.98,ice);',
-    '   frozen=mix(frozen,vec3(.90,1.,1.),rim*.62);',
-    '   frozen+=vec3(.08,.10,.10)*(1.-ice);',
-    '   col=mix(col,frozen,smoothstep(.03,.78,ice));',
-    '  }',
     '  alpha=mix(.62,.94,smoothstep(.008,.18,depth));',
-    '  alpha=mix(alpha,1.,smoothstep(.03,.78,ice));',
     '  alpha*=1.-smoothstep(edgeStart,edgeEnd,d);',
     ' }',
     ' if(uLight>.5&&uLight<1.5){col=col*vec3(1.1,.86,.75)+vec3(.035,.009,0.);}',
@@ -164,7 +149,7 @@
       this.fishBuffer=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);
       this.dropped=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropShadows=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropRevision=-1;this.dropCount=0;this.dropShadowCount=0;
       this.buffers=buffers; this.uniforms={};
-      var names=['uScene','uWave','uNoise','uIce','uNormal','uFoam','uBed','uBedTexel','uTexel','uShorePixel','uTime','uAspect','uLight','uDetail','uPass','uViewProjection'];
+      var names=['uScene','uWave','uNoise','uNormal','uFoam','uBed','uBedTexel','uTexel','uShorePixel','uTime','uAspect','uLight','uDetail','uPass','uViewProjection'];
       for(var i=0;i<names.length;i++)this.uniforms[names[i]]=gl.getUniformLocation(program,names[i]);
       function texture(unit,source,repeat) {
         var value=gl.createTexture();textures.push(value);gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,value);
@@ -176,18 +161,17 @@
       this.sceneTexture=texture(0,scene,false);
       this.waveTexture=texture(1,null,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,field.width,field.height,0,gl.RGBA,gl.UNSIGNED_BYTE,field.pack());
       this.noiseTexture=texture(2,root.WaterScene.createNoise(),true);
-      this.iceTexture=texture(3,root.WaterIce.createTexture(field.aspect),false);
       function map(unit,file,placeholder) {
         var t=texture(unit,null,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(placeholder));
-        var img=new Image(),kind=unit===4?'normal':'foam';
+        var img=new Image(),kind=unit===3?'normal':'foam';
         function upload(source){if(self.disposed||gl.isContextLost())return;gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);self.mapsLoaded++;}
         img.onload=function(){try{upload(img);}catch(error){upload(root.WaterMaps.canvas(kind));}};
         img.onerror=function(){if(!self.disposed)upload(root.WaterMaps.canvas(kind));};img.src='./'+file;
       }
-      map(4,'water-normal.png',[128,128,255,255]); map(5,'water-foam.png',[0,128,0,255]);
-      this.bedTexture=texture(6,null,false);
+      map(3,'water-normal.png',[128,128,255,255]); map(4,'water-foam.png',[0,128,0,255]);
+      this.bedTexture=texture(5,null,false);
       this.textures=textures;
-      ['uScene','uWave','uNoise','uIce','uNormal','uFoam','uBed'].forEach(function(name,index){gl.uniform1i(self.uniforms[name],index);});
+      ['uScene','uWave','uNoise','uNormal','uFoam','uBed'].forEach(function(name,index){gl.uniform1i(self.uniforms[name],index);});
       gl.uniform2f(this.uniforms.uTexel,1/field.width,1/field.height);
       gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
       for(i=0;i<shaders.length;i++)gl.deleteShader(shaders[i]);
@@ -221,7 +205,7 @@
       this.bed=root.WaterTerrain.bathymetry({ground:this.terrain.ground,stones:all},this.field.aspect,this.low);
     }
     this.field.setBathymetry(this.bed);
-    gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,this.bedTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,this.bed.width,this.bed.height,0,gl.RGBA,gl.UNSIGNED_BYTE,this.bed.pixels);
+    gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,this.bedTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,this.bed.width,this.bed.height,0,gl.RGBA,gl.UNSIGNED_BYTE,this.bed.pixels);
     gl.uniform2f(this.uniforms.uBedTexel,1/this.bed.width,1/this.bed.height);
   };
   Renderer.prototype.bindVertices=function(buffer){
@@ -234,7 +218,7 @@
     gl.enableVertexAttribArray(a.uv);gl.vertexAttribPointer(a.uv,2,gl.FLOAT,false,44,12);
     gl.enableVertexAttribArray(a.normal);gl.vertexAttribPointer(a.normal,3,gl.FLOAT,false,44,20);
     gl.enableVertexAttribArray(a.color);gl.vertexAttribPointer(a.color,3,gl.FLOAT,false,44,32);
-    gl.disableVertexAttribArray(a.dynamics);gl.vertexAttrib2f(a.dynamics,0,0);
+    gl.disableVertexAttribArray(a.dynamics);gl.vertexAttrib1f(a.dynamics,0);
     gl.uniform1f(this.uniforms.uPass,pass);gl.drawArrays(gl.TRIANGLES,0,count);
   };
   Renderer.prototype.draw=function(time,light){
@@ -246,7 +230,7 @@
     }
     gl.uniform1f(this.uniforms.uTime,time);gl.uniform1f(this.uniforms.uLight,light);gl.uniform1f(this.uniforms.uDetail,this.low?0:1);
     gl.disable(gl.BLEND);gl.depthMask(true);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-    gl.uniform1f(this.uniforms.uPass,0);this.bindVertices(this.quad);gl.disableVertexAttribArray(this.attributes.dynamics);gl.vertexAttrib2f(this.attributes.dynamics,0,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    gl.uniform1f(this.uniforms.uPass,0);this.bindVertices(this.quad);gl.disableVertexAttribArray(this.attributes.dynamics);gl.vertexAttrib1f(this.attributes.dynamics,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     this.drawSolid(this.ground,this.terrain.ground.length/11,2);
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
     this.drawSolid(this.shadows,this.terrain.shadows.length/11,4);gl.disable(gl.BLEND);gl.depthMask(true);
@@ -259,12 +243,12 @@
       this.drawSolid(this.fishBuffer,fish.length/11,5);
     }
     if(this.fishSystem||this.fishDepthActive){
-      gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,this.bedTexture);
+      gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,this.bedTexture);
       gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,this.bed.width,this.bed.height,gl.RGBA,gl.UNSIGNED_BYTE,this.fishSystem?this.fishDepth.pixels:this.bed.pixels);
     }
     this.fishDepthActive=!!this.fishSystem;
     root.WaterCore.updateMesh(this.mesh,this.field);
-    this.bindVertices(this.positions);gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamics);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.mesh.dynamics);gl.enableVertexAttribArray(this.attributes.dynamics);gl.vertexAttribPointer(this.attributes.dynamics,2,gl.FLOAT,false,8,0);
+    this.bindVertices(this.positions);gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamics);gl.bufferSubData(gl.ARRAY_BUFFER,0,this.mesh.dynamics);gl.enableVertexAttribArray(this.attributes.dynamics);gl.vertexAttribPointer(this.attributes.dynamics,1,gl.FLOAT,false,4,0);
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.indices);gl.uniform1f(this.uniforms.uPass,1);gl.drawElements(gl.TRIANGLES,this.mesh.indices.length,gl.UNSIGNED_SHORT,0);
     if(this.dropShadowCount)this.drawSolid(this.dropShadows,this.dropShadowCount,4);
