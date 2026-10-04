@@ -1,0 +1,14 @@
+[
+  {
+    "key": "water",
+    "original": "D:/BaiduNetdiskDownload/飞书20261005-005412.mp4",
+    "preserved": "assets-source\\video\\water-interactions-recording.mp4",
+    "sha256": "76b92cfbe25d9cae5802a32c11c1493a4ff5671c023457fd8b534a5dcbf34d2f"
+  },
+  {
+    "key": "nature",
+    "original": "D:/BaiduNetdiskDownload/飞书20261005-005420.mp4",
+    "preserved": "assets-source\\video\\snow-cloud-recording.mp4",
+    "sha256": "0e121032949261aa3527a04228c6b559d99137653bcb6711c4670d5c5ade311c"
+  }
+]

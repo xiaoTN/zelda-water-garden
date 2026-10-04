@@ -1,0 +1,12 @@
+{
+  "name": "moment-water-promo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "node export.mjs",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {"@remotion/cli":"4.0.484","react":"19.2.7","react-dom":"19.2.7","remotion":"4.0.484"},
+  "devDependencies": {"@types/react":"19.2.17","typescript":"6.0.3"}
+}

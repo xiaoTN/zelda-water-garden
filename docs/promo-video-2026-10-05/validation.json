@@ -1,0 +1,103 @@
+{
+  "duration_seconds": 45.0,
+  "dimensions": [
+    1080,
+    1440
+  ],
+  "fps": 30,
+  "bytes": 16564958,
+  "video_codec": "h264",
+  "audio_codec": "aac",
+  "sample_rate": "48000",
+  "checked_frames": [
+    10,
+    69,
+    114,
+    130,
+    189,
+    234,
+    250,
+    369,
+    474,
+    490,
+    579,
+    654,
+    670,
+    744,
+    804,
+    820,
+    939,
+    1044,
+    1060,
+    1089,
+    1104,
+    1120,
+    1149,
+    1164,
+    1180,
+    1260,
+    1326
+  ],
+  "motion": {
+    "calm": {
+      "mean_half_second_pixel_change": 2.558,
+      "min": 1.607
+    },
+    "touch": {
+      "mean_half_second_pixel_change": 2.914,
+      "min": 2.141
+    },
+    "swipe": {
+      "mean_half_second_pixel_change": 7.444,
+      "min": 2.772
+    },
+    "stone": {
+      "mean_half_second_pixel_change": 10.371,
+      "min": 5.67
+    },
+    "leaf": {
+      "mean_half_second_pixel_change": 2.568,
+      "min": 2.124
+    },
+    "rain": {
+      "mean_half_second_pixel_change": 7.856,
+      "min": 3.095
+    },
+    "snow": {
+      "mean_half_second_pixel_change": 1.741,
+      "min": 1.741
+    },
+    "cloud": {
+      "mean_half_second_pixel_change": 7.408,
+      "min": 7.408
+    },
+    "end": {
+      "mean_half_second_pixel_change": 8.58,
+      "min": 3.754
+    }
+  },
+  "peak_dbfs": -4.32,
+  "rms_dbfs": -24.51,
+  "audio_sync_probes": [
+    {
+      "at_seconds": 10,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.9999
+    },
+    {
+      "at_seconds": 19,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.99986
+    },
+    {
+      "at_seconds": 30,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.9999
+    }
+  ],
+  "bottom_safe_area": "y >= 1090 remains flat; no essential content below y=1081",
+  "all_checks_passed": true
+}

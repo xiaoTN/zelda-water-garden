@@ -1,0 +1,11 @@
+[
+  {"id":"calm","label":"宁静水面","from":0,"duration":138,"source":"water","start":0,"text":"给自己，\n留一点安静。","kicker":"片刻 · 水光"},
+  {"id":"touch","label":"轻触涟漪","from":120,"duration":138,"source":"water","start":3,"text":"轻轻一点，\n水便有了回响。","kicker":"指尖与水"},
+  {"id":"swipe","label":"指尖拨水","from":240,"duration":258,"source":"water","start":7.2,"text":"指尖走过，\n温柔还在荡漾。","kicker":"指尖与水"},
+  {"id":"stone","label":"落石入水","from":480,"duration":198,"source":"water","start":18,"text":"落下的，\n是一圈圈涟漪。","kicker":"一石一漪"},
+  {"id":"leaf","label":"浮叶漂流","from":660,"duration":168,"source":"water","start":25,"text":"看一片叶，\n慢慢漂远。","kicker":"让时间慢下来"},
+  {"id":"rain","label":"听雨落下","from":810,"duration":258,"source":"water","start":43.2,"text":"听雨落下，\n让思绪慢一点。","kicker":"听一场雨"},
+  {"id":"snow","label":"雪地掠影","from":1050,"duration":78,"source":"nature","start":17.5,"text":"也有雪落，","kicker":"片刻 · 雪落"},
+  {"id":"cloud","label":"云海掠影","from":1110,"duration":78,"source":"nature","start":29,"text":"有云经过。","kicker":"片刻 · 云间"},
+  {"id":"end","label":"月夜余韵","from":1170,"duration":180,"source":"water","start":64.5,"text":"把片刻，\n留给自己。","kicker":"片刻 · 水光"}
+]
