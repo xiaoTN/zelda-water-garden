@@ -90,6 +90,33 @@ test('tap decoding failure falls back without an unhandled rejection',async()=>{
   await Promise.resolve();assert.equal(tap.play(.6),false);assert.equal(tap.pending.length,0);
 });
 
+test('scene gains crossfade continuously, keep three buses and support rapid reversals on older AudioParams',()=>{
+  const {SceneMixer}=require('../src/water-audio.js');
+  for(const hold of [true,false]){
+    const events=[],buses=[];
+    const context={currentTime:1,createGain(){const param={value:0,cancelScheduledValues(t){events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;events.push(['value',v,t]);},setTargetAtTime(v,t,tau){events.push(['target',v,t,tau]);}};if(hold)param.cancelAndHoldAtTime=t=>events.push(['hold',t]);const bus={gain:param,connect(){}};buses.push(bus);return bus;}};
+    const mixer=new SceneMixer(context,{});assert.equal(buses.length,3);assert.equal(mixer.output('water').gain.value,1);assert.equal(mixer.output('snow').gain.value,0);
+    for(const kind of ['snow','cloud','water','cloud']){context.currentTime+=.08;mixer.select(kind);assert.equal(mixer.kind,kind);}
+    assert.equal(buses.length,3);assert.equal(events.filter(e=>e[0]==='target').length,12);assert(events.filter(e=>e[0]==='target').every(e=>e[3]>0));
+    assert(events.some(e=>e[0]===(hold?'hold':'cancel')));const count=events.length;mixer.select('cloud');assert.equal(events.length,count);
+  }
+});
+
+test('scene changes fade recorded short effects without changing their normal attack and cancel pending playback',()=>{
+  const {OneShot}=require('../src/water-audio.js'),asset=require('../src/stone-impact-asset.js');
+  for(const hold of [true,false]){
+    const nodes=[],events=[];let decode;
+    const context={state:'running',currentTime:2,decodeAudioData(bytes,done){decode=done;},createBufferSource(){const source={connect(){},disconnect(){this.disconnected=true;},start(){},stop(time){this.end=time;}};nodes.push(source);return source;},createGain(){const gain={gain:{value:0,cancelScheduledValues(t){events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;},setTargetAtTime(v,t,tau){events.push(['fade',v,t,tau]);}},connect(){},disconnect(){this.disconnected=true;}};if(hold)gain.gain.cancelAndHoldAtTime=t=>events.push(['hold',t]);nodes.push(gain);return gain;}};
+    const audio=new OneShot(context,{},asset);audio.play(.8);audio.fadeOut();decode({duration:3.13});assert.equal(audio.played,0);
+    audio.play(.8);const voice=audio.voices[0];assert.equal(events.length,0,'ordinary one-shots retain direct attack');
+    audio.fadeOut();assert(voice.fading);assert.equal(voice.source.end,context.currentTime+.65);assert.equal(voice.source.disconnected,undefined);
+    assert(events.some(e=>e[0]==='fade'&&e[1]===0&&e[3]>.1));assert(events.some(e=>e[0]===(hold?'hold':'cancel')));
+    const count=events.length;audio.fadeOut();assert.equal(events.length,count,'rapid scene changes keep the existing fade deadline');
+    audio.play(.8);assert.equal(audio.voices.length,2);assert(!audio.voices[1].fading,'new-scene playback is independent of old tails');
+    voice.source.onended();assert.equal(audio.voices.length,1);audio.stop();assert.equal(audio.voices.length,0);assert(nodes.every(n=>n.disconnected));
+  }
+});
+
 function strokeFixture(kind='Stroke'){
   const Controller=require('../src/water-audio.js')[kind],sample=kind==='Ripple'?'water-ripples':'water-swipe',asset=require('../src/'+sample+'-asset.js');
   const fs=require('fs');assert(Buffer.from(asset.base64,'base64').equals(fs.readFileSync(require('path').join(__dirname,'../assets-source/audio/'+sample+'.mp3'))));

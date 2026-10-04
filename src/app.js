@@ -11,7 +11,7 @@
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
-  var audio = null, master = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
+  var audio = null, master = null, sceneAudio = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
   var hints = { touch: '轻点泛起涟漪 · 滑动拨开水面 · 长按蓄起水波', leaf: '轻点放下一片浮叶 · 滑动水面，推着叶子走', stone: '轻点选择落点 · 随机石头从高处落下 · 平静可清除' };
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
   var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
@@ -36,11 +36,13 @@
     if (!Constructor) { notice('这里暂时无法播放声音，仍可继续体验'); return false; }
     try {
       audio = new Constructor(); master = audio.createGain(); master.gain.value = .38; master.connect(audio.destination);
-      weatherAudio = new window.WaterWeather.Audio(audio, master);
-      strokeAudio = new window.WaterSound.Stroke(audio, master, window.WaterSwipeAsset);
-      tapAudio = new window.WaterSound.Tap(audio, master, window.WaterTapAsset);
-      stoneAudio = new window.WaterSound.OneShot(audio, master, window.StoneImpactAsset);
-      rippleAudio = new window.WaterSound.Ripple(audio, master, window.WaterRipplesAsset);
+      sceneAudio = new window.WaterSound.SceneMixer(audio, master); sceneAudio.select(sceneKind);
+      var waterOutput = sceneAudio.output('water');
+      weatherAudio = new window.WaterWeather.Audio(audio, waterOutput);
+      strokeAudio = new window.WaterSound.Stroke(audio, waterOutput, window.WaterSwipeAsset);
+      tapAudio = new window.WaterSound.Tap(audio, waterOutput, window.WaterTapAsset);
+      stoneAudio = new window.WaterSound.OneShot(audio, waterOutput, window.StoneImpactAsset);
+      rippleAudio = new window.WaterSound.Ripple(audio, waterOutput, window.WaterRipplesAsset);
       weatherAudio.setLevel(sceneKind === 'water' ? weather.level : 0);
       if (audio.state === 'suspended') audio.resume().catch(function () {});
       return true;
@@ -60,23 +62,37 @@
     noise.buffer = buffer; filter.type = 'lowpass'; filter.frequency.setValueAtTime(deep ? 1200 : 2600, t); filter.frequency.exponentialRampToValueAtTime(180, t + .22);
     gain.gain.setValueAtTime(Math.min(.25, .05 + strength * .15), t); gain.gain.exponentialRampToValueAtTime(.001, t + .22);
     if (sceneKind !== 'water') { filter.type = 'lowpass'; filter.frequency.setValueAtTime(sceneKind === 'snow' ? 2400 : 650, t); filter.frequency.exponentialRampToValueAtTime(sceneKind === 'snow' ? 700 : 180, t + .22); }
-    noise.connect(filter); filter.connect(gain); gain.connect(master); noise.start(t); noise.stop(t + .23);
+    var output=sceneAudio.output(sceneKind);
+    noise.connect(filter); filter.connect(gain); gain.connect(output); noise.start(t); noise.stop(t + .23);
     var osc = audio.createOscillator(), tone = audio.createGain(); osc.type = 'sine';
     osc.frequency.setValueAtTime(deep ? 310 : 650 + Math.random() * 180, t); osc.frequency.exponentialRampToValueAtTime(100, t + .16);
     tone.gain.setValueAtTime(.03 + Math.min(strength, 1) * .08, t); tone.gain.exponentialRampToValueAtTime(.001, t + .18);
     if (sceneKind !== 'water') tone.gain.setValueAtTime(.001, t);
-    osc.connect(tone); tone.connect(master); osc.start(t); osc.stop(t + .2);
-    var node = { noise: noise, filter: filter, gain: gain, osc: osc, tone: tone }; audioNodes.push(node);
-    noise.onended = function () { noise.disconnect(); filter.disconnect(); gain.disconnect(); osc.disconnect(); tone.disconnect(); var index = audioNodes.indexOf(node); if (index !== -1) audioNodes.splice(index, 1); };
+    osc.connect(tone); tone.connect(output); osc.start(t); osc.stop(t + .2);
+    var node = { noise: noise, filter: filter, gain: gain, osc: osc, tone: tone, end: t+.23, scene: sceneKind, fading: false }; audioNodes.push(node);
+    noise.onended = function () { releaseSound(node); };
+  }
+  function releaseSound(node) {
+    node.noise.onended=null;node.noise.disconnect();node.filter.disconnect();node.gain.disconnect();node.osc.disconnect();node.tone.disconnect();
+    var index=audioNodes.indexOf(node);if(index!==-1)audioNodes.splice(index,1);
   }
   function stopAudio(immediate) {
     weather.cancelThunder();
     if (weatherAudio) weatherAudio.stop(immediate);
     if (strokeAudio) strokeAudio.stop(immediate);
-    if (tapAudio) tapAudio.stop();
-    if (stoneAudio) stoneAudio.stop();
+    if (tapAudio) { if(immediate)tapAudio.stop();else tapAudio.fadeOut(); }
+    if (stoneAudio) { if(immediate)stoneAudio.stop();else stoneAudio.fadeOut(); }
     if (rippleAudio) rippleAudio.stop(immediate);
-    for (var i = 0; i < audioNodes.length; i++) { try { audioNodes[i].noise.stop(); audioNodes[i].osc.stop(); } catch (error) {} }
+    for (var i = audioNodes.length-1; i >= 0; i--) {
+      var node=audioNodes[i];
+      try {
+        if(immediate){node.noise.stop();node.osc.stop();releaseSound(node);}
+        else if(!node.fading){
+          node.fading=true;window.WaterSound.fadeParameter(audio,node.gain.gain,.035);window.WaterSound.fadeParameter(audio,node.tone.gain,.035);
+          var end=Math.min(node.end,audio.currentTime+.18);node.noise.stop(end);node.osc.stop(Math.min(node.end-.03,end));
+        }
+      } catch (error) {}
+    }
     if (immediate && audio && audio.state === 'running') audio.suspend().catch(function () {});
   }
   function fallbackOn(message) {
@@ -283,6 +299,7 @@
   function setScene(kind) {
     if (kind === sceneKind) return;
     fingers = {}; cursor.style.display = 'none'; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; stopAudio(); sceneKind = kind;
+    if(sceneAudio)sceneAudio.select(kind);
     garden.setAttribute('data-scene', kind); garden.classList.remove('touched');
     var titles = { water: '水之庭', snow: '雪之野', cloud: '云之境' };
     document.getElementById('scene-title').textContent = titles[kind]; document.title = '海拉鲁 · ' + titles[kind];
@@ -581,9 +598,13 @@
     rainAudio: !!(weatherAudio && weatherAudio.rain && weatherAudio.level), rainAudioFading: !!(weatherAudio && weatherAudio.rainEnd), weatherAudioNodes: weatherAudio ? weatherAudio.nodes.length : 0,
     strokeAudio: !!(strokeAudio && strokeAudio.node), strokeSpeed: strokeAudio ? strokeAudio.speed : 0,
     audioState: audio ? audio.state : 'uninitialized', strokeAudioFading: !!(strokeAudio && strokeAudio.fadeEnd),
+    sceneSoundNodes: audioNodes.length, sceneSoundFading: audioNodes.filter(function(node){return node.fading;}).length,
+    audioScene: sceneAudio ? sceneAudio.kind : 'uninitialized',
     strokeReady: !!(strokeAudio && strokeAudio.buffer), strokeDuration: strokeAudio && strokeAudio.buffer ? strokeAudio.buffer.duration : 0,
     tapReady: !!(tapAudio && tapAudio.buffer), tapVoices: tapAudio ? tapAudio.voices.length : 0, tapPlayed: tapAudio ? tapAudio.played : 0,
     stoneReady: !!(stoneAudio && stoneAudio.buffer), stoneVoices: stoneAudio ? stoneAudio.voices.length : 0, stonePlayed: stoneAudio ? stoneAudio.played : 0,
+    tapFading: tapAudio ? tapAudio.voices.filter(function(voice){return voice.fading;}).length : 0,
+    stoneFading: stoneAudio ? stoneAudio.voices.filter(function(voice){return voice.fading;}).length : 0,
     rippleReady: !!(rippleAudio && rippleAudio.buffer), rippleAudio: !!(rippleAudio && rippleAudio.node), rippleLevel: rippleAudio ? rippleAudio.level : 0,
     rippleFading: !!(rippleAudio && rippleAudio.fadeEnd), rippleDuration: rippleAudio && rippleAudio.buffer ? rippleAudio.buffer.duration : 0,
     audioEnabled: true, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length,

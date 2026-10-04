@@ -74,6 +74,37 @@ async function run() {
         }
         assert(fades.resumed.sameVoice&&fades.resumed.resumed>.85,'a resumed swipe reverses its fade without restarting the source');
         reports.push({scenario:'real WebAudio PCM validates long-sound fades, continuous rain level changes and swipe fade reversal',...fades,result:'passed'});
+        const sceneFades=await page.evaluate(async()=>{
+          const c=new OfflineAudioContext(3,8000*4,8000);let time=0;
+          const clock={get currentTime(){return time;},createGain:c.createGain.bind(c)};
+          const mixer=new WaterSound.SceneMixer(clock,c.destination);
+          ['water','snow','cloud'].forEach((kind,channel)=>{
+            const buffer=c.createBuffer(3,8000*4,8000);buffer.getChannelData(channel).fill(1);
+            const source=c.createBufferSource();source.buffer=buffer;source.connect(mixer.output(kind));source.start();
+          });
+          const changes=[[1,'snow'],[1.2,'cloud'],[1.35,'water'],[2,'snow']];
+          changes.forEach(([at,kind])=>{time=at;mixer.select(kind);});
+          const data=await c.startRendering(),sample=t=>Array.from({length:3},(_,i)=>data.getChannelData(i)[Math.round(t*8000)]);
+          const jumps=changes.map(([t])=>Math.max(...sample(t).map((value,i)=>Math.abs(value-sample(t-1/8000)[i]))));
+          let sumError=0;for(let i=0;i<data.length;i+=8)sumError=Math.max(sumError,Math.abs([0,1,2].reduce((sum,ch)=>sum+data.getChannelData(ch)[i],0)-1));
+          return {before:sample(.8),early:sample(1.01),tail:sample(1.1),end:sample(3),jumps,sumError};
+        });
+        assert(sceneFades.before[0]>.99&&sceneFades.before[1]===0);
+        assert(sceneFades.early[1]>0&&sceneFades.early[1]<.1&&sceneFades.tail[0]>.4,'incoming and outgoing scenes overlap gently');
+        assert(sceneFades.end[0]<.005&&sceneFades.end[1]>.995);
+        assert(sceneFades.jumps.every(j=>j<.001)&&sceneFades.sumError<.0001,'rapid scene reversals preserve PCM continuity and stable combined gain within WebAudio float precision');
+        reports.push({scenario:'real three-channel PCM validates scene fade-in/out and rapid reversals',...sceneFades,result:'passed'});
+        const shortFade=await page.evaluate(async()=>{
+          const c=new OfflineAudioContext(1,8000*3,8000);let time=0;
+          const buffer=c.createBuffer(1,8000*3,8000);buffer.getChannelData(0).fill(1);
+          const clock={state:'running',get currentTime(){return time;},decodeAudioData(bytes,done){done(buffer);},createGain:c.createGain.bind(c),createBufferSource:c.createBufferSource.bind(c)};
+          const sound=new WaterSound.OneShot(clock,c.destination,StoneImpactAsset);sound.play(1);time=1;sound.fadeOut();
+          const data=(await c.startRendering()).getChannelData(0),at=t=>data[Math.round(t*8000)];
+          return {attack:at(0),before:at(.9),jump:Math.abs(at(1)-at(1-1/8000)),tail:at(1.15),end:at(1.64),stopped:at(1.7)};
+        });
+        assert(shortFade.attack===.5&&shortFade.before===.5,'ordinary short effects retain their direct attack');
+        assert(shortFade.jump<.001&&shortFade.tail>.1&&shortFade.end<.003&&shortFade.stopped===0);
+        reports.push({scenario:'real one-shot PCM preserves the ordinary attack and fades the interrupted scene tail',...shortFade,result:'passed'});
         await page.touchscreen.tap(195,410);await page.waitForFunction(()=>WaterGarden.inspect().tapReady&&WaterGarden.inspect().tapPlayed===1);
         assert.equal((await inspect()).audioState,'running','the first touch automatically unlocks sound');
         const sample=await page.evaluate(async()=>{
@@ -145,6 +176,28 @@ async function run() {
         await page.locator('#reset').click();assert((await inspect()).rippleFading);
         await page.waitForFunction(()=>!WaterGarden.inspect().rippleAudio);
         reports.push({scenario:'pointer release leaves wave-driven sound which weakens as the water settles and fades on reset',remaining,quieter,result:'passed'});
+        await page.touchscreen.tap(195,410);
+        const tapSwitch=await page.evaluate(()=>{
+          const before=WaterGarden.inspect();document.querySelector('button[data-scene="snow"]').click();return {before,after:WaterGarden.inspect()};
+        });
+        assert(tapSwitch.before.tapVoices>0&&tapSwitch.after.tapFading>0&&tapSwitch.after.audioScene==='snow');
+        await page.waitForFunction(()=>WaterGarden.inspect().tapVoices===0);
+        const natureTails=[];
+        for(const next of ['cloud','water']){
+          await page.waitForTimeout(250);
+          // Dispatch both DOM events in one turn so the naturally brief (.22s) sound cannot finish between test commands.
+          const transition=await page.evaluate(next=>{
+            const surface=document.getElementById('nature');
+            surface.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerId:913,pointerType:'touch',clientX:195,clientY:410}));
+            surface.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:0,pointerId:913,pointerType:'touch',clientX:195,clientY:410}));
+            const before=WaterGarden.inspect();document.querySelector('button[data-scene="'+next+'"]').click();return {before,after:WaterGarden.inspect()};
+          },next);
+          assert(transition.before.sceneSoundNodes>0&&transition.after.sceneSoundFading>0&&transition.after.audioScene===next,'nature sound retains a fading tail on '+next);
+          natureTails.push({from:transition.before.audioScene,to:next,retained:transition.after.sceneSoundFading});
+          await page.waitForFunction(()=>WaterGarden.inspect().sceneSoundNodes===0);
+        }
+        reports.push({scenario:'water tap, snow and cloud sounds retain fading tails across every scene boundary and release their nodes',tapRetained:tapSwitch.after.tapFading,natureTails,result:'passed'});
+        await page.locator('#reset').click();
       }
       assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
       const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
@@ -545,6 +598,15 @@ async function run() {
         assert.equal(state.stonePlayed,beforeStoneAudio.stonePlayed+1,'the supplied sample must play once at water entry');
         assert(state.stoneVoices>0);assert.equal(state.tapPlayed,beforeStoneAudio.tapPlayed,'stone impacts must not use the tap recording');
         reports.push({scenario:'stone recording starts automatically at physical water entry and uses its own sample',played:state.stonePlayed,result:'passed'});
+        const stoneSwitch=await page.evaluate(()=>{
+          document.querySelector('button[data-scene="snow"]').click();const leaving=WaterGarden.inspect();
+          document.querySelector('button[data-scene="cloud"]').click();document.querySelector('button[data-scene="water"]').click();
+          return {leaving,returning:WaterGarden.inspect()};
+        });
+        assert(stoneSwitch.leaving.stoneFading>0&&stoneSwitch.leaving.stoneVoices>0);
+        assert.equal(stoneSwitch.returning.stonePlayed,state.stonePlayed,'a rapid return must not replay an interrupted impact');
+        await page.waitForFunction(()=>WaterGarden.inspect().stoneVoices===0);
+        reports.push({scenario:'recorded impact fades on scene exit and rapid three-scene return does not replay it',retained:stoneSwitch.leaving.stoneFading,result:'passed'});
         await page.screenshot({path:path.join(out,'stone-impact.png')});
         await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'stone-ripples.png')});
       }

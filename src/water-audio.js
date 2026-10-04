@@ -1,5 +1,24 @@
 (function (root) {
   'use strict';
+  function holdParameter(param, time) {
+    if(param.cancelAndHoldAtTime)param.cancelAndHoldAtTime(time);
+    else {var value=param.value;param.cancelScheduledValues(time);param.setValueAtTime(value,time);}
+  }
+  function fadeParameter(context,param,seconds){
+    holdParameter(param,context.currentTime);param.setTargetAtTime(0,context.currentTime,seconds);
+  }
+  function SceneMixer(context,output){
+    this.context=context;this.kind='water';this.buses={};
+    for(var i=0,names=['water','snow','cloud'];i<names.length;i++){
+      var bus=context.createGain();bus.gain.value=i===0?1:0;bus.connect(output);this.buses[names[i]]=bus;
+    }
+  }
+  SceneMixer.prototype.output=function(kind){return this.buses[kind];};
+  SceneMixer.prototype.select=function(kind){
+    if(kind===this.kind||!this.buses[kind])return;
+    this.kind=kind;
+    for(var name in this.buses){var param=this.buses[name].gain;holdParameter(param,this.context.currentTime);param.setTargetAtTime(name===kind?1:0,this.context.currentTime,.16);}
+  };
   function TapAudio(context, output, asset) {
     this.context=context;this.output=output;this.buffer=null;this.voices=[];this.pending=[];this.failed=false;this.played=0;
     var self=this;
@@ -32,6 +51,14 @@
     this.pending.length=0;
     var voices=this.voices.slice();this.voices.length=0;
     for(var i=0;i<voices.length;i++){try{voices[i].source.stop();}catch(error){}voices[i].source.disconnect();voices[i].gain.disconnect();}
+  };
+  TapAudio.prototype.fadeOut=function(){
+    this.pending.length=0;
+    if(this.context.state!=='running'){this.stop();return;}
+    for(var i=0;i<this.voices.length;i++){
+      var voice=this.voices[i];if(voice.fading)continue;
+      voice.fading=true;fadeParameter(this.context,voice.gain.gain,.12);voice.source.stop(this.context.currentTime+.65);
+    }
   };
   function loopBuffer(context, original) {
     var overlap=Math.min(Math.floor(original.sampleRate*.12),Math.floor(original.length/4)),length=original.length-overlap;
@@ -127,6 +154,6 @@
     try{n.source.stop();}catch(error){}
     n.source.disconnect();n.gain.disconnect();
   };
-  root.WaterSound = { Stroke: StrokeAudio, Ripple: RippleAudio, Tap: TapAudio, OneShot: TapAudio };
+  root.WaterSound = { Stroke: StrokeAudio, Ripple: RippleAudio, Tap: TapAudio, OneShot: TapAudio, SceneMixer: SceneMixer, fadeParameter: fadeParameter };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterSound;
 }(typeof window !== 'undefined' ? window : global));
