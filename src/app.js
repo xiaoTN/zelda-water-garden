@@ -300,11 +300,11 @@
   for (var ni = 0; ni < natureButtons.length; ni++) natureButtons[ni].addEventListener('click', function () { fingers = {}; natureModes[sceneKind] = Number(this.getAttribute('data-nature')); syncNatureControls(); });
   document.getElementById('view-3d').addEventListener('click',function(){
     if(!natureRenderer.available())return;
-    var surface=natureRenderer.surface;surface.oblique=!surface.oblique;surface.camera=new window.Nature3D.Camera(surface.aspect,surface.oblique);fingers={};this.setAttribute('aria-pressed',String(surface.oblique));
+    var surface=natureRenderer.surface;surface.oblique=!surface.oblique;surface.resize(surface.canvas.width,surface.canvas.height,surface.low);fingers={};this.setAttribute('aria-pressed',String(surface.oblique));
   });
   function natureRadius() { return Math.min(width, height) / height; }
   function beginNature(id, p) {
-    if (p.v < .29 || p.v > .86) return;
+    if (!isFinite(p.u+p.v)) return;
     garden.classList.add('touched'); if (!muted) initAudio();
     var f = { u: p.u, v: p.v, born: now, last: now, travel: 0, spacing: 0, angle: 0 }, selected = natureModes[sceneKind];
     f.offsetU=p.ball?p.u-p.groundU:0; f.offsetV=p.ball?p.v-p.groundV:0;
@@ -318,7 +318,7 @@
     sound(.22, false);
   }
   function moveNature(f, p, distance) {
-    p.u = core.clamp(p.u+f.offsetU, 0, 1); p.v = core.clamp(p.v+f.offsetV, .29, .86);
+    p.u += f.offsetU; p.v += f.offsetV;
     var selected = natureModes[sceneKind], r = natureRadius();
     if (sceneKind === 'snow') {
       if (selected === 0) snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
@@ -330,7 +330,7 @@
         f.spacing = (f.spacing + actual) % step;
       } else if (f.ball) snow.roll(f.ball, p.u, p.v);
     } else {
-      var count = Math.min(24, Math.max(1, Math.ceil(distance / 12)));
+      var count = Math.min(24, Math.max(1, Math.ceil(distance / 8)));
       for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, ['part','gather','wind'][selected], (p.u - f.u) / count, (p.v - f.v) / count, .045);
     }
     if (distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }

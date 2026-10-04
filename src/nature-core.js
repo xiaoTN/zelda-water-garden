@@ -8,26 +8,39 @@
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
   function random(seed) { return function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
   function Snow() {
-    this.size = 320; this.depth = new Float32Array(this.size * this.size);
+    this.size = 640; this.origin = -.6; this.span = 2; this.depth = new Float32Array(this.size * this.size);
+    this.filtered=new Float32Array(this.depth.length);this.filterWork=new Float32Array(this.depth.length);this.filterRevision=-1;this.active=false;
     this.balls = []; this.revision = 0; this.foot = 0; this.aspect = 1;
   }
-  Snow.prototype.clear = function () { this.depth.fill(0); this.balls.length = 0; this.foot = 0; this.revision++; };
+  Snow.prototype.clear = function () { this.depth.fill(0); this.active=false; this.balls.length = 0; this.foot = 0; this.revision++; };
+  Snow.prototype.index=function(u,v){var x=clamp(Math.floor((u-this.origin)/this.span*this.size),0,this.size-1),y=clamp(Math.floor((v-this.origin)/this.span*this.size),0,this.size-1);return y*this.size+x;};
+  Snow.prototype.renderDepth=function(){
+    if(this.filterRevision===this.revision)return this.filtered;
+    var n=this.size,input=this.depth,work=this.filterWork,out=this.filtered;
+    // Two separable, symmetric diffusion steps smooth the height itself and conserve its sum.
+    for(var pass=0;pass<2;pass++){
+      for(var y=0;y<n;y++)for(var x=0;x<n;x++){var at=y*n+x;work[at]=input[at]*.5+(input[y*n+Math.max(0,x-1)]+input[y*n+Math.min(n-1,x+1)])*.25;}
+      for(y=0;y<n;y++)for(x=0;x<n;x++){at=y*n+x;out[at]=work[at]*.5+(work[Math.max(0,y-1)*n+x]+work[Math.min(n-1,y+1)*n+x])*.25;}
+      input=out;
+    }
+    this.filterRevision=this.revision;return out;
+  };
   // Reused brush workspace: one synchronous transfer moves material, including old berms.
-  var cutIndices=new Int32Array(320*320),cutAmounts=new Float32Array(320*320);
-  var bankIndices=new Int32Array(320*320),bankWeights=new Float32Array(320*320);
+  var cutIndices=new Int32Array(640*640),cutAmounts=new Float32Array(640*640);
+  var bankIndices=new Int32Array(640*640),bankWeights=new Float32Array(640*640);
   Snow.prototype.stamp = function (u, v, radius, strength, angle, narrow, gather, rate, flowAngle) {
     if (!(radius > 0) || !isFinite(u+v+radius+strength)) return;
-    var n=this.size,aspect=this.aspect,reach=radius*1.8,direction=gather?-1:1;
-    var x0=Math.max(0,Math.floor((u-reach/aspect)*n)),x1=Math.min(n-1,Math.ceil((u+reach/aspect)*n));
-    var y0=Math.max(Math.ceil(.29*n),Math.floor((v-reach)*n)),y1=Math.min(Math.floor(.86*n),Math.ceil((v+reach)*n));
+    var n=this.size,origin=this.origin,scale=n/this.span,aspect=this.aspect,reach=radius*1.8,direction=gather?-1:1;
+    var x0=Math.max(0,Math.floor((u-reach/aspect-origin)*scale)),x1=Math.min(n-1,Math.ceil((u+reach/aspect-origin)*scale));
+    var y0=Math.max(0,Math.floor((v-reach-origin)*scale)),y1=Math.min(n-1,Math.ceil((v+reach-origin)*scale));
     var ca=Math.cos(angle||0),sa=Math.sin(angle||0),cuts=0,banks=0,removed=0,capacity=0;
     strength=clamp(strength,0,1);
     for(var y=y0;y<=y1;y++)for(var x=x0;x<=x1;x++){
-      var dx=(x/n-u)*aspect,dy=y/n-v;
+      var dx=(origin+x/scale-u)*aspect,dy=origin+y/scale-v;
       var xx=(dx*ca+dy*sa)/(radius*(narrow||1)),yy=(-dx*sa+dy*ca)/radius;
       var d=Math.hypot(xx,yy),at=y*n+x;
       if(d<1){
-        var edge=clamp((1-d)/.55,0,1),target=strength*edge*edge*(3-2*edge);
+        var target=strength*(.5+.5*Math.cos(d*Math.PI));
         if(this.soft)target=strength*Math.pow(1-d*d,2);
         var amount=Math.max(0,target-direction*this.depth[at])*(gather?clamp(rate===undefined?1:rate,0,1):1);
         if(amount>0){cutIndices[cuts]=at;cutAmounts[cuts++]=amount;removed+=amount;}
@@ -59,11 +72,11 @@
       var ratio=Math.min(1,volume/available);
       for(i=0;i<banks;i++){index=bankIndices[i];this.depth[index]-=direction*(1+direction*this.depth[index])*ratio;}
     }
-    this.revision++;
+    this.active=true;this.revision++;
   };
   Snow.prototype.stroke = function (u, v, x, y, radius, strength) {
     var distance = Math.sqrt(Math.pow((u - x) * this.aspect, 2) + Math.pow(v - y, 2));
-    var count = Math.min(160, Math.max(1, Math.ceil(distance / (radius * .35))));
+    var count = Math.min(160, Math.max(1, Math.ceil(distance / (radius * .20))));
     var flowAngle=Math.atan2(y-v,(x-u)*this.aspect);
     for (var i = 1; i <= count; i++) this.stamp(u + (x - u) * i / count, v + (y - v) * i / count, radius, strength,0,1,false,1,flowAngle);
   };
@@ -83,7 +96,7 @@
     var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1] }; this.balls.push(item); return item;
   };
   Snow.prototype.roll = function (ball, u, v) {
-    u = clamp(u, ball.radius / this.aspect, 1 - ball.radius / this.aspect); v = clamp(v, .31, .83);
+    u = clamp(u, this.origin+ball.radius/this.aspect, this.origin+this.span-ball.radius/this.aspect); v = clamp(v, this.origin+ball.radius, this.origin+this.span-ball.radius);
     var distance = Math.hypot((u - ball.u) * this.aspect, v - ball.v);
     this.stroke(ball.u, ball.v, u, v, ball.radius * .65, .65);
     ball.radius = Math.min(Math.min(this.aspect, 1) * .085, ball.radius + distance * .025);
@@ -139,7 +152,7 @@
   };
   Clouds.prototype.update = function (dt, breeze, reduced) {
     if (!reduced) this.time += dt;
-    var decay=Math.exp(-dt*.32);for(var k=0;k<this.field.depth.length;k++)this.field.depth[k]*=decay;this.field.revision++; this.drift *= Math.exp(-dt*.7); this.driftY *= Math.exp(-dt*.7);
+    if(this.field.active){var decay=Math.exp(-dt*.32),peak=0;for(var k=0;k<this.field.depth.length;k++){this.field.depth[k]*=decay;peak=Math.max(peak,Math.abs(this.field.depth[k]));}if(peak<1e-5){this.field.depth.fill(0);this.field.active=false;}this.field.revision++;} this.drift *= Math.exp(-dt*.7); this.driftY *= Math.exp(-dt*.7);
     this.flowX += dt * ((reduced ? 0 : breeze ? .009 : .003) + this.drift*.035);
     this.flowY += dt * ((reduced ? 0 : .0015) + this.driftY*.035);
     for (var i = 0; i < this.items.length; i++) {

@@ -5,24 +5,24 @@ const { Snow, Clouds } = require('../src/nature-core.js');
 test('a snow stroke stays continuous, local and persistent without snowfall', () => {
   const snow = new Snow(); snow.aspect = .46;
   snow.stroke(.2, .5, .8, .5, .022, .8);
-  for (let u = .25; u < .8; u += .025) assert(snow.depth[Math.floor(.5 * snow.size) * snow.size + Math.floor(u * snow.size)] > .5);
-  assert.equal(snow.depth[Math.floor(.75 * snow.size) * snow.size + Math.floor(.5 * snow.size)], 0);
+  for (let u = .25; u < .8; u += .025) assert(snow.depth[snow.index(u,.5)] > .5);
+  assert.equal(snow.depth[snow.index(.5,.75)], 0);
   const before = snow.inspect(); snow.update(100, false); assert.deepEqual(snow.inspect(), before);
   snow.update(10, true); assert(snow.inspect().depth < before.depth);
   snow.update(100, true); assert.equal(snow.inspect().markedCells, 0);
 });
-test('snow pressure is bounded and never paints above the snow field', () => {
+test('snow pressure is bounded and affects positions above the former cutoff', () => {
   const snow = new Snow();
   for (let i = 0; i < 100; i++) snow.stamp(.5, .3, .04, 1);
   assert(snow.depth.every(d => Number.isFinite(d) && d <= 1 && d >= -1));
-  assert(snow.depth.slice(0, Math.floor(.29 * snow.size) * snow.size).every(d => d === 0));
+  assert(snow.depth[snow.index(.5,.28)]>0);
 });
 test('rolling a selected snowball grows it and leaves a compressed track', () => {
   const snow = new Snow(); snow.aspect = .46;
   const ball = snow.ball(.3, .5, .02); assert.equal(snow.ball(.3, .5, .02), ball);
   snow.roll(ball, .75, .6);
   assert(ball.radius > .02); assert(snow.inspect().markedCells > 30);
-  snow.roll(ball, 4, -2); assert(ball.u < 1 && ball.v >= .31);
+  snow.roll(ball, 4, -2); assert(ball.u < snow.origin+snow.span && ball.v >= snow.origin);
   snow.clear(); assert.equal(snow.balls.length, 0); assert.equal(snow.inspect().markedCells, 0);
 });
 test('snowballs have a fixed population cap and reset footprints', () => {
@@ -62,7 +62,7 @@ test('cloud sea channels retain displaced rims and refill while snow channels pe
   const before=cloud.field.inspect().depth, snowBefore=snow.inspect().depth;
   cloud.update(2,false,true);snow.update(2,false);
   assert(cloud.field.inspect().depth<before);assert.equal(snow.inspect().depth,snowBefore);
-  cloud.touch(.5,.5,'gather',0,0,.6);assert(cloud.field.depth[160*320+160]<0,'gather raises the center using surrounding material');
+  cloud.touch(.5,.5,'gather',0,0,.6);assert(cloud.field.depth[cloud.field.index(.5,.5)]<0,'gather raises the center using surrounding material');
   cloud.clear();assert.equal(cloud.field.inspect().depth,0);assert.equal(cloud.flowX,0);
 });
 test('breeze and direct vertical wind move the continuous cloud material',()=>{
@@ -72,7 +72,7 @@ test('breeze and direct vertical wind move the continuous cloud material',()=>{
 function volume(field){let dug=0,piled=0;for(const d of field.depth){if(d>0)dug+=d;else piled-=d;}return {dug,piled,balance:dug-piled};}
 test('a channel moves its missing volume to both shoulders and repeated pressure creates no material',()=>{
   const snow=new Snow();snow.aspect=.46;snow.stroke(.18,.5,.82,.5,.023,.75);
-  const at=(u,v)=>snow.depth[Math.round(v*320)*320+Math.round(u*320)];
+  const at=(u,v)=>snow.depth[snow.index(u,v)];
   assert(at(.5,.5)>.6);assert(at(.5,.467)<-.1);assert(at(.5,.533)<-.1);
   let v=volume(snow);assert(v.piled>100);assert(Math.abs(v.balance)<.001);
   snow.stamp(.5,.5,.023,.75);const previous=volume(snow);
@@ -90,16 +90,30 @@ test('covering the complete playable field repeatedly retains displaced snow ins
   }
 });
 test('crossing an old trench refills it locally and moves its old banks without deleting snow',()=>{
-  const snow=new Snow();snow.stroke(.1,.5,.9,.5,.04,.8);const old=snow.depth[160*320+180];
+  const snow=new Snow();snow.stroke(.1,.5,.9,.5,.04,.8);const old=snow.depth[snow.index(.5625,.5)];
   snow.stroke(.5,.35,.5,.7,.045,.8);
-  assert(snow.depth[160*320+180]<old,'a new shoulder can refill a previously carved cell');
+  assert(snow.depth[snow.index(.5625,.5)]<old,'a new shoulder can refill a previously carved cell');
   assert(Math.abs(volume(snow).balance)<.003);
 });
 test('cloud part, gather and relaxation preserve displaced volume across a full-field sweep',()=>{
   const clouds=new Clouds();clouds.aspect=.46;
   for(let y=.3;y<.86;y+=.045)for(let x=0;x<=1;x+=.035)clouds.touch(x,y,'part',0,0,.1);
   let v=volume(clouds.field);assert(v.dug>500&&v.piled>500);assert(Math.abs(v.balance)<.01);
-  const center=160*320+160;for(let i=0;i<60;i++)clouds.touch(.5,.5,'gather',0,0,1/30);
+  const center=clouds.field.index(.5,.5);for(let i=0;i<60;i++)clouds.touch(.5,.5,'gather',0,0,1/30);
   assert(clouds.field.depth[center]<-.5);v=volume(clouds.field);assert(Math.abs(v.balance)<.01);
   clouds.update(4,false,true);const relaxed=volume(clouds.field);assert(relaxed.dug<v.dug&&relaxed.piled<v.piled);assert(Math.abs(relaxed.balance)<.01);
+});
+test('snow and cloud carving crosses all old rectangle limits and extends beyond the viewport coordinates',()=>{
+  for(const field of [new Snow(),new Clouds().field]){
+    for(const [u,v] of [[-.15,.5],[1.15,.5],[.5,-.35],[.5,1.1],[.5,.28],[.5,.87]]){
+      field.stamp(u,v,.035,.8);assert(field.depth[field.index(u,v)]>.7);
+    }
+    assert(Math.abs(volume(field).balance)<.003);
+  }
+});
+test('render smoothing removes one-cell teeth while preserving volume and untouched terrain',()=>{
+  const snow=new Snow();snow.depth[snow.index(.5,.5)]=1;snow.depth[snow.index(.6,.5)]=-1;snow.revision++;
+  const filtered=snow.renderDepth();assert(filtered[snow.index(.5,.5)]<.25);assert(filtered[snow.index(.5,.5)+1]>0);
+  assert(Math.abs(filtered.reduce((a,b)=>a+b,0))<1e-6);assert.equal(filtered[snow.index(.9,.9)],0);
+  assert.equal(snow.renderDepth(),filtered);snow.clear();assert(snow.renderDepth().every(v=>v===0));
 });

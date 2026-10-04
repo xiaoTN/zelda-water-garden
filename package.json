@@ -1,6 +1,6 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.11.1",
+  "version": "1.11.2",
   "private": true,
   "description": "海拉鲁自然交互：离线体验水面、雪地与云层",
   "engines": {
