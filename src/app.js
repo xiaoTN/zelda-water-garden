@@ -263,7 +263,6 @@
   function syncSurfaces() {
     var water = sceneKind === 'water';
     document.getElementById('render-status').hidden = water ? !fallbackMode : natureRenderer.available();
-    document.getElementById('view-3d').hidden = water;
     canvas.style.display = water && !fallbackMode ? 'block' : 'none';
     fallback.style.display = 'none'; overlay.style.display = water && !fallbackMode ? 'block' : 'none';
     natureCanvas.style.display = water ? 'none' : 'block';
@@ -323,10 +322,6 @@
       }
     }else natureModes[sceneKind]=selected;
     syncNatureControls();
-  });
-  document.getElementById('view-3d').addEventListener('click',function(){
-    if(!natureRenderer.available())return;
-    var surface=natureRenderer.surface;surface.oblique=!surface.oblique;surface.resize(surface.canvas.width,surface.canvas.height,surface.low);fingers={};this.setAttribute('aria-pressed',String(surface.oblique));
   });
   function natureRadius() { return Math.min(width, height) / height; }
   function beginNature(id, p, x, y) {

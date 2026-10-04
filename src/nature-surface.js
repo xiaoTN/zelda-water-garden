@@ -124,8 +124,8 @@
     return this.mesh(vertices,indices);
   };
   Surface.prototype.resize=function(w,h,low){
-    this.canvas.width=w;this.canvas.height=h;this.aspect=w/h;this.camera=new window.Nature3D.Camera(this.aspect,this.oblique);this.low=!!low;
-    if(this.lost||this.meshQuality===this.low&&this.meshAspect===this.aspect&&this.meshView===!!this.oblique)return;
+    this.canvas.width=w;this.canvas.height=h;this.aspect=w/h;this.camera=new window.Nature3D.Camera(this.aspect);this.low=!!low;
+    if(this.lost||this.meshQuality===this.low&&this.meshAspect===this.aspect)return;
     var gl=this.gl;this.buffers.forEach(function(b){gl.deleteBuffer(b);});this.buffers=[];
     this.landMesh=this.mesh([-60,-5,-60,60,-5,-60,-60,-5,60,60,-5,60],[0,2,1,1,2,3]);
     this.snowMesh=this.grid(low?126:208,false);this.cloudMesh=this.grid(low?110:156,true);
@@ -134,7 +134,7 @@
     for(y=0;y<ny;y++)for(x=0;x<nx;x++){var k=y*(nx+1)+x;indices.push(k,k+nx+1,k+1,k+1,k+nx+1,k+nx+2);}
     this.ballMesh=this.mesh(vertices,indices);
     var rng=window.GardenNature.random(551),flakes=[];for(var i=0;i<(this.low?300:720);i++)flakes.push((rng()-.5)*14,rng()*6,(rng()-.5)*15);
-    this.flakeMesh=this.mesh(flakes,[]);this.meshQuality=this.low;this.meshAspect=this.aspect;this.meshView=!!this.oblique;
+    this.flakeMesh=this.mesh(flakes,[]);this.meshQuality=this.low;this.meshAspect=this.aspect;
   };
   Surface.prototype.sample=function(u,v){
     var x=((u%1)+1)%1*256-.5,y=((v%1)+1)%1*256-.5,ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,data=this.noise.values;

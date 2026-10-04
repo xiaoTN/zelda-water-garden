@@ -1,10 +1,10 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {Camera,intersect,rotation}=require('../src/nature-3d.js');
-test('perspective projection and ray picking agree on a deformed world in both views and orientations',()=>{
+test('fixed perspective projection and ray picking agree on a deformed world across orientations',()=>{
   const height=(x,z)=>.3+.25*Math.sin(x*1.3)*Math.cos(z*.8);
-  for(const aspect of [390/844,1.5,844/390])for(const oblique of [false,true]){
-    const camera=new Camera(aspect,oblique);
+  for(const aspect of [390/844,1.5,844/390]){
+    const camera=new Camera(aspect);
     for(const x of [-1,0,1])for(const z of [-2,0,2]){
       const p=[x,height(x,z),z],screen=camera.project(p),picked=intersect(camera,screen.u,screen.v,height);
       assert(picked);assert(Math.hypot(...picked.map((v,i)=>v-p[i]))<.0001);

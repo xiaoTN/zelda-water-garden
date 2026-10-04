@@ -11,7 +11,6 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
     await page.evaluate(()=>{const draw=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.displacementSurface=this;return draw.apply(this,arguments);};});
     for(const kind of ['snow','cloud']){
       await page.locator('button[data-scene="'+kind+'"]').click();
-      if(await page.locator('#view-3d').getAttribute('aria-pressed')==='false')await page.locator('#view-3d').click();
       await page.locator('#nature').press('Enter');
       for(const sweep of [false,true]){
         const report=await page.evaluate(({kind,sweep})=>{
@@ -49,27 +48,24 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
       await page.setViewportSize(viewport);await page.waitForFunction(w=>WaterGarden.inspect().width===w,viewport.width);
       for(const kind of ['snow','cloud']){
         await page.locator('button[data-scene="'+kind+'"]').click();
-        for(const oblique of [false,true]){
-          if((await page.locator('#view-3d').getAttribute('aria-pressed')==='true')!==oblique)await page.locator('#view-3d').click();
-          const edges=await page.evaluate(kind=>{
-            const s=displacementSurface,field=kind==='snow'?s.snow:s.clouds.field;field.clear();const points=[];
-            for(const [u,v] of [[.001,.001],[.999,.001],[.001,.999],[.999,.999],[.5,.001],[.5,.999],[.001,.5],[.999,.5]]){
-              const p=s.point(u,v,kind,s.clouds,false);if(!p)return {valid:false};
-              const margin=Math.min(p.u-field.origin,p.v-field.origin,field.origin+field.span-p.u,field.origin+field.span-p.v);
-              field.stamp(p.u,p.v,.025,.8);points.push({margin,depth:field.depth[field.index(p.u,p.v)]});
-            }
-            return {valid:points.every(p=>p.margin>.04&&p.depth>.6),points};
-          },kind);
-          assert(edges.valid,'every visible edge and corner must accept a 3D stroke in both views');
-          if(kind==='snow')await page.locator('#reset').click();
-          else await page.evaluate(()=>displacementSurface.clouds.clear());
-          const before=await page.evaluate(()=>NatureGarden.inspect().snow.markedCells+NatureGarden.inspect().cloudCarve);
-          await page.mouse.move(viewport.width*.45,viewport.height*.5);await page.mouse.down();await page.mouse.move(viewport.width*.45,2,{steps:24});await page.mouse.up();
-          await page.mouse.move(viewport.width*.55,viewport.height*.5);await page.mouse.down();await page.mouse.move(viewport.width-2,viewport.height-2,{steps:24});await page.mouse.up();
-          const after=await page.evaluate(()=>NatureGarden.inspect().snow.markedCells+NatureGarden.inspect().cloudCarve);assert(after>before);
-          if(viewport.width===390&&oblique)await page.screenshot({path:path.join(out,kind+'-screen-edges.png')});
-          reports.push({kind,viewport,oblique,edgePicking:edges,result:'passed'});
-        }
+        const edges=await page.evaluate(kind=>{
+          const s=displacementSurface,field=kind==='snow'?s.snow:s.clouds.field;field.clear();const points=[];
+          for(const [u,v] of [[.001,.001],[.999,.001],[.001,.999],[.999,.999],[.5,.001],[.5,.999],[.001,.5],[.999,.5]]){
+            const p=s.point(u,v,kind,s.clouds,false);if(!p)return {valid:false};
+            const margin=Math.min(p.u-field.origin,p.v-field.origin,field.origin+field.span-p.u,field.origin+field.span-p.v);
+            field.stamp(p.u,p.v,.025,.8);points.push({margin,depth:field.depth[field.index(p.u,p.v)]});
+          }
+          return {valid:points.every(p=>p.margin>.04&&p.depth>.6),points};
+        },kind);
+        assert(edges.valid,'every visible edge and corner must accept a 3D stroke in the fixed view');
+        if(kind==='snow')await page.locator('#reset').click();
+        else await page.evaluate(()=>displacementSurface.clouds.clear());
+        const before=await page.evaluate(()=>NatureGarden.inspect().snow.markedCells+NatureGarden.inspect().cloudCarve);
+        await page.mouse.move(viewport.width*.45,viewport.height*.5);await page.mouse.down();await page.mouse.move(viewport.width*.45,2,{steps:24});await page.mouse.up();
+        await page.mouse.move(viewport.width*.55,viewport.height*.5);await page.mouse.down();await page.mouse.move(viewport.width-2,viewport.height-2,{steps:24});await page.mouse.up();
+        const after=await page.evaluate(()=>NatureGarden.inspect().snow.markedCells+NatureGarden.inspect().cloudCarve);assert(after>before);
+        if(viewport.width===390)await page.screenshot({path:path.join(out,kind+'-screen-edges.png')});
+        reports.push({kind,viewport,edgePicking:edges,result:'passed'});
       }
     }
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'displacement-report.json'),JSON.stringify({browser:await browser.version(),errors,reports},null,2)+'\n');

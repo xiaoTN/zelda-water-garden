@@ -12,8 +12,8 @@
     for (var c=0;c<4;c++) for(var r=0;r<4;r++) for(var k=0;k<4;k++) m[c*4+r]+=a[k*4+r]*b[c*4+k];
     return m;
   }
-  function Camera(aspect, oblique) {
-    this.aspect=aspect; this.eye=oblique?[0,9.6,9.6]:[0,12,6]; this.tan=Math.tan(40*Math.PI/360);
+  function Camera(aspect) {
+    this.aspect=aspect; this.eye=[0,12,6]; this.tan=Math.tan(40*Math.PI/360);
     this.forward=unit(this.eye.map(function(x){return -x;})); this.right=unit(cross(this.forward,[0,1,0])); this.up=cross(this.right,this.forward);
     var r=this.right,u=this.up,f=this.forward,e=this.eye;
     var view=new Float32Array([r[0],u[0],-f[0],0,r[1],u[1],-f[1],0,r[2],u[2],-f[2],0,-dot(r,e),-dot(u,e),dot(f,e),1]);
