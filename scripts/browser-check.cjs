@@ -28,6 +28,29 @@ async function run() {
       assert(state.surfaceVertices > 4000 && state.surfaceVertices < 65536);
       assert(state.surfaceTriangles > 8000 && state.surfaceTriangles <= 32768);
       if(viewport.width === 390) {
+        const waveEdges=await page.evaluate(()=>{
+          const canvas=document.createElement('canvas'),field=new WaterCore.WaveField(32,32,1);
+          const proto=WebGLRenderingContext.prototype,source=proto.shaderSource;let renderer;
+          try{
+            proto.shaderSource=function(shader,text){return source.call(this,shader,text.replace('alpha=mix(.62,.94,smoothstep(.008,.18,depth));','col=vec3(heightAt(uv));alpha=1.;'));};
+            renderer=new WaterRenderer(canvas,WaterScene.create(1),field);proto.shaderSource=source;renderer.resize(640,640);
+            for(let y=0;y<32;y++)field.current[y*32+15]=.6;
+            const gl=renderer.gl,measure=low=>{
+              renderer.low=low;renderer.draw(4,0);const width=canvas.width,p=new Uint8Array(width*4);
+              gl.readPixels(0,Math.floor(canvas.height/2),width,1,gl.RGBA,gl.UNSIGNED_BYTE,p);
+              let kink=0,peak=0;
+              for(let x=Math.floor(width*.4);x<width*.6;x++){
+                peak=Math.max(peak,p[x*4]);kink=Math.max(kink,Math.abs(p[(x+1)*4]-2*p[x*4]+p[(x-1)*4]));
+              }
+              return {kink,peak};
+            };
+            return {linear:measure(true),smooth:measure(false),antialias:gl.getContextAttributes().antialias};
+          }finally{proto.shaderSource=source;if(renderer)renderer.destroy();}
+        });
+        assert(waveEdges.linear.kink>4,'the fixture must expose the old interpolation corner');
+        assert(waveEdges.smooth.kink<waveEdges.linear.kink*.5,'water reconstruction must smooth the visible wave corner');
+        assert(waveEdges.smooth.peak>60,'smoothing must preserve a visible wave');
+        reports.push({scenario:'smooth wave reconstruction',...waveEdges,result:'passed'});
         // Isolate the actual foam shader at a fixed time and fixed geometry.
         // A timer-only foam layer must fail even if the rest of the water reacts.
         const foamResponse = await page.evaluate(() => {
@@ -59,7 +82,8 @@ async function run() {
         });
         assert(foamResponse.changed>80,'coastal foam must respond to wave data with the animation clock fixed');
         assert.equal(foamResponse.remote,0,'local interaction must not shake the opposite bank');
-        assert.equal(foamResponse.resetDifference,0,'clearing waves must restore unperturbed foam');
+        // Multisample resolve can round a channel by one 8-bit unit between frames.
+        assert(foamResponse.resetDifference<=1,'clearing waves must restore unperturbed foam within output rounding');
         reports.push({scenario:'isolated coastal foam coupling',...foamResponse,result:'passed'});
         // Color-code actual rock geometry by height, then compare before/after the water pass.
         const depthResult = await page.evaluate(() => {

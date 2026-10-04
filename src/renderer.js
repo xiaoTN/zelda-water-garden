@@ -31,7 +31,16 @@
     'uniform vec2 uBedTexel;',
     'uniform vec2 uTexel; uniform float uShorePixel; uniform mediump float uTime; uniform float uAspect; uniform float uLight; uniform float uDetail; uniform mediump float uPass;',
     'float shore(vec2 uv){vec2 p=(uv-vec2(.5,.49))/vec2(.465,.35);float a=atan(p.y,p.x);return length(p)-(1.+.048*sin(a*5.+.7)+.024*sin(a*9.-.5)+.04*cos(a*3.));}',
-    'float heightAt(vec2 uv){vec4 s=texture2D(uWave,uv);return (s.r*(256./257.)+s.g*(1./257.))*2.-1.;}',
+    'float waveAt(vec2 uv){vec4 s=texture2D(uWave,uv);return (s.r*(256./257.)+s.g*(1./257.))*2.-1.;}',
+    // Four bilinear taps reconstruct a smooth cubic B-spline without enlarging the simulation.
+    'float heightAt(vec2 uv){',
+    ' if(uDetail<.5)return waveAt(uv);',
+    ' vec2 p=uv/uTexel-.5,i=floor(p),f=fract(p),f2=f*f,f3=f2*f;',
+    ' vec2 w0=(1.-3.*f+3.*f2-f3)/6.,w1=(4.-6.*f2+3.*f3)/6.;',
+    ' vec2 w2=(1.+3.*f+3.*f2-3.*f3)/6.,w3=f3/6.;',
+    ' vec2 g0=w0+w1,g1=w2+w3,a=(i-.5+w1/g0)*uTexel,b=(i+1.5+w3/g1)*uTexel;',
+    ' return mix(mix(waveAt(a),waveAt(vec2(b.x,a.y)),g1.x),mix(waveAt(vec2(a.x,b.y)),waveAt(b),g1.x),g1.y);',
+    '}',
     'float iceAt(vec2 uv){vec2 t=uTexel*.65;return texture2D(uWave,uv).b*.5+(texture2D(uWave,uv+vec2(t.x,0.)).b+texture2D(uWave,uv-vec2(t.x,0.)).b+texture2D(uWave,uv+vec2(0.,t.y)).b+texture2D(uWave,uv-vec2(0.,t.y)).b)*.125;}',
     'void main(){',
     ' if(uPass>3.5){float opacity=(1.-smoothstep(.08,.5,length(vUV-.5)))*.30*vColor.r;gl_FragColor=vec4(.025,.055,.035,opacity);return;}',
@@ -120,7 +129,7 @@
   ].join('\n');
   function Renderer(canvas, scene, field) {
     this.canvas = canvas; this.scene = scene; this.field = field; this.low = false; this.gl = null; this.disposed = false; this.mapsLoaded = 0;
-    var gl = canvas.getContext('webgl', { alpha:false, antialias:false, depth:true, stencil:false, preserveDrawingBuffer:false });
+    var gl = canvas.getContext('webgl', { alpha:false, antialias:true, depth:true, stencil:false, preserveDrawingBuffer:false });
     if (!gl) throw new Error('WebGL unavailable');
     this.gl = gl;
     var shaders = [], program, buffers = [], textures = [], self = this;

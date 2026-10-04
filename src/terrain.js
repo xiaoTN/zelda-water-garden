@@ -103,6 +103,12 @@
       }
     }
     raster(mesh.ground,false);raster(mesh.stones,true);
+    // A separable reconstruction filter smooths displayed depth without blurring collision heights.
+    var visualRows=new Float32Array(w*h);
+    for(var y=0;y<h;y++)for(var x=0;x<w;x++){
+      var row=y*w;
+      visualRows[row+x]=(heights[row+Math.max(0,x-2)]+4*heights[row+Math.max(0,x-1)]+6*heights[row+x]+4*heights[row+Math.min(w-1,x+1)]+heights[row+Math.min(w-1,x+2)])/16;
+    }
     var sx=aspect*2/w,sy=2/(.8660254*h),diagonal=Math.sqrt(sx*sx+sy*sy);
     for(var i=0;i<heights.length;i++)distance[i]=heights[i]>=-.002?0:.25;
     for(var y=0;y<h;y++)for(var x=0;x<w;x++) {
@@ -118,7 +124,8 @@
       if(y<h-1)distance[i]=Math.min(distance[i],distance[i+w]+sy);
       if(x<w-1&&y<h-1)distance[i]=Math.min(distance[i],distance[i+w+1]+diagonal);
       if(x&&y<h-1)distance[i]=Math.min(distance[i],distance[i+w-1]+diagonal);
-      var code=Math.round(core.clamp((heights[i]+.3)/.6,0,1)*65535),p=i*4;
+      var visualHeight=(visualRows[Math.max(0,y-2)*w+x]+4*visualRows[Math.max(0,y-1)*w+x]+6*visualRows[i]+4*visualRows[Math.min(h-1,y+1)*w+x]+visualRows[Math.min(h-1,y+2)*w+x])/16;
+      var code=Math.round(core.clamp((visualHeight+.3)/.6,0,1)*65535),p=i*4;
       pixels[p]=code>>8;pixels[p+1]=code&255;pixels[p+2]=Math.round(distance[i]/.25*255);pixels[p+3]=stone[i];
     }
     function sample(data,u,v) {

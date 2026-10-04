@@ -33,7 +33,7 @@ npm run build
 
 交付代码为 Chrome 61 / ES2017 基线的经典脚本，运行时不请求网络。开发构建依赖固定版本的 Cannon-es 与 esbuild，`npm run build` 自动重新打包物理引擎，也可单独运行 `npm run physics`。浏览器验证使用环境已有的 Playwright 与 Edge；可用 `CODEX_NODE_MODULES`、`BROWSER_CHANNEL` 指定验证运行时。
 
-上传包：`artifacts/zelda-water-garden-minitool-v1.8.5.zip`。只有 `src/` 的 13 个静态文件进入 ZIP，入口位于包根。研究、发布说明和验证截图在 `docs/`。v1.8.5 达到数量上限后自动替换最早落石，见 `docs/release-v1.8.5.md`。v1.8.4 扩大落石的水面扰动与外扩波峰，见 `docs/release-v1.8.4.md`。v1.8.3 修正石堆接触抖动与成组休眠，见 `docs/release-v1.8.3.md`。v1.6 增加三维水面与流动法线 / 泡沫贴图，见 `docs/release-v1.6.0.md`。v1.5 改为二次元水面与冰元素风格，研究和对照见 `docs/anime-water-ice-study-v1.5.0.md`。
+上传包：`artifacts/zelda-water-garden-minitool-v1.8.6.zip`。只有 `src/` 的 13 个静态文件进入 ZIP，入口位于包根。研究、发布说明和验证截图在 `docs/`。v1.8.6 平滑水波与石头水深边缘并开启轮廓抗锯齿，见 `docs/release-v1.8.6.md`。v1.8.5 达到数量上限后自动替换最早落石，见 `docs/release-v1.8.5.md`。v1.8.4 扩大落石的水面扰动与外扩波峰，见 `docs/release-v1.8.4.md`。v1.8.3 修正石堆接触抖动与成组休眠，见 `docs/release-v1.8.3.md`。v1.6 增加三维水面与流动法线 / 泡沫贴图，见 `docs/release-v1.6.0.md`。v1.5 改为二次元水面与冰元素风格，研究和对照见 `docs/anime-water-ice-study-v1.5.0.md`。
 
 WebGL 1 用于真正的三维水面网格、顶点位移、实时法线与卡通光照；能力不足、持续慢帧或上下文丢失会进入 Canvas 2D 水面。纹理最长边 1024，默认画布 DPR ≤ 1.5、像素 ≤ 200 万，低档 DPR ≤ 1、像素 ≤ 100 万；基础场景每帧 5 次 draw call，动态落石最多增加 2 次和 420 个三角形。立体池岸、144 块几何岸石、动态石头、阴影与半透明水面共用深度缓冲。石头露出部分遮挡水面、水下部分透出水色；草叶与蕨类仍为地形材质。页面隐藏时暂停模拟与音频。
 

@@ -234,6 +234,29 @@ test('repeated drops dissipate impact energy instead of scattering across the po
   assert(maxLift<.08,'underwater collisions must not launch stones far above water');
 });
 
+test('displayed underwater depth reconstructs diagonal edges without large stair steps',()=>{
+  const vertex=(u,v,y)=>[(u-.5)*2,y,(v-.5)*2/.8660254,u,v,0,1,0,1,1,1];
+  const ground=new Float32Array([...vertex(0,0,-.22),...vertex(1,0,-.22),...vertex(0,1,-.22),...vertex(1,0,-.22),...vertex(1,1,-.22),...vertex(0,1,-.22)]);
+  const stones=new Float32Array([...vertex(.3,.3,-.03),...vertex(.7,.61,-.03),...vertex(.3,.7,-.03)]);
+  for(const low of [false,true]){
+    const bed=terrain.bathymetry({ground,stones},1,low);
+    const read=(x,y)=>{const i=(y*bed.width+x)*4;return (bed.pixels[i]*256+bed.pixels[i+1])/65535*.6-.3;};
+    const height=(u,v)=>{
+      const x=u*bed.width-.5,y=v*bed.height-.5,ix=Math.floor(x),iy=Math.floor(y),tx=x-ix,ty=y-iy;
+      return (read(ix,iy)*(1-tx)+read(ix+1,iy)*tx)*(1-ty)+(read(ix,iy+1)*(1-tx)+read(ix+1,iy+1)*tx)*ty;
+    };
+    let maxError=0;
+    for(let j=0;j<700;j++){
+      const u=.36+j/700*.25,expected=.3+(u-.3)*.775;
+      let a=expected-.015,b=expected+.015;
+      for(let k=0;k<24;k++){const m=(a+b)/2;if(height(u,m)>-.125)b=m;else a=m;}
+      maxError=Math.max(maxError,Math.abs((a+b)/2-expected)*1280);
+    }
+    assert(maxError<(low?1.3:.65),'a straight stone edge must stay straight at display scale');
+    assert.equal(bed.heightAt(.4,.5),Math.fround(-.03),'physical stone heights must remain sharp');
+  }
+});
+
 test('bathymetry comes from stone triangles and blocks waves and ice at dry footprints', () => {
   const mesh=terrain.create(.8,false),bed=terrain.bathymetry(mesh,.8,false),field=new WaveField(128,160,.8);
   field.setBathymetry(bed);
@@ -242,7 +265,12 @@ test('bathymetry comes from stone triangles and blocks waves and ice at dry foot
     const i=y*bed.width+x,u=(x+.5)/bed.width,v=(y+.5)/bed.height;
     if(bed.stone[i]&&bed.heights[i]<-.004&&bed.heights[i]>terrain.elevation(u,v)+.01)raisedWet++;
     const packed=(bed.pixels[i*4]*256+bed.pixels[i*4+1])/65535*.6-.3;
-    assert(Math.abs(packed-bed.heights[i])<.00001);
+    let min=Infinity,max=-Infinity;
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+      const value=bed.heights[Math.max(0,Math.min(bed.height-1,y+dy))*bed.width+Math.max(0,Math.min(bed.width-1,x+dx))];
+      min=Math.min(min,value);max=Math.max(max,value);
+    }
+    assert(packed>=min-.00001&&packed<=max+.00001,'visual reconstruction must not overshoot the local geometry');
   }
   assert(raisedWet>100,'submerged stone surfaces must make the local water shallower');
   for(let y=0;y<field.height;y++)for(let x=0;x<field.width;x++) {
