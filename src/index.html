@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#122d29">
-  <title>海拉鲁 · 水之庭</title>
+  <title>片刻 · 水光</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main id="garden" aria-label="海拉鲁水之庭">
+  <main id="garden" aria-label="片刻 · 水光">
     <canvas id="water" aria-label="交互水池，轻点起涟漪，滑动拨水" tabindex="0"></canvas>
     <canvas id="fallback" aria-hidden="true"></canvas>
     <canvas id="life" aria-hidden="true"></canvas>
@@ -17,7 +17,7 @@
     <header class="topbar">
       <div class="brand">
         <svg class="emblem" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C24 3 9 20 9 30a15 15 0 0 0 30 0C39 20 24 3 24 3Z"/><path d="M24 13v26M16 29l8 8 8-8M18 23l6 6 6-6"/></svg>
-        <div><h1>海拉鲁 <span>·</span> <span id="scene-title">水之庭</span></h1><p id="scene-subtitle">HYRULE WATER GARDEN</p></div>
+        <div><h1>片刻 <span>·</span> <span id="scene-title">水光</span></h1><p id="scene-subtitle">风过水面，留下一点温柔</p></div>
       </div>
       <button id="light" class="light-button" aria-label="切换光照，当前晨光"><span class="sun-icon" aria-hidden="true">☼</span><span id="light-label">晨光</span><span class="cycle" aria-hidden="true">↻</span></button>
     </header>
@@ -30,7 +30,7 @@
     <div class="pool-caption" aria-hidden="true"><span>✧</span> 一池水，一点宁静 <span>✧</span></div>
     <footer class="bottom">
       <div id="rain-options" class="rain-options" role="group" aria-label="选择雨势" hidden>
-        <p>雨势<span>雨越大，雷电越频繁</span></p>
+        <p>雨势<span>听雨落下，也听远处的雷声</span></p>
         <div class="rain-levels">
           <button data-rain="0" aria-pressed="true">停雨</button>
           <button data-rain="1" aria-pressed="false">小雨</button>
@@ -39,8 +39,8 @@
           <button data-rain="4" aria-pressed="false">暴雨</button>
         </div>
       </div>
-      <p id="hint" class="hint" role="status" aria-live="polite">轻点泛起涟漪 · 滑动拨开水面 · 长按蓄起水波</p>
-      <nav class="toolbar" aria-label="水面玩法">
+      <p id="hint" class="hint" role="status" aria-live="polite">轻触起涟漪 · 滑动拨水 · 长按蓄波</p>
+      <nav class="toolbar" aria-label="水面互动">
         <div class="modes" role="group" aria-label="选择交互方式">
           <button class="mode selected" data-mode="touch" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11Z"/><path d="M9 15c0 2 1 3 3 3"/></svg><span>拨水</span></button>
           <button class="mode" data-mode="leaf" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4S6 2 4 12s8 11 12 4 3-12 3-12Z"/><path d="m7 18 9-11M9 15l-1-5m4 2 4 1"/></svg><span>浮叶</span></button>
@@ -62,7 +62,7 @@
     <button id="view-3d" hidden aria-label="切换 3D 场景视角" aria-pressed="false">视角</button>
     <div id="render-status" role="status" hidden></div>
     <div id="notice" class="notice" role="status" aria-live="polite"></div>
-    <div id="loading"><span></span><p>走进水之庭…</p></div>
+    <div id="loading"><span></span><p>慢下来，风景正在醒来…</p></div>
   </main>
   <script src="./water-core.js"></script>
   <script src="./scene.js"></script>

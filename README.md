@@ -1,6 +1,6 @@
-# 海拉鲁 · 水之庭
+# 片刻 · 水光
 
-一池偏二次元风格的青蓝浅水。用简洁的浅深色层、自然起伏和随拨水推移、绕石形成的白沫表现流动；滑动水面时带动水流和白色波峰，不产生飞溅水花。
+把片刻留给自然。在「水光、雪落、云间」慢慢触碰、静静停留，用轻柔的文字、流动的光影和声音，留一点宁静。一池青蓝浅水以自然起伏和随拨水推移、绕石形成的白沫表现流动；滑动水面时带动水流和白色波峰，不产生飞溅水花。
 
 v1.9.0 增加「雪之野」和「云之境」。顶部切换水面、雪地、云层；当前会话内保留各场景的交互状态，共用晨光、暮色、月夜。设计与验证见 [雪地、云层设计及发布说明](docs/nature-history/release-v1.9.0.md)。
 
@@ -48,7 +48,7 @@ npm run build
 
 交付代码为 Chrome 61 / ES2017 基线的经典脚本，运行时不请求网络。开发构建依赖固定版本的 Cannon-es 与 esbuild，`npm run build` 自动重新打包物理引擎，也可单独运行 `npm run physics`。浏览器验证使用环境已有的 Playwright 与 Edge；可用 `CODEX_NODE_MODULES`、`BROWSER_CHANNEL` 指定验证运行时。
 
-上传包：`artifacts/zelda-water-garden-minitool-v1.11.20.zip`。`src/` 的 26 个静态文件进入 ZIP，入口位于包根。v1.11.20 修复云层滑动时的堆高边缘，见 `docs/release-v1.11.20.md`。v1.11.19 移除云海工具栏，仅保留滑动交互，见 `docs/release-v1.11.19.md`。v1.11.18 为场景切换增加双向声音淡入淡出，见 `docs/release-v1.11.18.md`。v1.11.17 移除雪地树木，见 `docs/release-v1.11.17.md`。v1.11.16 移除声音开关，首次操作自动播放默认开启的声音，见 `docs/release-v1.11.16.md`。v1.11.15 增加随实际水波强弱变化、松手后持续的荡漾录音，见 `docs/release-v1.11.15.md`。v1.11.14 接入用户指定的石头入水录音，见 `docs/release-v1.11.14.md`。v1.11.13 合并雪地、云层场景与本地雨势连续过渡、录音和长声音淡入淡出，保留冰霜移除，见 `docs/release-v1.11.13.md`。降雨与音频改动见 `docs/release-v1.9.6.md` 至 `docs/release-v1.9.13.md`；雪地、云层改动见 `docs/release-v1.10.0.md` 至 `docs/release-v1.11.12.md`。锦鲤发布记录与证据保存在 `docs/fish-history/`，Blender 制作源文件在 `assets-source/fish/`。
+上传包：`artifacts/zelda-water-garden-minitool-v1.11.21.zip`。`src/` 的 26 个静态文件进入 ZIP，入口位于包根。v1.11.21 将界面统一为「片刻」的唯美自然文案，见 [文案改版说明](docs/release-v1.11.21.md)。v1.11.20 修复云层滑动时的堆高边缘，见 `docs/release-v1.11.20.md`。v1.11.19 移除云海工具栏，仅保留滑动交互，见 `docs/release-v1.11.19.md`。v1.11.18 为场景切换增加双向声音淡入淡出，见 `docs/release-v1.11.18.md`。v1.11.17 移除雪地树木，见 `docs/release-v1.11.17.md`。v1.11.16 移除声音开关，首次操作自动播放默认开启的声音，见 `docs/release-v1.11.16.md`。v1.11.15 增加随实际水波强弱变化、松手后持续的荡漾录音，见 `docs/release-v1.11.15.md`。v1.11.14 接入用户指定的石头入水录音，见 `docs/release-v1.11.14.md`。v1.11.13 合并雪地、云层场景与本地雨势连续过渡、录音和长声音淡入淡出，保留冰霜移除，见 `docs/release-v1.11.13.md`。降雨与音频改动见 `docs/release-v1.9.6.md` 至 `docs/release-v1.9.13.md`；雪地、云层改动见 `docs/release-v1.10.0.md` 至 `docs/release-v1.11.12.md`。锦鲤发布记录与证据保存在 `docs/fish-history/`，Blender 制作源文件在 `assets-source/fish/`。
 
 WebGL 1 用于真正的三维水面网格、顶点位移、实时法线与卡通光照；能力不足时暂停并显示 3D 状态说明，上下文恢复后重建低档资源。纹理最长边 1024，默认画布 DPR ≤ 1.5、像素 ≤ 200 万，低档 DPR ≤ 1、像素 ≤ 100 万；基础场景每帧 6 次 draw call（含鱼群的 1 次 / 1175 个三角形），动态落石最多增加 2 次和 420 个三角形。立体池岸、144 块几何岸石、动态石头、阴影与半透明水面共用深度缓冲。石头露出部分遮挡水面、水下部分透出水色；草叶与蕨类仍为地形材质。页面隐藏时暂停模拟与音频。
 

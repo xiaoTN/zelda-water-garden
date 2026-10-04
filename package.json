@@ -1,8 +1,8 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.11.20",
+  "version": "1.11.21",
   "private": true,
-  "description": "海拉鲁自然交互：离线体验水面、雪地与云层",
+  "description": "片刻：在水光、雪落与云间，留一点宁静",
   "engines": {
     "node": ">=18"
   },

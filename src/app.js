@@ -12,12 +12,12 @@
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
   var audio = null, master = null, sceneAudio = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
-  var hints = { touch: '轻点泛起涟漪 · 滑动拨开水面 · 长按蓄起水波', leaf: '轻点放下一片浮叶 · 滑动水面，推着叶子走', stone: '轻点选择落点 · 随机石头从高处落下 · 平静可清除' };
+  var hints = { touch: '轻触起涟漪 · 滑动拨水 · 长按蓄波', leaf: '轻放一片叶 · 拨水送它远行', stone: '轻点落石，让涟漪慢慢散开' };
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
   var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
   var natureRenderer = new window.NatureRenderer(natureCanvas, snow, clouds);
   var natureModes = { snow: 0 }, natureWeather = { snow: true, cloud: true };
-  var snowHints = ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹'];
+  var snowHints = ['滑动留痕 · 长按轻压新雪', '轻点留下脚印 · 拖动串起足迹'];
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function notice(text) {
     var element = document.getElementById('notice'); element.textContent = text; element.classList.add('show');
@@ -282,25 +282,25 @@
       controls[i].classList.toggle('selected', active); controls[i].setAttribute('aria-pressed', String(active));
     }
     hint.textContent = water ? hints[mode] : snowScene ? snowHints[natureModes.snow] : '滑动拨开云海';
-    if (snowScene && snow.balls.length) hint.textContent = '拖动雪球，越滚越大 · 再点「雪球」收起';
+    if (snowScene && snow.balls.length) hint.textContent = '推着雪球慢慢走 · 再点「雪球」收起';
     natureCanvas.setAttribute('aria-label', snowScene ? '交互雪地，' + hint.textContent + '；空格或回车触碰中央' : '交互云层，滑动拨开云海');
     var weatherName = rain ? window.WaterWeather.profiles[weather.level].name : '下雨';
     var rainButton = document.getElementById('rain'); rainButton.hidden = !water; rainButton.querySelector('span').textContent = weatherName;
     rainButton.setAttribute('aria-pressed', String(rain)); rainButton.setAttribute('aria-label', rain ? '选择雨势，当前' + weatherName : '开启小雨并选择雨势');
     document.getElementById('reset').querySelector('span').textContent = water ? '平静' : '新雪';
     document.getElementById('reset').setAttribute('aria-label', water ? '让水池归于平静' : '铺一场新雪，清除足迹和雪球');
-    toolbar.setAttribute('aria-label', water ? '水面玩法' : '雪地玩法');
+    toolbar.setAttribute('aria-label', water ? '水面互动' : '雪地互动');
   }
   function setScene(kind) {
     if (kind === sceneKind) return;
     fingers = {}; cursor.style.display = 'none'; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; stopAudio(); sceneKind = kind;
     if(sceneAudio)sceneAudio.select(kind);
     garden.setAttribute('data-scene', kind); garden.classList.remove('touched');
-    var titles = { water: '水之庭', snow: '雪之野', cloud: '云之境' };
-    document.getElementById('scene-title').textContent = titles[kind]; document.title = '海拉鲁 · ' + titles[kind];
+    var titles = { water: '水光', snow: '雪落', cloud: '云间' };
+    document.getElementById('scene-title').textContent = titles[kind]; document.title = '片刻 · ' + titles[kind];
     garden.setAttribute('aria-label', document.title);
-    document.getElementById('scene-subtitle').textContent = { water: 'HYRULE WATER GARDEN', snow: 'HYRULE SNOW FIELD', cloud: 'HYRULE CLOUD SANCTUARY' }[kind];
-    document.querySelector('.pool-caption').textContent = { water: '✧ 一池水，一点宁静 ✧', snow: '✧ 把足迹，留在新雪里 ✧', cloud: '✧ 拨开云，遇见一线天光 ✧' }[kind];
+    document.getElementById('scene-subtitle').textContent = { water: '风过水面，留下一点温柔', snow: '雪落无声，时光也轻了', cloud: '天光轻落，云影缓行' }[kind];
+    document.querySelector('.pool-caption').textContent = { water: '✧ 一池水，一点宁静 ✧', snow: '✧ 把足迹，轻轻留在雪里 ✧', cloud: '✧ 拨开云，遇见一线天光 ✧' }[kind];
     document.querySelector('.footnote').textContent = { water: '风吹过的地方，水会记得。', snow: '每一步，都有柔软的回声。', cloud: '让心事，随云慢慢走。' }[kind];
     var selectors = document.querySelectorAll('[data-scene]');
     for (var i = 0; i < selectors.length; i++) if (selectors[i].tagName === 'BUTTON') { var selected = selectors[i].getAttribute('data-scene') === kind; selectors[i].classList.toggle('selected', selected); selectors[i].setAttribute('aria-pressed', String(selected)); }
@@ -408,12 +408,12 @@
   }
   document.getElementById('rain').addEventListener('click', function () {
     if(sceneKind!=='water')return;
-    if (!rain) { setRainLevel(1); showRainOptions(true); notice('小雨轻落，试试不同的雨势'); }
+    if (!rain) { setRainLevel(1); showRainOptions(true); notice('小雨轻落，听一会儿雨声'); }
     else showRainOptions(rainOptions.hidden);
   });
   for (var r = 0; r < rainButtons.length; r++) rainButtons[r].addEventListener('click', function () {
     var level = Number(this.getAttribute('data-rain')); setRainLevel(level);
-    notice(['雨停了，水波还在','小雨轻落，雨丝拂过水面','中雨连绵，偶有远雷','大雨倾落，雷电渐近','暴雨倾盆，电闪雷鸣'][level]);
+    notice(['雨停了，水波还在','雨丝轻落，水面泛起微光','雨声渐密，远处偶有雷鸣','雨落成帘，天边传来回声','雨声漫过四野，雷光掠过水面'][level]);
     if (!level) document.getElementById('rain').focus();
   });
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !rainOptions.hidden) { showRainOptions(false); document.getElementById('rain').focus(); } });

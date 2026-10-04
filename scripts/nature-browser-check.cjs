@@ -16,8 +16,17 @@ async function run() {
       await page.evaluate(()=>{const original=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.testSurface3D=this;return original.apply(this,arguments);};});
       const state = () => page.evaluate(() => NatureGarden.inspect());
       const select = kind => page.locator('button[data-scene="' + kind + '"]').click();
+      const copyChecks = [];
+      const checkCopy = async kind => {
+        const copy = await page.evaluate(() => ({title:document.title, heading:document.querySelector('h1').innerText, label:document.getElementById('garden').getAttribute('aria-label'), subtitle:document.getElementById('scene-subtitle').textContent, visible:document.body.innerText}));
+        assert(!/海拉鲁|塞尔达|hyrule|zelda/i.test(Object.values(copy).join('\n')), 'visible and accessible scene copy must use nature language');
+        assert.equal(copy.label,copy.title,'scene title and accessible name stay in sync');
+        copyChecks.push({scene:kind,title:copy.title,subtitle:copy.subtitle});
+      };
+      await checkCopy('water');
       const x = viewport.width * .48, y = viewport.height * .49;
       await select('snow'); assert.equal((await state()).scene, 'snow');
+      await checkCopy('snow');
       await page.waitForFunction(()=>window.testSurface3D && testSurface3D.snowMaps===2);
       assert.equal((await state()).renderer,'webgl','the reference surface must compile and render, not silently fall back');
       assert((await state()).triangles<=100000 && (await state()).triangles>50000);
@@ -66,6 +75,8 @@ async function run() {
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snowfall-mobile.png')});
       await page.locator('#reset').click(); assert.equal((await state()).snow.markedCells,0); assert.equal((await state()).snow.balls.length,0); assert.equal((await state()).weather,true);
       await select('cloud');
+      await checkCopy('cloud');
+      if(viewport.width===390)reports.push({scenario:'poetic nature copy stays free of franchise references across all three scenes',copy:copyChecks,result:'passed'});
       assert.equal(await page.locator('.toolbar').isVisible(),false,'cloud has no mode or reset toolbar');
       assert.equal(await page.locator('#hint').textContent(),'滑动拨开云海');
       assert.equal((await state()).mode,'swipe');
