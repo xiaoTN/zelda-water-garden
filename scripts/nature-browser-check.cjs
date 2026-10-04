@@ -59,6 +59,8 @@ async function run() {
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snowfall-mobile.png')});
       await page.locator('#reset').click(); assert.equal((await state()).snow.markedCells,0); assert.equal((await state()).snow.balls.length,0); assert.equal((await state()).weather,true);
       await select('cloud'); await page.locator('#reset').click();
+      await page.waitForFunction(()=>testSurface3D.landReady);
+      assert.equal(await page.evaluate(()=>testSurface3D.landMesh.count),6,'aerial terrain is a separate plane below the cloud mesh');
       const opacity = (await state()).cloud.opacity;
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.move(x+70,y,{steps:15}); await page.mouse.up();
       s = await state(); assert(s.cloud.opacity <= opacity);
@@ -122,6 +124,7 @@ async function run() {
         await page.waitForFunction(()=>!document.getElementById('render-status').hidden);
         await page.evaluate(()=>natureLost.restoreContext());await page.waitForFunction(()=>NatureGarden.inspect().renderer==='webgl');
         await page.waitForFunction(()=>testSurface3D.snowMaps===2);
+        await page.waitForFunction(()=>testSurface3D.landReady);
         await page.waitForFunction(()=>NatureGarden.inspect().triangles<=50000);
         await select('snow');await page.locator('[data-nature="0"]').click();const before=(await state()).snow.markedCells;await page.touchscreen.tap(240,530);assert((await state()).snow.markedCells>before);await select('cloud');
       }
@@ -138,6 +141,7 @@ async function run() {
     await page.evaluate(()=>{const draw=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.offlineSurface=this;return draw.apply(this,arguments);};});
     await page.locator('button[data-scene="snow"]').click(); await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().snow.markedCells>0));
     await page.waitForFunction(()=>window.offlineSurface && offlineSurface.snowMaps===2);
+    await page.waitForFunction(()=>offlineSurface.landReady);
     assert.equal(await page.evaluate(()=>NatureGarden.inspect().renderer),'webgl');
     await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().cloudCarve>0));
     await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloud.time),0);assert.equal(requests,0);
