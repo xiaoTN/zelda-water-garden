@@ -6,6 +6,8 @@
 
 `water-swipe.mp3`：用户于 2026-10-04 提供的手指滑动水面水流声，原文件名 `335cd12ed8fd4662a09a27d066eadae4.mp3`，来源为 `D:/BaiduNetdiskDownload/`。按用途重命名并复制入项目，来源文件保留。原始字节不变：52,763 字节，22,050 Hz、单声道、时长约 6.5 秒。SHA-256：`4ec742a383a84833ae38af6215497741c318bc5a48b295d3e8ddcf38e7823342`。
 
-`npm run audio` 分别将这两个小样本生成至 `src/water-tap-asset.js` 和 `src/water-swipe-asset.js`，完整构建自动执行该步骤。小工具上传类型清单未列出 MP3，运行包因此携带小型 Base64 字节数据，通过 Web Audio 直接解码为可复用的 AudioBuffer；不使用媒体 data URL、网络请求或运行时文件读取。原始 MP3 只保留在素材目录中，ZIP 中的脚本与原始字节一致性由测试验证。
+`stone-impact.mp3`：用户于 2026-10-04 指定的石头入水声，来源为 [爱给音频文件](https://s1.aigei.com/src/aud/mp3/a7/a70922a8c46748c0af1ae8c34f0b83f9.mp3)，下载时使用用户提供的临时链接。按用途命名，完整保留原始字节：25,805 字节，22,050 Hz、单声道、容器时长约 3.130 秒。SHA-256：`a260cf244dbcee3b2ee3d7753f021a06f52bd5ac819f84a91cf630ef5dddf5b6`。仅在石头接触水面时播放一次，保留原有起音与自然尾音，不额外淡入淡出。
+
+`npm run audio` 将这三个样本生成至 `src/water-tap-asset.js`、`src/water-swipe-asset.js` 和 `src/stone-impact-asset.js`，完整构建自动执行该步骤。小工具上传类型清单未列出 MP3，运行包因此携带小型 Base64 字节数据，通过 Web Audio 直接解码为可复用的 AudioBuffer；不使用媒体 data URL、网络请求或运行时文件读取。原始 MP3 只保留在素材目录中，ZIP 中的脚本与原始字节一致性由测试验证。
 
 滑动录音在运行时把尾部与开头交叉淡化 120 毫秒，形成约 6.38 秒的循环；原始 MP3 保持完整。滑动只复用一个循环声源，音量随手速变化，停手后淡出。

@@ -92,6 +92,17 @@ async function run() {
         const mutedCount=(await inspect()).tapPlayed;await page.touchscreen.tap(195,410);assert.equal((await inspect()).tapPlayed,mutedCount);
         await page.locator('#reset').click();
         reports.push({scenario:'supplied tap sample decodes, plays on taps, stays out of swipes and stops on mute/reset',...sample,result:'passed'});
+        const stoneSample=await page.evaluate(async()=>{
+          const raw=atob(StoneImpactAsset.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+          const audio=new OfflineAudioContext(1,22050*4,22050),buffer=await audio.decodeAudioData(bytes.buffer);
+          const source=audio.createBufferSource();source.buffer=buffer;source.connect(audio.destination);source.start();
+          const rendered=await audio.startRendering();let peak=0;
+          for(const value of rendered.getChannelData(0))peak=Math.max(peak,Math.abs(value));
+          return {duration:buffer.duration,channels:buffer.numberOfChannels,peak,bytes:StoneImpactAsset.bytes};
+        });
+        assert(stoneSample.duration>3&&stoneSample.duration<3.3&&stoneSample.peak>.01);
+        assert.equal(stoneSample.channels,1);assert.equal(stoneSample.bytes,25805);
+        reports.push({scenario:'supplied stone impact sample decodes and renders non-silent PCM',...stoneSample,result:'passed'});
       }
       assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
       const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
@@ -469,6 +480,9 @@ async function run() {
         await page.screenshot({path:path.join(out,'fish-escape-airborne.png')});
         await page.locator('#reset').click();
       }
+      if(viewport.width===390){
+        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().stoneReady);
+      }
       // Reuse a fixed varied rock sequence; weather/audio consume random values at
       // different rates, which must not change this independent physics fixture.
       await page.evaluate(()=>{
@@ -476,13 +490,20 @@ async function run() {
         window.restoreStoneFixture=()=>{proto.add=add;delete window.restoreStoneFixture;};
         proto.add=function(u,v){return add.call(this,u,v,random);};
       });
+      const beforeStoneAudio=await inspect();
       await page.mouse.click(x,y);state=await inspect();
       assert.equal(state.stones.length,1);assert(state.stones[0].y>1);assert.equal(state.stoneImpacts,0);
+      assert.equal(state.stonePlayed,beforeStoneAudio.stonePlayed,'airborne stones must stay silent');
       await page.waitForFunction(()=>{const s=WaterGarden.inspect().stones[0];return s&&s.y<1&&s.y>.05;});
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-airborne.png')});
       await page.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);state=await inspect();assert(state.energy>.1,'impact must disturb water');
       assert.equal(state.rings,0,'stone waves must come from the water simulation without drawn rings');assert.equal(state.drops,0);
       if(viewport.width===390){
+        assert.equal(state.stonePlayed,beforeStoneAudio.stonePlayed+1,'the supplied sample must play once at water entry');
+        assert(state.stoneVoices>0);assert.equal(state.tapPlayed,beforeStoneAudio.tapPlayed,'stone impacts must not use the tap recording');
+        await page.locator('#sound').click();assert.equal((await inspect()).stoneVoices,0,'mute immediately releases short stone voices');
+        await page.locator('#sound').click();assert.equal((await inspect()).stonePlayed,state.stonePlayed,'unmuting must not replay past impacts');
+        reports.push({scenario:'stone recording starts at physical water entry, uses its own sample and releases on mute',played:state.stonePlayed,result:'passed'});
         await page.screenshot({path:path.join(out,'stone-impact.png')});
         await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'stone-ripples.png')});
       }
@@ -513,6 +534,7 @@ async function run() {
       assert(!(await page.locator('#notice').textContent()).includes('石头已经够多了'));
       if(viewport.width===390)await page.screenshot({path:path.join(out,'stone-capacity.png')});
       await page.locator('#reset').click();assert.equal((await inspect()).stones.length,0);
+      assert.equal((await inspect()).stoneVoices,0,'reset releases all stone voices');
       await page.mouse.click(x,y);await page.locator('#reset').click();await page.waitForTimeout(1100);assert.equal((await inspect()).stoneImpacts,0);
       await page.locator('#reset').click();await page.locator('[data-mode="touch"]').click();
       reports.push({viewport, readyAndSettleMs, result:'passed', state: await inspect()});
@@ -553,6 +575,12 @@ async function run() {
     await offlinePage.locator('#sound').click();assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().tapVoices),0);
     await offlinePage.locator('#rain').click();await offlinePage.locator('[data-rain="4"]').click();await offlinePage.locator('#sound').click();
     await offlinePage.waitForFunction(()=>WaterGarden.inspect().thunderPlayed>0);assert.equal(networkRequests,0);
+    await offlinePage.locator('#reset').click();await offlinePage.locator('[data-mode="stone"]').click();
+    await offlinePage.waitForFunction(()=>WaterGarden.inspect().stoneReady);await offlinePage.mouse.click(195,410);
+    assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().stonePlayed),0);
+    await offlinePage.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);
+    assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().stonePlayed),1);assert.equal(networkRequests,0);
+    await offlinePage.locator('#reset').click();assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().stoneVoices),0);
     reports.push({scenario:'file URL offline', networkRequests, result:'passed'}); await offlineContext.close();
     const reducedContext = await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'}), reducedPage = await reducedContext.newPage();
     reducedPage.on('pageerror',e => errors.push(e.message));

@@ -19,7 +19,7 @@
     if(this.failed)return false;
     if(!this.buffer){if(this.pending.length<4)this.pending.push(strength);return true;}
     var c=this.context;if(c.state!=='running')return false;
-    // Rapid taps share one decoded buffer and keep at most four short voices.
+    // One-shot effects share one decoded buffer and keep at most four voices.
     if(this.voices.length>=4){var oldest=this.voices.shift();oldest.source.stop();oldest.source.disconnect();oldest.gain.disconnect();}
     var source=c.createBufferSource(),gain=c.createGain(),self=this;
     source.buffer=this.buffer;gain.gain.value=.5*Math.sqrt(Math.max(.1,Math.min(1,strength)));
@@ -94,6 +94,6 @@
     try{n.source.stop();}catch(error){}
     n.source.disconnect();n.gain.disconnect();
   };
-  root.WaterSound = { Stroke: StrokeAudio, Tap: TapAudio };
+  root.WaterSound = { Stroke: StrokeAudio, Tap: TapAudio, OneShot: TapAudio };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterSound;
 }(typeof window !== 'undefined' ? window : global));
