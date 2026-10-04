@@ -65,11 +65,15 @@ async function run() {
       assert.equal(await page.locator('#rain').isVisible(),false); await page.waitForTimeout(250); assert((await state()).snow.depth < saved.depth);
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snowfall-mobile.png')});
       await page.locator('#reset').click(); assert.equal((await state()).snow.markedCells,0); assert.equal((await state()).snow.balls.length,0); assert.equal((await state()).weather,true);
-      await select('cloud'); await page.locator('#reset').click();
+      await select('cloud');
+      assert.equal(await page.locator('.toolbar').isVisible(),false,'cloud has no mode or reset toolbar');
+      assert.equal(await page.locator('#hint').textContent(),'滑动拨开云海');
+      assert.equal((await state()).mode,'swipe');
       await page.waitForFunction(()=>testSurface3D.landReady);
       assert.equal(await page.evaluate(()=>testSurface3D.landMesh.count),6,'aerial terrain is a separate plane below the cloud mesh');
       if(viewport.width===390)await page.screenshot({path:path.join(out,'cloud-default.png')});
       const opacity = (await state()).cloud.opacity;
+      await page.touchscreen.tap(x,y);assert.equal((await state()).cloudCarve,0,'a cloud tap must not carve');
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.move(x+70,y,{steps:15}); await page.mouse.up();
       s = await state(); assert(s.cloud.opacity <= opacity);
       assert(s.cloudCarve>10,'parting must deform the actual cloud surface');
@@ -78,10 +82,26 @@ async function run() {
       await page.waitForTimeout(650);
       assert((await state()).cloudCarve<openDepth*.8,'released cloud gaps close quickly');
       if(viewport.width===390)await page.screenshot({path:path.join(out,'cloud-refilling.png')});
-      await page.locator('[data-nature="1"]').click();
-      const gatherPoint=await page.evaluate(({x,y})=>testSurface3D.point(x/innerWidth,y/innerHeight,'cloud',testSurface3D.clouds),{x,y});
-      await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up();
-      assert(await page.evaluate(p=>{const f=testSurface3D.clouds.field;return f.depth[f.index(p.u,p.v)]<0;},gatherPoint),'gather raises the touched cloud surface');
+      const stationary=await page.evaluate(({x,y})=>{
+        window.cloudGestureCalls=[];const touch=GardenNature.Clouds.prototype.touch;
+        GardenNature.Clouds.prototype.touch=function(){cloudGestureCalls.push(arguments[2]);return touch.apply(this,arguments);};
+        window.restoreCloudGesture=()=>{GardenNature.Clouds.prototype.touch=touch;};
+        const before=NatureGarden.inspect().cloudCarve;
+        document.querySelector('[data-nature="1"]').click();document.getElementById('reset').click();
+        const surface=document.getElementById('nature');
+        surface.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:920,clientX:x,clientY:y}));
+        for(let i=0;i<4;i++)surface.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:920,clientX:x,clientY:y}));
+        surface.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:920,clientX:x,clientY:y}));
+        return {before,after:NatureGarden.inspect().cloudCarve,calls:cloudGestureCalls.length,mode: NatureGarden.inspect().mode};
+      },{x,y});
+      assert.equal(stationary.before,stationary.after);assert.equal(stationary.calls,0);assert.equal(stationary.mode,'swipe','hidden snow controls cannot activate cloud gathering');
+      await page.mouse.move(x,y);await page.mouse.down();await page.waitForTimeout(800);
+      assert.equal(await page.evaluate(()=>cloudGestureCalls.length),0,'holding must not keep parting or gathering');
+      await page.mouse.move(x+70,y,{steps:15});await page.mouse.up();
+      const calls=await page.evaluate(()=>{const calls=cloudGestureCalls.slice();restoreCloudGesture();return calls;});
+      assert(calls.length>0&&calls.every(mode=>mode==='part'),'sliding is the only cloud interaction');
+      assert.equal((await state()).activePointers,0);
+      if(viewport.width===390)reports.push({scenario:'cloud toolbar removed; taps, stationary movement, holds and hidden controls do not interact; swipes alone part the cloud',stationary,swipeCalls:calls.length,result:'passed'});
       assert.equal(await page.locator('[data-nature="2"]').isVisible(),false,'cloud has no wind tool');
       assert.equal(await page.locator('#rain').isVisible(),false); assert.equal((await state()).weather,true);
       await page.locator('#light').click(); assert.equal(await page.evaluate(() => WaterGarden.inspect().light),1);
@@ -92,7 +112,9 @@ async function run() {
       if (viewport.width===390) { await select('snow'); await page.screenshot({path:path.join(out,'snow-moon.png')}); await select('cloud'); }
       assert.equal(await page.locator('#sound').count(),0);assert(await page.evaluate(()=>WaterGarden.inspect().audioEnabled));
       await page.waitForFunction(()=>WaterGarden.inspect().audioState==='running');
-      await page.locator('#nature').focus(); await page.keyboard.press('Enter'); assert.equal((await state()).activePointers,0);
+      const keyboardDepth=(await state()).cloudCarve;
+      await page.locator('#nature').focus();await page.keyboard.press('Enter');await page.keyboard.press('Space');
+      assert.equal((await state()).activePointers,0);assert((await state()).cloudCarve<=keyboardDepth,'cloud keyboard taps cannot create a new gap');
       if (viewport.width===390) {
         const geometry=await page.evaluate(()=>{
           const surface=testSurface3D,snow=surface.snow,clouds=surface.clouds;
@@ -142,7 +164,9 @@ async function run() {
         await page.waitForFunction(()=>NatureGarden.inspect().triangles<=50000);
         await select('snow');await page.locator('[data-nature="0"]').click();const before=(await state()).snow.markedCells;await page.touchscreen.tap(240,530);assert((await state()).snow.markedCells>before);await select('cloud');
       }
-      await page.locator('#reset').click(); assert.equal((await state()).weather,true); assert.equal((await state()).cloud.count,72);
+      assert.equal(await page.locator('.toolbar').isVisible(),false);assert.equal((await state()).weather,true);assert.equal((await state()).cloud.count,72);
+      await select('snow');assert(await page.locator('.toolbar').isVisible());assert.equal(await page.locator('[data-nature="0"] span').textContent(),'划雪');
+      await page.locator('#reset').click();
       await select('water'); await page.mouse.click(x,y); assert(await page.evaluate(()=>WaterGarden.inspect().energy>0));
       reports.push({viewport,result:'passed'}); await context.close();
     }
@@ -157,7 +181,14 @@ async function run() {
     await page.waitForFunction(()=>window.offlineSurface && offlineSurface.snowMaps===2);
     await page.waitForFunction(()=>offlineSurface.landReady);
     assert.equal(await page.evaluate(()=>NatureGarden.inspect().renderer),'webgl');
-    await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().cloudCarve>0));
+    await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloudCarve),0);
+    assert.equal(await page.locator('.toolbar').isVisible(),false);
+    const cdp=await context.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:145,y:410,id:1}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:195,y:410,id:1}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:245,y:410,id:1}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
+    assert(await page.evaluate(()=>NatureGarden.inspect().cloudCarve>0));
     await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloud.time),0);assert.equal(requests,0);
     reports.push({scenario:'offline WebGL, touch fallback, reduced motion',result:'passed',networkRequests:requests});await context.close();
     const unavailable=await browser.newContext({viewport:{width:390,height:844}}),unsupported=await unavailable.newPage();
@@ -169,7 +200,7 @@ async function run() {
     await unavailable.close();reports.push({scenario:'unsupported hardware shows explicit 3D unavailable state',result:'passed'});
     assert.deepEqual(errors,[]);
     fs.writeFileSync(path.join(out,'nature-browser-report.json'),JSON.stringify({date:new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'}),browser:await browser.version(),errors,reports},null,2)+'\n');
-    console.log('Nature browser checks passed: snow, footprints, rolling balls, cloud part/gather, persistence, resize, audio, light, weather, reset, touch cancel, lifecycle, actual 3D geometry, offline WebGL and unsupported hardware.');
+    console.log('Nature browser checks passed: snow tools, cloud swipe-only interaction without a toolbar, persistence, resize, audio, light, touch cancel, lifecycle, actual 3D geometry, offline WebGL and unsupported hardware.');
   } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error(error);server.close();process.exitCode=1;});

@@ -16,15 +16,8 @@
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
   var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
   var natureRenderer = new window.NatureRenderer(natureCanvas, snow, clouds);
-  var natureModes = { snow: 0, cloud: 0 }, natureWeather = { snow: true, cloud: true };
-  var natureIcons = {
-    snow: ['M3 17c3-8 5 7 9-2s5 3 9-8M4 21c3-5 5 3 8-2', 'M7 3c-4 0-4 10-1 10s4-10 1-10ZM16 8c-4 0-4 10-1 10s4-10 1-10ZM4 16v3h3v-3Zm9 5h3', 'M20 12a8 8 0 1 1-16 0 8 8 0 1 1 16 0ZM7 11c0-3 2-4 4-4M4 21h12'],
-    cloud: ['M8 16H6a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9h-2M9 12l-3 3 3 3m6-6 3 3-3 3', 'M6 17a4 4 0 1 1 1-8 5 5 0 0 1 9-1 4 4 0 0 1 2 9M3 21h6l-2-2m14 2h-6l2-2', 'M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 17h5a3 3 0 1 1-3 3']
-  };
-  var natureHints = {
-    snow: ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹'],
-    cloud: ['轻点推开云海 · 滑动划出云间小径', '按住聚拢云团 · 缓缓拖动，带着云走']
-  };
+  var natureModes = { snow: 0 }, natureWeather = { snow: true, cloud: true };
+  var snowHints = ['滑动划出雪痕 · 长按压实积雪', '轻点踩下脚印 · 拖动走出一串足迹'];
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function notice(text) {
     var element = document.getElementById('notice'); element.textContent = text; element.classList.add('show');
@@ -181,7 +174,7 @@
   function begin(id, x, y) {
     var p = point(x, y);
     if(sceneKind==='water'&&!renderer)return;
-    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,true); if(p)beginNature(id, p); return; }
+    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,true); if(p)beginNature(id, p, x, y); return; }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
     if (mode!=='stone' && renderer && renderer.terrain.blocks(p.u, p.v)) return;
     if (core.shore(p.u, p.v) >= -.025) { notice('轻触池中的青绿水面'); return; }
@@ -200,7 +193,13 @@
   function move(id, x, y) {
     var f = fingers[id]; if (!f) return;
     var p = point(x, y), dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, distance = Math.sqrt(dx * dx + dy * dy);
-    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,false); if(!p)return; distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height); moveNature(f, p, distance); return; }
+    if (sceneKind !== 'water') {
+      if(!natureRenderer.available())return;
+      // Camera picking can move with an animated cloud surface; require actual pointer movement.
+      if(sceneKind==='cloud'&&Math.hypot(x-f.screenX,y-f.screenY)<1)return;
+      p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,false);if(!p)return;
+      f.screenX=x;f.screenY=y;distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height);moveNature(f,p,distance);return;
+    }
     f.travel += distance;
     if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
@@ -258,7 +257,7 @@
     window.addEventListener('mousemove', function (event) { move('mouse', event.clientX, event.clientY); });
     window.addEventListener('mouseup', function () { end('mouse', false); });
   }
-  function keyRipple(event) { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); begin('key', width * .5, height * .49); end('key', false); } }
+  function keyRipple(event) { if (sceneKind !== 'cloud' && (event.key === ' ' || event.key === 'Enter')) { event.preventDefault(); begin('key', width * .5, height * .49); end('key', false); } }
   canvas.addEventListener('keydown', keyRipple); fallback.addEventListener('keydown', keyRipple);
   natureCanvas.addEventListener('keydown', keyRipple);
   function syncSurfaces() {
@@ -270,31 +269,27 @@
     natureCanvas.style.display = water ? 'none' : 'block';
     canvas.setAttribute('aria-hidden', String(!water || fallbackMode)); canvas.tabIndex = water && !fallbackMode ? 0 : -1;
     fallback.setAttribute('aria-hidden', 'true'); fallback.tabIndex = -1;
-    natureCanvas.setAttribute('aria-hidden', String(water)); natureCanvas.tabIndex = water ? -1 : 0;
+    natureCanvas.setAttribute('aria-hidden', String(water)); natureCanvas.tabIndex = sceneKind === 'snow' ? 0 : -1;
   }
   function syncNatureControls() {
-    var water = sceneKind === 'water', names = sceneKind === 'snow' ? ['划雪','脚印','雪球'] : ['拨云','聚云'];
+    var water = sceneKind === 'water', snowScene = sceneKind === 'snow';
+    var toolbar = document.querySelector('.toolbar'); toolbar.hidden = sceneKind === 'cloud';
     document.querySelector('.modes').hidden = !water;
-    document.getElementById('nature-modes').hidden = water;
+    document.getElementById('nature-modes').hidden = !snowScene;
     var controls = document.querySelectorAll('[data-nature]');
     for (var i = 0; i < controls.length; i++) {
-      controls[i].hidden = !water && i >= names.length;
-      if (controls[i].hidden) continue;
-      controls[i].querySelector('span').textContent = names[i] || '';
-      if (!water) { controls[i].querySelector('svg').innerHTML = '<path d="' + natureIcons[sceneKind][i] + '"/>'; }
-      var active=sceneKind==='snow'&&i===2?snow.balls.length>0:i===natureModes[sceneKind];
-      controls[i].classList.toggle('selected',active); controls[i].setAttribute('aria-pressed',String(active));
+      var active = i === 2 ? snow.balls.length > 0 : i === natureModes.snow;
+      controls[i].classList.toggle('selected', active); controls[i].setAttribute('aria-pressed', String(active));
     }
-    hint.textContent = water ? hints[mode] : natureHints[sceneKind][natureModes[sceneKind]];
-    if(sceneKind==='snow'&&snow.balls.length)hint.textContent='拖动雪球，越滚越大 · 再点「雪球」收起';
-    natureCanvas.setAttribute('aria-label', (sceneKind === 'snow' ? '交互雪地，' : '交互云层，') + hint.textContent + '；空格或回车触碰中央');
-    var weatherName = water ? (rain?window.WaterWeather.profiles[weather.level].name:'下雨') : sceneKind === 'snow' ? '飘雪' : '微风', enabled = water ? rain : natureWeather[sceneKind];
+    hint.textContent = water ? hints[mode] : snowScene ? snowHints[natureModes.snow] : '滑动拨开云海';
+    if (snowScene && snow.balls.length) hint.textContent = '拖动雪球，越滚越大 · 再点「雪球」收起';
+    natureCanvas.setAttribute('aria-label', snowScene ? '交互雪地，' + hint.textContent + '；空格或回车触碰中央' : '交互云层，滑动拨开云海');
+    var weatherName = rain ? window.WaterWeather.profiles[weather.level].name : '下雨';
     var rainButton = document.getElementById('rain'); rainButton.hidden = !water; rainButton.querySelector('span').textContent = weatherName;
-    rainButton.querySelector('svg').innerHTML = '<path d="' + (water ? 'M6 14a4 4 0 0 1-1-8 6 6 0 0 1 11-1 4 4 0 0 1 2 9M7 16l-1 4m6-4-1 4m6-4-1 4' : sceneKind === 'snow' ? 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3M4 10l4-1-1-4M17 19l-1-4 4-1' : natureIcons.cloud[2]) + '"/>';
-    rainButton.setAttribute('aria-label', (enabled ? '关闭' : '开启') + weatherName); rainButton.setAttribute('aria-pressed', String(enabled)); if(water)rainButton.setAttribute('aria-label',rain?'选择雨势，当前'+weatherName:'开启小雨并选择雨势');
-    document.getElementById('reset').querySelector('span').textContent = water ? '平静' : sceneKind === 'snow' ? '新雪' : '云海';
-    document.getElementById('reset').setAttribute('aria-label', water ? '让水池归于平静' : sceneKind === 'snow' ? '铺一场新雪，清除足迹和雪球' : '重置云海');
-    document.querySelector('.toolbar').setAttribute('aria-label', water ? '水面玩法' : sceneKind === 'snow' ? '雪地玩法' : '云层玩法');
+    rainButton.setAttribute('aria-pressed', String(rain)); rainButton.setAttribute('aria-label', rain ? '选择雨势，当前' + weatherName : '开启小雨并选择雨势');
+    document.getElementById('reset').querySelector('span').textContent = water ? '平静' : '新雪';
+    document.getElementById('reset').setAttribute('aria-label', water ? '让水池归于平静' : '铺一场新雪，清除足迹和雪球');
+    toolbar.setAttribute('aria-label', water ? '水面玩法' : '雪地玩法');
   }
   function setScene(kind) {
     if (kind === sceneKind) return;
@@ -318,6 +313,7 @@
   for (var si = 0; si < sceneButtons.length; si++) sceneButtons[si].addEventListener('click', function () { setScene(this.getAttribute('data-scene')); });
   var natureButtons = document.querySelectorAll('[data-nature]');
   for (var ni = 0; ni < natureButtons.length; ni++) natureButtons[ni].addEventListener('click', function () {
+    if(sceneKind!=='snow')return;
     fingers = {}; var selected=Number(this.getAttribute('data-nature'));
     if(sceneKind==='snow'&&selected===2){
       if(snow.balls.length)snow.balls.length=0;
@@ -333,19 +329,21 @@
     var surface=natureRenderer.surface;surface.oblique=!surface.oblique;surface.resize(surface.canvas.width,surface.canvas.height,surface.low);fingers={};this.setAttribute('aria-pressed',String(surface.oblique));
   });
   function natureRadius() { return Math.min(width, height) / height; }
-  function beginNature(id, p) {
+  function beginNature(id, p, x, y) {
     if (!isFinite(p.u+p.v)) return;
-    garden.classList.add('touched'); initAudio();
+    if(sceneKind==='snow')garden.classList.add('touched');initAudio();
     var f = { u: p.u, v: p.v, born: now, last: now, movedAt: now, travel: 0, spacing: 0, angle: 0 }, selected = natureModes[sceneKind];
     f.offsetU=p.ball?p.u-p.groundU:0; f.offsetV=p.ball?p.v-p.groundV:0;
     fingers[id] = f;
+    f.screenX=x;f.screenY=y;
+    if(sceneKind==='cloud')f.last=now-.17;
     if (sceneKind === 'snow') {
       var r = natureRadius();
       if(p.ball)f.ball=p.ball;
       else if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
       else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
-    } else clouds.touch(p.u, p.v, ['part','gather'][selected], 0, 0, selected===0 ? .04 : .22);
-    sound(.22, false);
+      sound(.22, false);
+    }
   }
   function moveNature(f, p, distance) {
     p.u += f.offsetU; p.v += f.offsetV;
@@ -361,9 +359,10 @@
         f.spacing = (f.spacing + actual) % step;
       }
     } else {
+      garden.classList.add('touched');
       var count = Math.min(24, Math.max(1, Math.ceil(distance / 8)));
       var elapsed=Math.max(.008,Math.min(.1,now-f.movedAt)),speed=Math.hypot((p.u-f.u)*clouds.aspect,p.v-f.v)/elapsed;
-      for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, ['part','gather'][selected], (p.u - f.u) / count, (p.v - f.v) / count, selected===0 ? .016 : .045,speed);
+      for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, 'part', (p.u - f.u) / count, (p.v - f.v) / count, .016,speed);
       f.movedAt=now;
     }
     if (distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }
@@ -374,7 +373,6 @@
     for (var id in fingers) {
       var f = fingers[id], selected = natureModes[sceneKind];
       if (sceneKind === 'snow' && !f.ball && selected === 0 && f.travel < 15 && now - f.born > .3) snow.stamp(f.u, f.v, natureRadius() * .04, Math.min(1, .65 + (now - f.born) * .2));
-      if (sceneKind === 'cloud' && selected < 2) clouds.touch(f.u, f.v, selected === 0 ? 'part' : 'gather', 0, 0, dt);
     }
     if (sceneKind === 'snow') snow.update(dt, natureWeather.snow);
     else clouds.update(dt, natureWeather.cloud, reduced);
@@ -420,11 +418,12 @@
   });
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !rainOptions.hidden) { showRainOptions(false); document.getElementById('rain').focus(); } });
   document.getElementById('reset').addEventListener('click', function () {
+    if(sceneKind==='cloud')return;
     if (strokeAudio) strokeAudio.stop();
     if (rippleAudio) rippleAudio.stop();
     if (tapAudio) tapAudio.stop();
     if (stoneAudio) stoneAudio.stop();
-    if (sceneKind !== 'water') { fingers = {}; natureWeather[sceneKind] = true; if (sceneKind === 'snow') snow.clear(); else clouds.clear(); syncNatureControls(); notice(sceneKind === 'snow' ? '一场新雪，等你留下足迹' : '云海重新铺开'); return; }
+    if (sceneKind === 'snow') { fingers = {}; natureWeather.snow = true; snow.clear(); syncNatureControls(); notice('一场新雪，等你留下足迹'); return; }
     field.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
     setRainLevel(0); weather.clear();
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
@@ -613,7 +612,7 @@
     waterMaps: renderer ? renderer.mapsLoaded : 0, width: width, height: height, bufferWidth: renderer ? canvas.width : fallback.width,
     bufferHeight: renderer ? canvas.height : fallback.height, activePointers: Object.keys(fingers).length
   }; } };
-  window.NatureGarden = { inspect: function () { return { scene: sceneKind, renderLight: natureRenderer.light, renderer: natureRenderer.available() ? 'webgl' : 'unavailable', camera: natureRenderer.surface && natureRenderer.surface.camera ? 'perspective' : null, ballMeshes: natureRenderer.available() && sceneKind === 'snow' ? snow.balls.length : 0, drawCalls: natureRenderer.surface ? natureRenderer.surface.drawCalls : 0, closedCloudMesh: !!(natureRenderer.surface && natureRenderer.surface.cloudMesh), triangles: natureRenderer.surface ? natureRenderer.surface.count / 3 : 0, cloudCarve: clouds.field.inspect().depth, mode: natureModes[sceneKind], weather: sceneKind === 'water' ? rain : natureWeather[sceneKind], snow: snow.inspect(), cloud: clouds.inspect(), activePointers: Object.keys(fingers).length, bufferWidth: natureCanvas.width, bufferHeight: natureCanvas.height }; } };
+  window.NatureGarden = { inspect: function () { return { scene: sceneKind, renderLight: natureRenderer.light, renderer: natureRenderer.available() ? 'webgl' : 'unavailable', camera: natureRenderer.surface && natureRenderer.surface.camera ? 'perspective' : null, ballMeshes: natureRenderer.available() && sceneKind === 'snow' ? snow.balls.length : 0, drawCalls: natureRenderer.surface ? natureRenderer.surface.drawCalls : 0, closedCloudMesh: !!(natureRenderer.surface && natureRenderer.surface.cloudMesh), triangles: natureRenderer.surface ? natureRenderer.surface.count / 3 : 0, cloudCarve: clouds.field.inspect().depth, mode: sceneKind === 'cloud' ? 'swipe' : natureModes[sceneKind], weather: sceneKind === 'water' ? rain : natureWeather[sceneKind], snow: snow.inspect(), cloud: clouds.inspect(), activePointers: Object.keys(fingers).length, bufferWidth: natureCanvas.width, bufferHeight: natureCanvas.height }; } };
   resize();
   requestAnimationFrame(function () { garden.classList.add('ready'); frameId = requestAnimationFrame(tick); });
 }());

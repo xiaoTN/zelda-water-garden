@@ -189,6 +189,7 @@ async function run() {
           const transition=await page.evaluate(next=>{
             const surface=document.getElementById('nature');
             surface.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerId:913,pointerType:'touch',clientX:195,clientY:410}));
+            surface.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,button:0,buttons:1,pointerId:913,pointerType:'touch',clientX:225,clientY:410}));
             surface.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:0,pointerId:913,pointerType:'touch',clientX:195,clientY:410}));
             const before=WaterGarden.inspect();document.querySelector('button[data-scene="'+next+'"]').click();return {before,after:WaterGarden.inspect()};
           },next);

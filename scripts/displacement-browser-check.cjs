@@ -45,7 +45,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
             return {valid:points.every(p=>p.margin>.04&&p.depth>.6),points};
           },kind);
           assert(edges.valid,'every visible edge and corner must accept a 3D stroke in both views');
-          await page.locator('#reset').click();
+          if(kind==='snow')await page.locator('#reset').click();
+          else await page.evaluate(()=>displacementSurface.clouds.clear());
           const before=await page.evaluate(()=>NatureGarden.inspect().snow.markedCells+NatureGarden.inspect().cloudCarve);
           await page.mouse.move(viewport.width*.45,viewport.height*.5);await page.mouse.down();await page.mouse.move(viewport.width*.45,2,{steps:24});await page.mouse.up();
           await page.mouse.move(viewport.width*.55,viewport.height*.5);await page.mouse.down();await page.mouse.move(viewport.width-2,viewport.height-2,{steps:24});await page.mouse.up();
