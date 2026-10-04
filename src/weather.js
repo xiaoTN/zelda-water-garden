@@ -4,15 +4,15 @@
   var profiles = [
     { name: '停雨', count: 0, speed: 0, length: 0, wind: 0, cloud: 0, impacts: 0, thunder: 0 },
     { name: '小雨', count: 48, speed: .85, length: .8, wind: .02, cloud: .035, impacts: 20, thunder: 0 },
-    { name: '中雨', count: 112, speed: 1.1, length: 1, wind: .035, cloud: .075, impacts: 65, thunder: .38, interval: [18, 30] },
-    { name: '大雨', count: 240, speed: 1.45, length: 1.2, wind: .05, cloud: .14, impacts: 160, thunder: .68, interval: [8, 14] },
-    { name: '暴雨', count: 420, speed: 1.85, length: 1.4, wind: .07, cloud: .23, impacts: 320, thunder: 1, interval: [2.8, 5.6] }
+    { name: '中雨', count: 168, speed: 1.1, length: 1, wind: .035, cloud: .075, impacts: 100, thunder: .38, interval: [18, 30] },
+    { name: '大雨', count: 420, speed: 1.45, length: 1.2, wind: .05, cloud: .14, impacts: 280, thunder: .68, interval: [8, 14] },
+    { name: '暴雨', count: 840, speed: 1.85, length: 1.4, wind: .07, cloud: .23, impacts: 640, thunder: 1, interval: [2.8, 5.6] }
   ];
   function Weather(random) {
     this.random = random || Math.random; this.level = 0; this.count = 0; this.cloud = 0; this.credit = 0;
     this.flashAge = 10; this.flash = 0; this.nextStrike = Infinity; this.pendingThunder = -1;
     this.hits = 0; this.strikes = 0; this.thunders = 0; this.particles = [];
-    for (var i = 0; i < 420; i++) this.particles.push({ u: 0, v: 0, altitude: 0, span: 0, speed: 0, depth: 0 });
+    for (var i = 0; i < profiles[4].count; i++) this.particles.push({ u: 0, v: 0, altitude: 0, span: 0, speed: 0, depth: 0 });
   }
   Weather.prototype.seed = function (p, warm) {
     var r = this.random, profile = profiles[this.level];
@@ -48,7 +48,8 @@
     var profile = profiles[this.level], count = Math.round(profile.count * (low ? .4 : 1) * (reduced ? .45 : 1));
     this.cloud += (profile.cloud - this.cloud) * Math.min(1, dt * 3);
     for (var i = this.count; i < count; i++) this.seed(this.particles[i], true);
-    this.count = count; this.credit = Math.min(low ? 12 : 28, this.credit + profile.impacts * (low ? .4 : 1) * dt);
+    // Cover the maximum .08s update without throttling dense storms at slower frame rates.
+    this.count = count; this.credit = Math.min(low ? 24 : 56, this.credit + profile.impacts * (low ? .4 : 1) * dt);
     for (i = 0; i < count; i++) {
       var p = this.particles[i]; p.altitude -= p.speed * dt;
       if (p.altitude <= 0) {

@@ -42,7 +42,7 @@ test('storm rain has a fixed work budget in both quality modes',()=>{
     const f=new WaveField(90,192,.462),w=new Weather(seededRandom(87));w.setLevel(4);
     for(let i=0;i<120;i++){
       w.update(1/30,low,false,(u,v,s)=>f.rainImpact(u,v,s,low));f.updateRain(1/30);
-      assert(f.rainRipples.filter(r=>r.age<r.life).length<=(low?80:192));
+      assert(f.rainRipples.filter(r=>r.age<r.life).length<=(low?160:384));
       assert(f.rainHeight.every(Number.isFinite));
     }
     assert(w.hits>200);assert(f.energy()>.001);
@@ -82,7 +82,7 @@ test('storm surface impacts stay dense at 60, 30 and 12.5 updates per second',()
   for(const dt of [1/60,1/30,.08]){
     const w=new Weather(seededRandom(87));w.setLevel(4);
     for(let elapsed=0;elapsed<8;elapsed+=dt)w.update(dt,false,false,(u,v)=>shore(u,v)<-.015);
-    assert(w.hits>2000,'storm must land hundreds of water drops per second, not two per frame');
+    assert(w.hits>4000,'doubled storm impacts must stay dense even with .08s updates');
     const hits=w.hits;w.setLevel(0);
     for(let i=0;i<90;i++)w.update(1/60,false,false,()=>assert.fail('stopped rain cannot inject waves'));
     assert.equal(w.hits,hits);w.clear();assert.equal(w.hits,0);
@@ -115,7 +115,7 @@ test('rain impacts occur at streak landing, never during initial population',()=
   const w=new Weather(seededRandom(41));let hits=0;
   w.setLevel(4);w.update(0,false,false,()=>{hits++;return true;});assert.equal(hits,0);
   for(let i=0;i<120;i++)w.update(1/60,false,false,()=>{hits++;return true;});
-  assert(hits>500);assert(hits<=642,'surface impacts have a fixed per-second budget');
+  assert(hits>1000);assert(hits<=1282,'surface impacts have a fixed per-second budget');
   assert(w.particles.slice(0,w.count).every(p=>p.altitude>0),'landed particles recycle above their next target');
 });
 
@@ -133,8 +133,8 @@ test('stopping or clearing rain cancels queued thunder, flashes and falling stre
 test('low quality reduces rain work while keeping storms and rain visible',()=>{
   const w=new Weather(seededRandom(4));w.setLevel(4);let hits=0;
   for(let i=0;i<1800;i++)w.update(1/60,true,false,()=>{hits++;return true;});
-  assert(w.count>100&&w.count<180);assert(hits<=3842);assert(w.strikes>=5);
-  w.update(1/60,true,true);assert(w.count<100);
+  assert(w.count>300&&w.count<340);assert(hits>6000&&hits<=7682);assert(w.strikes>=5);
+  w.update(1/60,true,true);assert(w.count<160);
 });
 
 const fishAsset=require('../src/fish-asset.js');

@@ -230,6 +230,7 @@ async function run() {
         assert(box.width>=44&&box.height>=44,'rain choices have touch-sized targets');
         await page.locator(selector).click();await page.waitForTimeout(450);state=await inspect();
         assert.equal(state.rainLevel,level);assert(state.rainStreaks>0);assert.equal(await page.locator(selector).getAttribute('aria-pressed'),'true');
+        assert.equal(state.rainStreaks,Math.round([0,48,168,420,840][level]*(state.quality==='normal'?1:.4)),'each rain level uses the increased particle density');
         rainStates.push({level,streaks:state.rainStreaks,impacts:state.rainImpacts,energy:state.energy});
         if(viewport.width===390)await page.screenshot({path:path.join(out,'mobile-rain-'+level+'.png')});
       }
@@ -502,7 +503,7 @@ async function run() {
     await reducedPage.mouse.click(187.2,405.12); await reducedPage.waitForTimeout(300);
     assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceCenter),0); assert.equal(await reducedPage.evaluate(() => WaterGarden.inspect().iceShards),0);
     await reducedPage.locator('#rain').click();await reducedPage.locator('[data-rain="4"]').click();await reducedPage.waitForTimeout(300);
-    assert(await reducedPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0&&WaterGarden.inspect().rainStreaks<200));
+    assert(await reducedPage.evaluate(()=>WaterGarden.inspect().rainStreaks>0&&WaterGarden.inspect().rainStreaks<=378));
     reports.push({scenario:'reduced motion freezes and breaks without airborne shards',result:'passed'}); await reducedContext.close();
     // Simulated slow timing verifies both downgrade thresholds, without claiming real-device FPS.
     const slowContext = await browser.newContext({viewport:{width:390,height:844}}), slowPage = await slowContext.newPage();

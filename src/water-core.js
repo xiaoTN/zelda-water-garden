@@ -15,7 +15,7 @@
     // Injecting it into the long-lived touch solver makes every drop a large wave.
     this.rainHeight = new Float32Array(width * height);
     this.rainRipples = []; this.rainCursor = 0;
-    for (var r = 0; r < 192; r++) this.rainRipples.push({ u: 0, v: 0, age: 1, life: 0, strength: 0 });
+    for (var r = 0; r < 384; r++) this.rainRipples.push({ u: 0, v: 0, age: 1, life: 0, strength: 0 });
     this.mask = new Uint8Array(width * height);
     this.depthScale = new Float32Array(width * height); this.depthScale.fill(1);
     this.pixels = new Uint8Array(width * height * 4);
@@ -67,7 +67,7 @@
     var i = Math.round(v * (this.height - 1)) * this.width + Math.round(u * (this.width - 1));
     if (!this.mask[i]) return false;
     var ripple = this.rainRipples[this.rainCursor];
-    this.rainCursor = (this.rainCursor + 1) % (low ? 80 : 192);
+    this.rainCursor = (this.rainCursor + 1) % (low ? 160 : 384);
     ripple.u = u; ripple.v = v; ripple.age = 0;
     ripple.strength = clamp(strength, .04, .2);
     ripple.life = .38 + ripple.strength * .55;
