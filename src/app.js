@@ -5,7 +5,7 @@
   var fctx = fallback.getContext('2d'), hint = document.getElementById('hint'), cursor = document.getElementById('cursor');
   var renderer = null, scene, field, width = 1, height = 1, mode = 'touch', light = 0, rain = false, muted = true;
   var leaves = [], drops = [], rings = [], dust = [], fingers = {}, reduced = false;
-  var weather = new window.WaterWeather.System(), weatherAudio = null, strokeAudio = null, tapAudio = null, stoneAudio = null;
+  var weather = new window.WaterWeather.System(), weatherAudio = null, strokeAudio = null, tapAudio = null, stoneAudio = null, rippleAudio = null;
   var rainOptions = document.getElementById('rain-options'), rainButtons = document.querySelectorAll('[data-rain]');
   var fishSchool = new window.WaterFish.System();
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
@@ -41,6 +41,7 @@
       strokeAudio = new window.WaterSound.Stroke(audio, master, window.WaterSwipeAsset);
       tapAudio = new window.WaterSound.Tap(audio, master, window.WaterTapAsset);
       stoneAudio = new window.WaterSound.OneShot(audio, master, window.StoneImpactAsset);
+      rippleAudio = new window.WaterSound.Ripple(audio, master, window.WaterRipplesAsset);
       if (audio.state === 'suspended') audio.resume().catch(function () {});
       return true;
     } catch (error) { notice('这里暂时无法播放声音，仍可继续体验'); return false; }
@@ -70,6 +71,7 @@
     if (strokeAudio) strokeAudio.stop(immediate);
     if (tapAudio) tapAudio.stop();
     if (stoneAudio) stoneAudio.stop();
+    if (rippleAudio) rippleAudio.stop(immediate);
     for (var i = 0; i < audioNodes.length; i++) { try { audioNodes[i].noise.stop(); audioNodes[i].osc.stop(); } catch (error) {} }
     if (audio && audio.state === 'running') {
       if (immediate) audio.suspend().catch(function () {});
@@ -78,6 +80,7 @@
         if (!muted) return;
         if (weatherAudio) weatherAudio.stop(true);
         if (strokeAudio) strokeAudio.stop(true);
+        if (rippleAudio) rippleAudio.stop(true);
         audio.suspend().catch(function () {});
       }, 800);
     }
@@ -112,6 +115,7 @@
     if(!field.bathymetry)prepareFallbackStones();
     fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0;
     if (strokeAudio) strokeAudio.stop();
+    if (rippleAudio) rippleAudio.stop();
     // Three small existing leaves make the pool feel alive before the first touch.
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29);
     dust.length = 0;
@@ -415,6 +419,7 @@
   });
   document.getElementById('reset').addEventListener('click', function () {
     if (strokeAudio) strokeAudio.stop();
+    if (rippleAudio) rippleAudio.stop();
     if (tapAudio) tapAudio.stop();
     if (stoneAudio) stoneAudio.stop();
     if (sceneKind !== 'water') { fingers = {}; natureWeather[sceneKind] = true; if (sceneKind === 'snow') snow.clear(); else clouds.clear(); syncNatureControls(); notice(sceneKind === 'snow' ? '一场新雪，等你留下足迹' : '云海重新铺开'); return; }
@@ -552,6 +557,7 @@
       renderer.draw(reduced ? 0 : now, light);
       drawLife(dt);
       }
+      if (rippleAudio) rippleAudio.update(!muted && sceneKind === 'water' && renderer ? Math.sqrt(field.energy() / field.current.length) : 0);
     }
     // Slow callback delivery can also come from the host scheduler. Lower quality,
     // but never treat it as proof that WebGL is unavailable or stop simulation.
@@ -593,6 +599,8 @@
     strokeReady: !!(strokeAudio && strokeAudio.buffer), strokeDuration: strokeAudio && strokeAudio.buffer ? strokeAudio.buffer.duration : 0,
     tapReady: !!(tapAudio && tapAudio.buffer), tapVoices: tapAudio ? tapAudio.voices.length : 0, tapPlayed: tapAudio ? tapAudio.played : 0,
     stoneReady: !!(stoneAudio && stoneAudio.buffer), stoneVoices: stoneAudio ? stoneAudio.voices.length : 0, stonePlayed: stoneAudio ? stoneAudio.played : 0,
+    rippleReady: !!(rippleAudio && rippleAudio.buffer), rippleAudio: !!(rippleAudio && rippleAudio.node), rippleLevel: rippleAudio ? rippleAudio.level : 0,
+    rippleFading: !!(rippleAudio && rippleAudio.fadeEnd), rippleDuration: rippleAudio && rippleAudio.buffer ? rippleAudio.buffer.duration : 0,
     muted: muted, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length,
     energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'unavailable',
     surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0,

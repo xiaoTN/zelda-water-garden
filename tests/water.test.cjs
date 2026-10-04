@@ -90,17 +90,48 @@ test('tap decoding failure falls back without an unhandled rejection',async()=>{
   await Promise.resolve();assert.equal(tap.play(.6),false);assert.equal(tap.pending.length,0);
 });
 
-function strokeFixture(){
-  const {Stroke}=require('../src/water-audio.js'),asset=require('../src/water-swipe-asset.js');
-  const fs=require('fs');assert(Buffer.from(asset.base64,'base64').equals(fs.readFileSync(require('path').join(__dirname,'../assets-source/audio/water-swipe.mp3'))));
+function strokeFixture(kind='Stroke'){
+  const Controller=require('../src/water-audio.js')[kind],sample=kind==='Ripple'?'water-ripples':'water-swipe',asset=require('../src/'+sample+'-asset.js');
+  const fs=require('fs');assert(Buffer.from(asset.base64,'base64').equals(fs.readFileSync(require('path').join(__dirname,'../assets-source/audio/'+sample+'.mp3'))));
   const nodes=[],targets=[],buffers=[];let success,failure,decodes=0;
   function node(){const n={gain:{value:0,setTargetAtTime(value,time,fade){targets.push({value,time,fade});}},connect(){},disconnect(){this.disconnected=true;},start(){},stop(){this.stopped=true;}};nodes.push(n);return n;}
   const context={state:'running',currentTime:0,decodeAudioData(bytes,done,fail){decodes++;assert.equal(bytes.byteLength,asset.bytes);success=done;failure=fail;},createBuffer(channels,length,rate){const data=Array.from({length:channels},()=>new Float32Array(length)),b={length,sampleRate:rate,numberOfChannels:channels,duration:length/rate,getChannelData:i=>data[i]};buffers.push(b);return b;},createBufferSource:node,createGain:node};
   const original=context.createBuffer(2,16000,8000);
   for(let channel=0;channel<2;channel++)for(let i=0;i<original.length;i++)original.getChannelData(channel)[i]=Math.sin(i*.01+channel)*.1+i/original.length*.2;
-  const audio=new Stroke(context,{},asset);
+  const audio=new Controller(context,{},asset);
   return {audio,context,nodes,targets,buffers,original,decode:()=>success(original),fail:()=>failure(),decodes:()=>decodes};
 }
+
+test('ripple recording follows actual wave strength, preserves its loop and reverses fades on the same source',()=>{
+  const f=strokeFixture('Ripple'),{audio,context,nodes,targets}=f;f.decode();
+  assert.equal(f.decodes(),1);assert.equal(audio.buffer.length,15040);audio.update(0);assert.equal(audio.node,null);
+  audio.update(.002);const quiet=targets.at(-1).value,voice=audio.node;
+  audio.update(.015);const medium=targets.at(-1).value;audio.update(.06);assert(targets.at(-1).value>medium&&medium>quiet);
+  for(let i=0;i<100;i++){context.currentTime+=.033;audio.update(.025);assert.equal(audio.node,voice);}
+  assert.equal(nodes.length,2);assert(voice.source.loop);assert(targets.every(t=>t.fade>0));
+  audio.update(0);const deadline=audio.fadeEnd;assert(deadline>context.currentTime);context.currentTime+=.2;audio.update(0);assert.equal(audio.fadeEnd,deadline);
+  audio.update(.012);assert.equal(audio.node,voice);assert.equal(audio.fadeEnd,0);
+  context.currentTime=deadline+.1;audio.update(.012);assert.equal(audio.node,voice,'cancelled fades cannot stop new waves');
+  audio.stop();context.currentTime+=.7;audio.update(0);assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));
+  audio.update(.01);context.state='suspended';audio.update(.01);assert.equal(audio.node,null,'hidden-page suspension releases the loop immediately');
+});
+
+test('delayed ripple decoding waits for current waves and decoder failure stays silent',()=>{
+  const f=strokeFixture('Ripple');f.audio.update(.05);f.audio.stop();f.decode();assert.equal(f.audio.node,null);
+  f.audio.update(0);assert.equal(f.audio.node,null);f.audio.update(.02);assert(f.audio.node);f.audio.stop(true);assert.equal(f.audio.node,null);
+  const failed=strokeFixture('Ripple');failed.fail();failed.audio.update(.06);assert.equal(failed.audio.node,null);assert(failed.audio.failed);
+});
+
+test('more simulated ripples raise sound level and naturally settling waves fade to silence without a pointer',()=>{
+  const f=strokeFixture('Ripple'),field=new WaveField(88,192,.462);f.decode();
+  const rms=()=>Math.sqrt(field.energy()/field.current.length);
+  field.disturb(.5,.49,.35);f.audio.update(rms());const single=f.audio.level;
+  field.disturb(.3,.49,.35);field.disturb(.7,.49,.35);f.audio.update(rms());assert(f.audio.level>single*1.5);
+  const strong=f.audio.level;for(let i=0;i<360;i++){field.step();f.context.currentTime+=1/60;f.audio.update(rms());}
+  assert(f.audio.level<strong*.3&&f.audio.node,'quiet remaining waves keep the loop alive');
+  for(let i=0;i<1000;i++){field.step();f.context.currentTime+=1/60;f.audio.update(rms());}
+  assert.equal(f.audio.node,null);assert.equal(f.audio.level,0);
+});
 
 test('recorded swipe sound crossfades its loop, follows speed and reuses one source',()=>{
   const f=strokeFixture(),{audio,context,nodes,targets,original}=f;f.decode();

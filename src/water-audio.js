@@ -46,31 +46,36 @@
     }
     return buffer;
   }
-  function StrokeAudio(context, output, asset) {
-    this.context=context;this.output=output;this.buffer=null;this.node=null;this.lastMove=-10;this.speed=0;this.failed=false;this.fadeEnd=0;
-    var self=this;
-    function fail(){self.failed=true;self.speed=0;}
+  function decodeLoop(self, asset, ready, failed) {
+    var context=self.context;
+    function fail(){self.failed=true;if(failed)failed();}
     try {
       var raw=root.atob(asset.base64),bytes=new Uint8Array(raw.length);
       for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
       var decoded=context.decodeAudioData(bytes.buffer,function(original){
         self.buffer=loopBuffer(context,original);
-        if(self.speed>0&&context.currentTime-self.lastMove<.09)self.stroke(self.speed);
+        if(ready)ready();
       },fail);
       if(decoded&&decoded.catch)decoded.catch(fail);
     }catch(error){fail();}
+  }
+  function startLoop(self) {
+    var source=self.context.createBufferSource(),gain=self.context.createGain();
+    source.buffer=self.buffer;source.loop=true;gain.gain.value=0;
+    source.connect(gain);gain.connect(self.output);source.start();
+    self.node={source:source,gain:gain};
+  }
+  function StrokeAudio(context, output, asset) {
+    this.context=context;this.output=output;this.buffer=null;this.node=null;this.lastMove=-10;this.speed=0;this.failed=false;this.fadeEnd=0;
+    var self=this;
+    decodeLoop(this,asset,function(){if(self.speed>0&&context.currentTime-self.lastMove<.09)self.stroke(self.speed);},function(){self.speed=0;});
   }
   StrokeAudio.prototype.stroke=function(speed){
     var c=this.context;if(c.state!=='running'||this.failed)return;
     this.fadeEnd=0;
     this.lastMove=c.currentTime;this.speed=Math.max(0,Math.min(2.5,speed));
     if(!this.buffer)return;
-    if(!this.node){
-      var source=c.createBufferSource(),gain=c.createGain();
-      source.buffer=this.buffer;source.loop=true;gain.gain.value=0;
-      source.connect(gain);gain.connect(this.output);source.start();
-      this.node={source:source,gain:gain};
-    }
+    if(!this.node)startLoop(this);
     this.node.gain.gain.setTargetAtTime(.10+Math.min(1,this.speed/1.4)*.8,c.currentTime,.08);
   };
   StrokeAudio.prototype.release=function(){
@@ -94,6 +99,34 @@
     try{n.source.stop();}catch(error){}
     n.source.disconnect();n.gain.disconnect();
   };
-  root.WaterSound = { Stroke: StrokeAudio, Tap: TapAudio, OneShot: TapAudio };
+  function RippleAudio(context, output, asset) {
+    this.context=context;this.output=output;this.buffer=null;this.node=null;this.failed=false;this.fadeEnd=0;this.level=0;
+    decodeLoop(this,asset);
+  }
+  RippleAudio.prototype.update=function(rms){
+    // RMS includes both moving crests and rain waves, independent of grid size.
+    var level=Number.isFinite(rms)?Math.max(0,Math.min(1,(rms-.0005)/.06)):0,c=this.context;
+    if(level<=.005||c.state!=='running'||this.failed){
+      this.stop(c.state!=='running');
+      if(this.fadeEnd&&c.currentTime>=this.fadeEnd)this.stop(true);
+      return;
+    }
+    var previous=this.level;this.level=level;this.fadeEnd=0;
+    if(!this.buffer)return;
+    if(!this.node)startLoop(this);
+    this.node.gain.gain.setTargetAtTime(level*.85,c.currentTime,level>previous ? .18 : .24);
+  };
+  RippleAudio.prototype.stop=function(immediate){
+    this.level=0;
+    if(!this.node){this.fadeEnd=0;return;}
+    if(!immediate&&this.context.state==='running'){
+      if(!this.fadeEnd){this.node.gain.gain.setTargetAtTime(0,this.context.currentTime,.12);this.fadeEnd=this.context.currentTime+.65;}
+      return;
+    }
+    var n=this.node;this.node=null;this.fadeEnd=0;
+    try{n.source.stop();}catch(error){}
+    n.source.disconnect();n.gain.disconnect();
+  };
+  root.WaterSound = { Stroke: StrokeAudio, Ripple: RippleAudio, Tap: TapAudio, OneShot: TapAudio };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterSound;
 }(typeof window !== 'undefined' ? window : global));

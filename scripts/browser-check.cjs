@@ -103,6 +103,48 @@ async function run() {
         assert(stoneSample.duration>3&&stoneSample.duration<3.3&&stoneSample.peak>.01);
         assert.equal(stoneSample.channels,1);assert.equal(stoneSample.bytes,25805);
         reports.push({scenario:'supplied stone impact sample decodes and renders non-silent PCM',...stoneSample,result:'passed'});
+        const rippleSample=await page.evaluate(async()=>{
+          const c=new OfflineAudioContext(2,22050*17,22050);let original;
+          await new Promise((resolve,reject)=>{
+            const decode=c.decodeAudioData.bind(c);c.decodeAudioData=(bytes,done)=>decode(bytes,buffer=>{original=buffer;done(buffer);resolve();},reject);
+            window.rippleSampleCheck=new WaterSound.Ripple(c,c.destination,WaterRipplesAsset);
+          });
+          const buffer=rippleSampleCheck.buffer,source=c.createBufferSource();source.buffer=buffer;source.loop=true;source.connect(c.destination);source.start();
+          const data=(await c.startRendering()).getChannelData(0);let peak=0,afterLoops=0;
+          for(let i=0;i<data.length;i++){peak=Math.max(peak,Math.abs(data[i]));if(i>2*buffer.length)afterLoops=Math.max(afterLoops,Math.abs(data[i]));}
+          let seamError=0;for(let channel=0;channel<buffer.numberOfChannels;channel++){
+            const loop=buffer.getChannelData(channel),input=original.getChannelData(channel),overlap=original.length-buffer.length;
+            seamError=Math.max(seamError,Math.abs((loop[0]-loop[loop.length-1])-(input[overlap]-input[overlap-1])));
+          }
+          delete window.rippleSampleCheck;return {duration:original.duration,loopDuration:buffer.duration,channels:buffer.numberOfChannels,bytes:WaterRipplesAsset.bytes,peak,afterLoops,seamError};
+        });
+        assert(rippleSample.duration>7.9&&rippleSample.duration<8.2);assert.equal(rippleSample.bytes,64827);
+        assert.equal(rippleSample.channels,2);assert(rippleSample.peak>.01&&rippleSample.afterLoops>.01&&rippleSample.seamError<1e-6);
+        reports.push({scenario:'supplied ripple recording renders offline across two smooth loop boundaries',...rippleSample,result:'passed'});
+        const rippleFades=await page.evaluate(async()=>{
+          const c=new OfflineAudioContext(1,8000*5,8000);let time=0;
+          const buffer=c.createBuffer(1,16000,8000);buffer.getChannelData(0).fill(1);
+          const clock={state:'running',get currentTime(){return time;},decodeAudioData(bytes,done){done(buffer);},createBuffer:c.createBuffer.bind(c),createBufferSource:c.createBufferSource.bind(c),createGain:c.createGain.bind(c)};
+          const sound=new WaterSound.Ripple(clock,c.destination,WaterRipplesAsset);sound.update(.003);const voice=sound.node;
+          time=1;sound.update(.025);time=2;sound.update(.06);time=3;sound.update(.003);time=4;sound.update(0);
+          const samples=(await c.startRendering()).getChannelData(0),at=t=>samples[Math.round(t*8000)];
+          return {sameVoice:sound.node===voice,early:at(.01),quiet:at(.8),medium:at(1.8),strong:at(2.8),reduced:at(3.8),tail:at(4.15),end:at(4.64),jumps:[1,2,3,4].map(t=>Math.abs(at(t)-at(t-1/8000)))};
+        });
+        assert(rippleFades.sameVoice&&rippleFades.early<rippleFades.quiet*.2);
+        assert(rippleFades.medium>rippleFades.quiet*4&&rippleFades.strong>rippleFades.medium*1.8);
+        assert(rippleFades.reduced<rippleFades.strong*.12&&rippleFades.end<rippleFades.tail*.025);
+        assert(rippleFades.jumps.every(j=>j<.001));
+        reports.push({scenario:'real ripple PCM fades in, scales with wave strength and fades out continuously',...rippleFades,result:'passed'});
+        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().rippleReady);
+        await page.mouse.move(120,410);await page.mouse.down();await page.mouse.move(270,410,{steps:12});await page.mouse.up();
+        await page.waitForTimeout(900);const remaining=await inspect();
+        assert(!remaining.strokeAudio&&remaining.rippleAudio&&remaining.rippleLevel>.01&&remaining.activePointers===0,'released fingers leave audible moving water');
+        await page.waitForFunction(level=>WaterGarden.inspect().rippleLevel>0&&WaterGarden.inspect().rippleLevel<level*.7,remaining.rippleLevel);
+        const quieter=await inspect();assert(quieter.rippleAudio);
+        await page.screenshot({path:path.join(out,'ripple-audio-after-release.png')});
+        await page.locator('#reset').click();assert((await inspect()).rippleFading);
+        await page.waitForFunction(()=>!WaterGarden.inspect().rippleAudio);await page.locator('#sound').click();
+        reports.push({scenario:'pointer release leaves wave-driven sound which weakens as the water settles and fades on reset',remaining,quieter,result:'passed'});
       }
       assert.equal(state.fish.length,5);assert.equal(state.fishTriangles,1175);
       const fishStart=state.fishTime;await page.waitForTimeout(220);assert((await inspect()).fishTime>fishStart);
@@ -406,10 +448,11 @@ async function run() {
         await page.waitForFunction(()=>WaterGarden.inspect().audioState==='suspended');assert.equal((await inspect()).weatherAudioNodes,0);assert.equal((await inspect()).rainAudioFading,false);
         reports.push({scenario:'rapid mute/unmute cancels suspension and rain intensity changes retain continuous playback',result:'passed'});
         await page.locator('[data-rain="0"]').click();await page.locator('#reset').click();
-        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().strokeReady);
+        await page.locator('#sound').click();await page.waitForFunction(()=>WaterGarden.inspect().strokeReady&&WaterGarden.inspect().audioState==='running');
         await page.mouse.move(x-40,y);await page.mouse.down();
         for(let i=0;i<12;i++){await page.mouse.move(x-40+i*7,y);await page.waitForTimeout(25);}
-        state=await inspect();assert(state.strokeAudio&&state.strokeSpeed>0,'a real swipe must create continuous water sound');
+        await page.mouse.move(x+45,y);
+        state=await inspect();assert(state.strokeAudio&&state.strokeSpeed>0,'a real swipe must create continuous water sound: '+JSON.stringify(state));
         await page.waitForTimeout(160);assert.equal((await inspect()).strokeSpeed,0,'holding still must silence the swipe');
         await page.mouse.move(x+55,y);await page.waitForTimeout(35);assert((await inspect()).strokeSpeed>0);
         await page.mouse.up();await page.waitForTimeout(800);assert.equal((await inspect()).strokeAudio,false,'release must free the continuous sound graph after its fade');
@@ -423,7 +466,7 @@ async function run() {
         assert((await inspect()).strokeAudio);await page.mouse.up();
         await page.locator('button[data-scene="snow"]').click();assert.equal(await page.evaluate(()=>NatureGarden.inspect().scene),'snow');
         assert((await inspect()).rainAudioFading);
-        await page.waitForFunction(()=>!WaterGarden.inspect().strokeAudio&&!WaterGarden.inspect().rainAudioFading);
+        await page.waitForFunction(()=>!WaterGarden.inspect().strokeAudio&&!WaterGarden.inspect().rainAudioFading&&!WaterGarden.inspect().rippleAudio);
         assert.equal((await inspect()).audioState,'running','scene changes keep unmuted audio available');
         await page.locator('button[data-scene="cloud"]').click();await page.locator('button[data-scene="water"]').click();assert((await inspect()).rainAudio);
         await page.locator('#sound').click();await page.locator('#reset').click();
@@ -449,6 +492,7 @@ async function run() {
         const pausedState=await inspect(),paused=pausedState.steps; await page.waitForTimeout(220); assert.equal((await inspect()).steps, paused);
         assert.equal((await inspect()).rainAudio,false);assert.equal((await inspect()).lightningNext,pausedState.lightningNext);
         assert.equal((await inspect()).tapVoices,0);
+        assert.equal((await inspect()).rippleAudio,false);
         await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable:true,value:false}); document.dispatchEvent(new Event('visibilitychange')); });
         await page.waitForTimeout(170); assert((await inspect()).steps > paused);
         assert((await inspect()).rainAudio);assert.equal((await inspect()).rainLevel,4);
@@ -580,6 +624,7 @@ async function run() {
     assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().stonePlayed),0);
     await offlinePage.waitForFunction(()=>WaterGarden.inspect().stoneImpacts===1);
     assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().stonePlayed),1);assert.equal(networkRequests,0);
+    await offlinePage.waitForFunction(()=>WaterGarden.inspect().rippleAudio&&WaterGarden.inspect().rippleLevel>.01);assert.equal(networkRequests,0);
     await offlinePage.locator('#reset').click();assert.equal(await offlinePage.evaluate(()=>WaterGarden.inspect().stoneVoices),0);
     reports.push({scenario:'file URL offline', networkRequests, result:'passed'}); await offlineContext.close();
     const reducedContext = await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'}), reducedPage = await reducedContext.newPage();

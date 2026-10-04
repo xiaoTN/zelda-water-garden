@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path');
 const root=path.resolve(__dirname,'..');
-for(const [name,globalName] of [['water-tap','WaterTapAsset'],['water-swipe','WaterSwipeAsset'],['stone-impact','StoneImpactAsset']]){
+for(const [name,globalName] of [['water-tap','WaterTapAsset'],['water-swipe','WaterSwipeAsset'],['stone-impact','StoneImpactAsset'],['water-ripples','WaterRipplesAsset']]){
   const bytes=fs.readFileSync(path.join(root,'assets-source/audio/'+name+'.mp3'));
   // Small encoded samples are decoded directly by Web Audio, without media URLs.
   const asset={bytes:bytes.length,base64:bytes.toString('base64')};

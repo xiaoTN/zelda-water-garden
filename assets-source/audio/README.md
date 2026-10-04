@@ -8,6 +8,8 @@
 
 `stone-impact.mp3`：用户于 2026-10-04 指定的石头入水声，来源为 [爱给音频文件](https://s1.aigei.com/src/aud/mp3/a7/a70922a8c46748c0af1ae8c34f0b83f9.mp3)，下载时使用用户提供的临时链接。按用途命名，完整保留原始字节：25,805 字节，22,050 Hz、单声道、容器时长约 3.130 秒。SHA-256：`a260cf244dbcee3b2ee3d7753f021a06f52bd5ac819f84a91cf630ef5dddf5b6`。仅在石头接触水面时播放一次，保留原有起音与自然尾音，不额外淡入淡出。
 
-`npm run audio` 将这三个样本生成至 `src/water-tap-asset.js`、`src/water-swipe-asset.js` 和 `src/stone-impact-asset.js`，完整构建自动执行该步骤。小工具上传类型清单未列出 MP3，运行包因此携带小型 Base64 字节数据，通过 Web Audio 直接解码为可复用的 AudioBuffer；不使用媒体 data URL、网络请求或运行时文件读取。原始 MP3 只保留在素材目录中，ZIP 中的脚本与原始字节一致性由测试验证。
+`water-ripples.mp3`：用户于 2026-10-04 指定的水波荡漾声，来源为 [爱给音频文件](https://s8.aigei.com/src/aud/mp3/0a/0a3c08d94728401d9f719716336b566c.mp3)，下载时使用用户提供的临时链接。完整保留原始字节：64,827 字节，22,050 Hz、双声道、容器时长约 8.011 秒。SHA-256：`36b14179708f11b3aa98b29c32a4b642b9ee9c76be77e2dd85884eb700d2bdae`。运行时循环尾首交叉淡化 120 毫秒，音量随实际波场强度平滑变化，水波消散后淡出。
+
+`npm run audio` 将这四个样本生成至 `src/water-tap-asset.js`、`src/water-swipe-asset.js`、`src/stone-impact-asset.js` 和 `src/water-ripples-asset.js`，完整构建自动执行该步骤。小工具上传类型清单未列出 MP3，运行包因此携带小型 Base64 字节数据，通过 Web Audio 直接解码为可复用的 AudioBuffer；不使用媒体 data URL、网络请求或运行时文件读取。原始 MP3 只保留在素材目录中，ZIP 中的脚本与原始字节一致性由测试验证。
 
 滑动录音在运行时把尾部与开头交叉淡化 120 毫秒，形成约 6.38 秒的循环；原始 MP3 保持完整。滑动只复用一个循环声源，音量随手速变化，停手后淡出。
