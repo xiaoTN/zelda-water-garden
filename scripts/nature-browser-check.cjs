@@ -59,11 +59,14 @@ async function run() {
       await select('cloud'); await page.locator('#reset').click();
       const opacity = (await state()).cloud.opacity;
       await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.move(x+70,y,{steps:15}); await page.mouse.up();
-      s = await state(); assert(s.cloud.opacity < opacity - .5); assert(s.cloud.motion > 0);
+      s = await state(); assert(s.cloud.opacity <= opacity);
       assert(s.cloudCarve>10,'parting must deform the actual cloud surface');
       if (viewport.width === 390 || viewport.width === 1440) await page.screenshot({path:path.join(out,viewport.width===390?'cloud-mobile.png':'cloud-desktop.png')});
-      await page.locator('[data-nature="1"]').click(); await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up(); assert((await state()).cloud.motion > .02);
-      await page.locator('[data-nature="2"]').click(); await page.mouse.move(x-60,y); await page.mouse.down(); await page.mouse.move(x+90,y-30,{steps:12}); await page.mouse.up(); assert((await state()).cloud.motion > .1);
+      await page.locator('[data-nature="1"]').click();
+      const gatherPoint=await page.evaluate(({x,y})=>testSurface3D.point(x/innerWidth,y/innerHeight,'cloud',testSurface3D.clouds),{x,y});
+      await page.mouse.move(x,y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up();
+      assert(await page.evaluate(p=>{const f=testSurface3D.clouds.field;return f.depth[f.index(p.u,p.v)]<0;},gatherPoint),'gather raises the touched cloud surface');
+      assert.equal(await page.locator('[data-nature="2"]').isVisible(),false,'cloud has no wind tool');
       await page.locator('#rain').click(); assert.equal((await state()).weather,true);
       await page.locator('#light').click(); assert.equal(await page.evaluate(() => WaterGarden.inspect().light),1);
       await page.waitForFunction(() => NatureGarden.inspect().renderLight === 1);
@@ -126,7 +129,7 @@ async function run() {
     await page.goto(pathToFileURL(path.join(root,'src/index.html')).href);await page.waitForFunction(()=>window.NatureGarden);
     await page.locator('button[data-scene="snow"]').click(); await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().snow.markedCells>0));
     assert.equal(await page.evaluate(()=>NatureGarden.inspect().renderer),'webgl');
-    await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().cloud.opacity<72));
+    await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().cloudCarve>0));
     await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloud.time),0);assert.equal(requests,0);
     reports.push({scenario:'offline WebGL, touch fallback, reduced motion',result:'passed',networkRequests:requests});await context.close();
     const unavailable=await browser.newContext({viewport:{width:390,height:844}}),unsupported=await unavailable.newPage();
@@ -138,7 +141,7 @@ async function run() {
     await unavailable.close();reports.push({scenario:'unsupported hardware shows explicit 3D unavailable state',result:'passed'});
     assert.deepEqual(errors,[]);
     fs.writeFileSync(path.join(out,'nature-browser-report.json'),JSON.stringify({date:new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'}),browser:await browser.version(),errors,reports},null,2)+'\n');
-    console.log('Nature browser checks passed: snow, footprints, rolling balls, cloud part/gather/wind, persistence, resize, audio, light, weather, reset, touch cancel, lifecycle, actual 3D geometry, offline WebGL and unsupported hardware.');
+    console.log('Nature browser checks passed: snow, footprints, rolling balls, cloud part/gather, persistence, resize, audio, light, weather, reset, touch cancel, lifecycle, actual 3D geometry, offline WebGL and unsupported hardware.');
   } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error(error);server.close();process.exitCode=1;});

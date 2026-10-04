@@ -137,11 +137,11 @@
     }
   };
   Clouds.prototype.touch = function (u, v, mode, dx, dy, dt) {
-    var radius = Math.min(this.aspect, 1) * .32;
+    if(mode!=='part'&&mode!=='gather')return;
+    var radius = Math.min(this.aspect, 1) * .32 / 3;
     this.field.aspect = this.aspect;
-    if (mode === 'part' || mode === 'wind') this.field.stamp(u, v, radius * (mode === 'part' ? .27 : .20), mode === 'part' ? .98 : .55,0,1,false,1,Math.hypot(dx,dy)>1e-5?Math.atan2(dy,dx*this.aspect):undefined);
-    else this.field.stamp(u,v,radius*.36,.65,0,1,true,dt*3);
-    if(mode==='wind') { this.drift = clamp(this.drift + dx * 1.8,-.6,.6); this.driftY = clamp(this.driftY + dy * 1.8,-.6,.6); }
+    if (mode === 'part') this.field.stamp(u, v, radius * .27, .98,0,1,false,1,Math.hypot(dx,dy)>1e-5?Math.atan2(dy,dx*this.aspect):undefined);
+    else this.field.stamp(u,v,radius*.36,.65,0,1,true,dt*6);
     for (var i = 0; i < this.items.length; i++) {
       var p = this.items[i], x = (p.u - u) * this.aspect, y = p.v - v, d = Math.hypot(x, y);
       if (d > radius) continue;
@@ -150,11 +150,8 @@
         p.vx += x / safe * force * dt * .6; p.vy += y / safe * force * dt * .6;
         p.opacity = Math.max(.08, p.opacity - force * dt * 3.5);
       } else if (mode === 'gather') {
-        p.vx -= x * force * dt * 6; p.vy -= y * force * dt * 6;
-        p.opacity = Math.min(1, p.opacity + dt * force * 3);
-      } else {
-        p.vx += clamp(dx * this.aspect, -.12, .12) * force * 5;
-        p.vy += clamp(dy, -.12, .12) * force * 5;
+        p.vx -= x * force * dt * 12; p.vy -= y * force * dt * 12;
+        p.opacity = Math.min(1, p.opacity + dt * force * 6);
       }
       p.vx = clamp(p.vx, -.32, .32); p.vy = clamp(p.vy, -.32, .32);
     }

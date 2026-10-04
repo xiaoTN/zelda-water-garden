@@ -50,23 +50,34 @@ test('snowballs have a fixed population cap and reset footprints', () => {
 test('parting clouds opens a local gap which recovers over time', () => {
   const clouds = new Clouds(); clouds.aspect = .46;
   const before = clouds.inspect().opacity;
-  clouds.touch(.5, .5, 'part', 0, 0, .5);
+  clouds.touch(clouds.items[0].u-.01, clouds.items[0].v, 'part', 0, 0, .5);
   assert(clouds.inspect().opacity < before); assert(clouds.inspect().motion > 0);
   const gap = clouds.inspect().opacity;
   for (let i = 0; i < 300; i++) clouds.update(1 / 30, false, false);
   assert(clouds.inspect().opacity > gap); assert.equal(clouds.items.length, 72);
 });
-test('gather pulls nearby clouds inward and wind follows the drag direction', () => {
-  const clouds = new Clouds(); clouds.items = [{ u: .6, v: .5, homeV: .5, vx: 0, vy: 0, opacity: .2 }];
+test('gather pulls nearby clouds inward', () => {
+  const clouds = new Clouds(); clouds.items = [{ u: .53, v: .5, homeV: .5, vx: 0, vy: 0, opacity: .2 }];
   clouds.touch(.5, .5, 'gather', 0, 0, .2); clouds.update(.08, false, true);
-  assert(clouds.items[0].u < .6); assert(clouds.items[0].opacity > .2);
-  clouds.items[0].vx = 0; clouds.touch(.5, .5, 'wind', .1, 0, .1);
-  assert(clouds.items[0].vx > 0);
+  assert(clouds.items[0].u < .53); assert(clouds.items[0].opacity > .2);
+});
+
+test('cloud brush reaches one third as far and gathering moves twice the material per second', () => {
+  const cloud=new Clouds();cloud.touch(.5,.5,'part',0,0,.01);
+  const field=cloud.field,reach=.32/3*.27*1.8;
+  for(let y=0;y<field.size;y++)for(let x=0;x<field.size;x++){
+    if(field.depth[y*field.size+x]!==0)assert(Math.hypot(field.origin+x/field.size*field.span-.5,field.origin+y/field.size*field.span-.5)<=reach+1e-6);
+  }
+  cloud.clear();const previousRate=new Snow();
+  previousRate.soft=true;previousRate.stamp(.5,.5,.32/3*.36,.65,0,1,true,.01*3);
+  cloud.touch(.5,.5,'gather',0,0,.01);
+  const raised=s=>s.depth.reduce((sum,d)=>sum+Math.max(0,-d),0);
+  assert(Math.abs(raised(cloud.field)/raised(previousRate)-2)<.001);
 });
 test('reduced motion suppresses ambient drift while direct cloud interaction still works', () => {
   const clouds = new Clouds(), first = clouds.items[0].u;
   clouds.update(1, true, true); assert.equal(clouds.items[0].u, first); assert.equal(clouds.time, 0);
-  clouds.touch(clouds.items[0].u, clouds.items[0].v, 'wind', .1, 0, .2);
+  clouds.touch(clouds.items[0].u-.01, clouds.items[0].v, 'part', .1, 0, .2);
   clouds.update(.05, false, true); assert(clouds.items[0].u > first);
   clouds.clear(); assert.equal(clouds.inspect().motion, 0); assert.equal(clouds.inspect().opacity, 72);
 });
@@ -80,9 +91,8 @@ test('cloud sea channels retain displaced rims and refill while snow channels pe
   cloud.touch(.5,.5,'gather',0,0,.6);assert(cloud.field.depth[cloud.field.index(.5,.5)]<0,'gather raises the center using surrounding material');
   cloud.clear();assert.equal(cloud.field.inspect().depth,0);assert.equal(cloud.flowX,0);
 });
-test('breeze and direct vertical wind move the continuous cloud material',()=>{
+test('ambient breeze moves the continuous cloud material',()=>{
   const calm=new Clouds(),breeze=new Clouds();calm.update(1,false,false);breeze.update(1,true,false);assert(breeze.flowX>calm.flowX*2);
-  const wind=new Clouds();wind.touch(.5,.5,'wind',0,-.1,.1);wind.update(.2,false,true);assert(wind.flowY<0);
 });
 function volume(field){let dug=0,piled=0;for(const d of field.depth){if(d>0)dug+=d;else piled-=d;}return {dug,piled,balance:dug-piled};}
 test('a channel moves its missing volume to both shoulders and repeated pressure creates no material',()=>{
