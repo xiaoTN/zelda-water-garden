@@ -84,7 +84,7 @@
       var s=this.items[i],previous=s.body,ratio=Math.sqrt(Math.min(aspect,1)/Math.min(oldAspect,1));
       var y=bed.heightAt(s.u,s.v)+(previous.position.y-oldBed.heightAt(s.u,s.v))*ratio;
       this.createBody(s,y);s.body.quaternion.copy(previous.quaternion);s.body.velocity.copy(previous.velocity);s.body.angularVelocity.copy(previous.angularVelocity);
-      s.settled=false;this.sync(s);
+      if(s.settled)this.fixStone(s);this.sync(s);
     }
     this.revision++;
   };
@@ -93,19 +93,15 @@
     var shape=rockShape(s.radius,s.height,s.seed);s.local=mesh(shape,s.seed);
     s.body=new C.Body({mass:Math.max(.15,s.radius*s.radius*s.height*1800),shape:shape,linearDamping:.08,angularDamping:.25,
       allowSleep:false,collisionFilterGroup:2,collisionFilterMask:3});
-    s.body.waterStone=s;s.quietTime=0;s.restGroup=null;
-    var system=this;
-    s.body.addEventListener('collide',function(event){
-      // Wake the complete supporting group before the contact solver runs.
-      // Even a slow new contact must participate: a sleeping neighbour otherwise acts infinitely heavy.
-      if(s.body.sleepState===C.Body.SLEEPING&&event.body.mass>0&&event.body.sleepState!==C.Body.SLEEPING)system.wakeGroup(s);
-    });
+    s.body.waterStone=s;s.quietTime=0;s.restMotion=0;s.supportTime=0;
     s.body.position.set((s.u-.5)*this.aspect*2,y,(s.v-.5)*2/.8660254);s.body.quaternion.setFromEuler(.09,s.angle,.06);
     this.world.addBody(s.body);
   };
-  Stones.prototype.wakeGroup=function(stone){
-    var group=stone.restGroup||[stone];
-    for(var i=0;i<group.length;i++){var s=group[i];s.body.wakeUp();s.settled=false;s.quietTime=0;s.restGroup=null;}
+  Stones.prototype.fixStone=function(stone){
+    // Keep the same hull and pose, but remove this body from dynamic integration.
+    var body=stone.body;body.type=C.Body.STATIC;body.mass=0;body.updateMassProperties();
+    body.force.setZero();body.torque.setZero();body.sleep();body.aabbNeedsUpdate=true;
+    this.world.broadphase.dirty=true;
   };
   Stones.prototype.groupRoot=function(index){
     while(this.parents[index]!==index){this.parents[index]=this.parents[this.parents[index]];index=this.parents[index];}
@@ -120,32 +116,31 @@
       s=items[i];s.contact=false;s.body.waterIndex=i;this.parents[i]=i;
       this.supported[i]=0;this.groupQuiet[i]=Infinity;this.groupMotion[i]=0;
     }
-    // Sleeping pairs do not generate contacts; retain their support graph until impact.
-    for(i=0;i<n;i++)if(items[i].restGroup)for(j=0;j<items[i].restGroup.length;j++)this.joinGroup(i,items[i].restGroup[j].body.waterIndex);
     for(i=0;i<this.world.contacts.length;i++){
       var contact=this.world.contacts[i],a=contact.bi.waterStone,b=contact.bj.waterStone;
-      if(a)a.contact=true;if(b)b.contact=true;
-      if(a&&b)this.joinGroup(a.body.waterIndex,b.body.waterIndex);
-      else if(a&&!contact.bj.mass)this.supported[a.body.waterIndex]=1;
-      else if(b&&!contact.bi.mass)this.supported[b.body.waterIndex]=1;
+      var activeA=a&&contact.bi.type===C.Body.DYNAMIC,activeB=b&&contact.bj.type===C.Body.DYNAMIC;
+      if(activeA)a.contact=true;if(activeB)b.contact=true;
+      if(activeA&&activeB)this.joinGroup(a.body.waterIndex,b.body.waterIndex);
+      else if(activeA&&!contact.bj.mass)this.supported[a.body.waterIndex]=1;
+      else if(activeB&&!contact.bi.mass)this.supported[b.body.waterIndex]=1;
     }
     for(i=0;i<n;i++){
-      s=items[i];var root=this.groupRoot(i),motion=s.body.velocity.lengthSquared()+s.body.angularVelocity.lengthSquared()*s.radius*s.radius;
-      this.groupMotion[root]=Math.max(this.groupMotion[root],motion);
+      s=items[i];if(s.body.type===C.Body.STATIC)continue;
+      var root=this.groupRoot(i),motion=s.body.velocity.lengthSquared()+s.body.angularVelocity.lengthSquared()*s.radius*s.radius;
+      // Smooth isolated solver impulses; sustained rolling still resets the quiet timer.
+      s.restMotion+=(motion-s.restMotion)*(1-Math.exp(-fixed/.15));
+      this.groupMotion[root]=Math.max(this.groupMotion[root],s.restMotion);
       this.groupQuiet[root]=Math.min(this.groupQuiet[root],s.quietTime);
-      if(this.supported[i]||s.body.sleepState===C.Body.SLEEPING)this.supported[root]=1;
+      if(this.supported[i])this.supported[root]=1;
     }
     for(i=0;i<n;i++){
-      root=this.groupRoot(i);s=items[i];
-      s.quietTime=this.supported[root]&&this.groupMotion[root]<.0016?this.groupQuiet[root]+fixed:0;
+      root=this.groupRoot(i);s=items[i];if(s.body.type===C.Body.STATIC)continue;
+      // A facet can lose contact for a few ticks while resting on a rough fixed hull.
+      s.supportTime=this.supported[root] ? .06 : Math.max(0,s.supportTime-fixed);
+      s.quietTime=s.supportTime>0&&this.groupMotion[root]<.0016?this.groupQuiet[root]+fixed:0;
     }
-    for(i=0;i<n;i++)if(this.groupRoot(i)===i&&items[i].quietTime>.7){
-      var needsSleep=false;
-      for(j=0;j<n;j++)if(this.groupRoot(j)===i&&items[j].body.sleepState!==C.Body.SLEEPING)needsSleep=true;
-      if(needsSleep){
-        var group=[];for(j=0;j<n;j++)if(this.groupRoot(j)===i)group.push(items[j]);
-        for(j=0;j<group.length;j++){group[j].body.sleep();group[j].restGroup=group;}
-      }
+    for(i=0;i<n;i++)if(this.groupRoot(i)===i&&items[i].body.type===C.Body.DYNAMIC&&items[i].quietTime>.7){
+      for(j=0;j<n;j++)if(this.groupRoot(j)===i&&items[j].body.type===C.Body.DYNAMIC)this.fixStone(items[j]);
     }
   };
   Stones.prototype.sync=function(s){
@@ -158,8 +153,7 @@
     if(!this.world||core.shore(u,v)>-.10||this.bed.heightAt(u,v)>-.025)return false;
     if(this.items.length>=limit){
       var oldest=this.items[0];
-      // Removing a support must wake its resting neighbours before the next physics step.
-      this.wakeGroup(oldest);this.world.removeBody(oldest.body);this.items.shift();
+      this.world.removeBody(oldest.body);this.items.shift();
     }
     var s={u:u,v:v,size:.075+random()*.11,tall:1.85+random()*.4,seed:Math.floor(random()*1000000)+1,angle:random()*6.28,entered:false,settled:false};
     var y=Math.max(1.5,v*4+.25);
@@ -172,13 +166,13 @@
   };
   Stones.prototype.update=function(dt,onEvent){
     if(!this.world||!this.items.length||dt<=0)return;
-    var active=false;for(var a=0;a<this.items.length;a++)if(this.items[a].body.sleepState!==C.Body.SLEEPING)active=true;
+    var active=false;for(var a=0;a<this.items.length;a++)if(!this.items[a].settled)active=true;
     if(!active){this.accumulator=0;return;}
     this.accumulator+=Math.min(.08,dt);var count=0,moved=false;
     while(this.accumulator>=fixed&&count++<10){
       for(var i=0;i<this.items.length;i++){
         var s=this.items[i],b=s.body;
-        if(b.sleepState===C.Body.SLEEPING)continue;
+        if(b.type===C.Body.STATIC)continue;
         var wet=core.clamp(-s.y/Math.max(.01,s.top-s.y),0,1);
         // Approximate buoyancy for stone density 2.65 x water; water also damps spin.
         b.force.y+=b.mass*6.5*wet/2.65;
@@ -192,11 +186,12 @@
       this.world.step(fixed);this.accumulator-=fixed;
       this.restContacts();
       for(i=0;i<this.items.length;i++){
-        s=this.items[i];var before=s.y,wasSettled=s.settled;this.sync(s);
-        s.settled=s.body.sleepState===C.Body.SLEEPING;
+        s=this.items[i];if(s.settled)continue;
+        var before=s.y;this.sync(s);
+        s.settled=s.body.type===C.Body.STATIC;
         if(!s.entered&&before>0&&s.y<=0){s.entered=true;this.impacts++;if(onEvent)onEvent('impact',s);}
-        if(s.settled&&!wasSettled&&onEvent)onEvent('settled',s);
-        if(!s.settled||!wasSettled){this.revision++;if(s.entered)moved=true;}
+        if(s.settled&&onEvent)onEvent('settled',s);
+        this.revision++;if(s.entered)moved=true;
       }
     }
     this.bedClock+=dt;

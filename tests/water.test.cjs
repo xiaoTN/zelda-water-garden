@@ -589,19 +589,22 @@ test('faceted contact friction does not sustain motion in a resting pile',()=>{
   }
 });
 
-test('a new impact wakes the complete resting support group and it settles again',()=>{
+test('new drops collide with fixed stones without moving or rotating the settled pile',()=>{
   const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(2*713);
   s.attach(.462,terrain.bathymetry(scene,.462,true),scene);
   for(let i=0;i<3;i++)s.add(.5,.49,random);
   for(let i=0;i<2400;i++)s.update(1/120);
-  const member=s.items.find(r=>r.restGroup&&r.restGroup.length>1);
-  assert(member,'fixture must form a supported resting pile');
-  const group=member.restGroup.slice(),top=group.reduce((a,b)=>a.top>b.top?a:b);
+  const group=s.items.slice(),poses=group.map(r=>({position:r.body.position.clone(),quaternion:r.body.quaternion.clone()})),top=group.reduce((a,b)=>a.top>b.top?a:b);
+  assert(group.every(r=>r.settled&&r.body.mass===0));
   assert(s.add(top.u,top.v,()=>.99));
-  let together=false;
-  for(let i=0;i<3000;i++){s.update(1/120);if(group.every(r=>!r.settled))together=true;}
-  assert(together,'impact must wake every rock in the supporting contact group');
-  assert(s.items.every(r=>r.settled),'the disturbed pile must return to stable rest');
+  let contacts=0;
+  for(let i=0;i<3000;i++){
+    s.update(1/120);
+    contacts+=s.world.contacts.filter(c=>group.some(r=>r.body===c.bi||r.body===c.bj)).length;
+    for(let j=0;j<group.length;j++){assert(group[j].settled);assert.deepEqual(group[j].body.position,poses[j].position);assert.deepEqual(group[j].body.quaternion,poses[j].quaternion);}
+  }
+  assert(contacts>0,'fixed hulls still support and collide with later drops');
+  assert(s.items.every(r=>r.settled),'the new stone must also settle');
 });
 
 test('stone undersides have irregular facets and rendering matches the full collision hull',()=>{
@@ -644,12 +647,14 @@ test('rigid stones accelerate, rotate, impact once and settle without sinking th
   assert(Math.abs(rock.y+.22)<.004);assert.equal(stones.impacts,1);
   assert(rotated,'orientation must evolve physically without requiring a large tumble');
   assert(stones.geometry(true).length>0);assert.equal(stones.shadows().length,0);
-  stones.attach(.46,{heightAt:()=>-.18});for(let i=0;i<600;i++)stones.update(1/120);
+  const settledRotation=rock.body.quaternion.clone();
+  stones.attach(.46,{heightAt:()=>-.18});assert(rock.settled);assert.equal(rock.body.mass,0);assert.deepEqual(rock.body.quaternion,settledRotation);
+  for(let i=0;i<600;i++)stones.update(1/120);
   assert(rock.settled);assert(Math.abs(rock.y+.18)<.004);assert.equal(stones.items.length,1);
   stones.clear();stones.update(.08,(event)=>events.push(event));assert.equal(stones.items.length,0);assert.equal(stones.geometry(false).length,0);assert.equal(stones.impacts,0);
 });
 
-test('same-point rigid bodies collide, transfer momentum, roll apart and sleep',()=>{
+test('same-point moving stones collide and roll apart, then stay fixed under later impacts',()=>{
   const stones=new FallingStones();stones.attach(1,{heightAt:()=>-.22});
   for(let i=0;i<3;i++)assert(stones.add(.5,.49,()=>.8));
   assert(stones.items[1].y>stones.items[0].top);
@@ -659,11 +664,9 @@ test('same-point rigid bodies collide, transfer momentum, roll apart and sleep',
   assert(stones.items.every(s=>s.settled));assert(stones.items.some(s=>Math.abs(s.u-.5)>.04),'contact must allow lateral motion');
   assert(stones.items.every(s=>s.y>-.224));assert.equal(stones.shadows().length,0);
   assert.equal(stones.geometry(true).length,stones.items.reduce((n,s)=>n+s.local.length,0));
-  const sleeping=stones.items[0],previous=sleeping.body.position.clone();
-  assert(stones.add(sleeping.u+.025,sleeping.v,()=>.99));let woke=false,maxMotion=0;
-  for(let i=0;i<1800;i++){stones.update(1/120);if(!sleeping.settled)woke=true;maxMotion=Math.max(maxMotion,sleeping.body.position.distanceTo(previous));}
-  assert(woke,'a new collision must wake a resting rock');
-  assert(maxMotion>.003,'impact must move existing stones');
+  const fixedStone=stones.items[0],previous=fixedStone.body.position.clone();
+  const orientation=fixedStone.body.quaternion.clone();assert(stones.add(fixedStone.u+.025,fixedStone.v,()=>.99));
+  for(let i=0;i<1800;i++){stones.update(1/120);assert(fixedStone.settled);assert.deepEqual(fixedStone.body.position,previous);assert.deepEqual(fixedStone.body.quaternion,orientation);}
 });
 
 test('random stone sizes, capacity and cancellation are bounded',()=>{
@@ -684,19 +687,28 @@ test('random stone sizes, capacity and cancellation are bounded',()=>{
   const before=stones.items[0].y;stones.update(0);assert.equal(stones.items[0].y,before);
 });
 
-test('replacing the oldest stone wakes its resting support group without stale members',()=>{
+test('replacing the oldest stone releases its body and preserves all other fixed poses',()=>{
   const s=new FallingStones(),scene=terrain.create(.462,true),random=seededRandom(2*713);
   s.attach(.462,terrain.bathymetry(scene,.462,true),scene);
   for(let i=0;i<3;i++)s.add(.5,.49,random);
   for(let i=0;i<2400;i++)s.update(1/120);
-  const oldest=s.items[0],neighbour=s.items[1],unrelated=s.items[2];
-  assert(oldest.restGroup.includes(neighbour));assert(neighbour.settled);
+  const oldest=s.items[0],others=s.items.slice(1),poses=others.map(r=>({position:r.body.position.clone(),quaternion:r.body.quaternion.clone()}));
+  assert(others.every(r=>r.settled));
   while(s.items.length<stoneLimit)assert(s.add(.75,.4,()=>0));
   assert(s.add(.75,.4,()=>0));
-  assert(!s.world.bodies.includes(oldest.body));assert(!neighbour.settled);assert.equal(neighbour.restGroup,null);
-  assert(unrelated.settled,'unrelated resting rocks should remain asleep');
+  assert(!s.world.bodies.includes(oldest.body));
   s.update(1/120);
-  for(const stone of s.items)assert(!stone.restGroup||!stone.restGroup.includes(oldest));
+  for(let j=0;j<others.length;j++){assert(others[j].settled);assert.deepEqual(others[j].body.position,poses[j].position);assert.deepEqual(others[j].body.quaternion,poses[j].quaternion);}
+});
+
+test('fixed stones skip physics and geometry updates while fresh drops remain dynamic',()=>{
+  const s=new FallingStones();s.attach(1,{heightAt:()=>-.22});const a=s.add(.5,.49,()=>.8);
+  for(let i=0;i<1200;i++)s.update(1/120);
+  assert(a.settled);const time=s.world.time,revision=s.revision;
+  for(let i=0;i<600;i++)s.update(1/30);
+  assert.equal(s.world.time,time);assert.equal(s.revision,revision);assert.equal(a.body.mass,0);assert.equal(a.body.invMass,0);
+  const b=s.add(.5,.49,()=>.99);assert(b.body.mass>0);assert(!b.settled);
+  s.update(1/30);assert(s.world.time>time);assert(!b.settled,'airborne zero-spin bodies are never fixed without support');
 });
 
 test('fixed physics steps agree across frame rates and ten overlapping drops stay bounded',()=>{
@@ -706,18 +718,18 @@ test('fixed physics steps agree across frame rates and ten overlapping drops sta
   for(let i=0;i<stoneLimit;i++)assert(s.add(.5,.49,()=>.2+i*.07));
   for(let i=0;i<3000;i++)s.update(1/120);
   assert(s.items.every(r=>Number.isFinite(r.y)&&r.y>-.24&&Math.abs(r.body.position.x)<1.1&&Math.abs(r.body.position.z)<1.5));
-  assert(s.items.every(r=>r.settled),'the pile should eventually sleep');
+  assert(s.items.every(r=>r.settled),'the pile should eventually become fixed');
   const bodyCount=s.world.bodies.length;s.clear();assert.equal(s.world.bodies.length,bodyCount-stoneLimit);
 });
 
-test('small rocks and shore contacts dissipate rolling motion and enter sleep',()=>{
+test('small rocks and shore contacts dissipate rolling motion and become fixed',()=>{
   for(const [aspect,seed] of [[.462,11],[1.5,7]]){
     const s=new FallingStones(),scene=terrain.create(aspect,true),random=seededRandom(seed*713);
     s.attach(aspect,terrain.bathymetry(scene,aspect,true),scene);s.add(.5,.49,random);
     for(let i=0;i<1200;i++)s.update(1/120);
     s.add(.5,.49,random);s.add(.5,.49,random);
     for(let i=0;i<2400;i++)s.update(1/120);
-    assert(s.items.every(r=>r.settled),'low-energy contact motion should sleep at every rock size');
+    assert(s.items.every(r=>r.settled),'low-energy contact motion should become fixed at every rock size');
   }
 });
 

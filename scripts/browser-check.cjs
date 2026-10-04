@@ -613,12 +613,16 @@ async function run() {
         await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'stone-ripples.png')});
       }
       await page.waitForFunction(()=>WaterGarden.inspect().stones[0].settled);state=await inspect();
+      const fixedPose=state.stones[0];assert.equal(state.stoneDynamicBodies,0);
       assert(state.stoneDepth>-.21,'settled stone must update actual water depth');assert.equal(state.stoneImpacts,1);
       await page.mouse.click(x,y);await page.mouse.click(x,y);
       assert.equal((await inspect()).stones.length,3,'repeated positions must accept both settled and airborne stones');
       try{await page.waitForFunction(()=>WaterGarden.inspect().stones.every(s=>s.settled));}
       catch(error){console.error('Unsettled stones',viewport,(await inspect()).stones);throw error;}
       state=await inspect();
+      assert.deepEqual(state.stones[0],fixedPose,'later repeated drops cannot move or rotate the settled stone');assert.equal(state.stoneDynamicBodies,0);
+      const physicsTime=state.stonePhysicsTime;await page.waitForTimeout(200);assert.equal((await inspect()).stonePhysicsTime,physicsTime,'all fixed stones skip physics stepping');
+      if(viewport.width===390)reports.push({scenario:'settled stones retain exact poses under later impacts and all-fixed scenes stop physics stepping',fixedPose,physicsTime,result:'passed'});
       assert(state.stones.every(s=>s.y>-.235&&s.speed<.07),'rigid stones must come to rest above the pool bed');
       assert(state.stones.some(s=>Math.abs(s.u-state.stones[0].u)>.005||Math.abs(s.v-state.stones[0].v)>.005),'collisions must allow rocks to roll aside');
       if(viewport.width===390){
