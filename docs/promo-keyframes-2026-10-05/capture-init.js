@@ -1,0 +1,1 @@
+let captureFrozen=false;const captureRAF=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=fn=>captureRAF(t=>{if(!captureFrozen)fn(t)});let captureSeed=34197;Math.random=()=>{captureSeed=(captureSeed*1664525+1013904223)>>>0;return captureSeed/4294967296};

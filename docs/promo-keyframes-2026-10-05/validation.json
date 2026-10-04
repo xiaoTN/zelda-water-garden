@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-05",
+  "scope": "Static promotional keyframes only; runtime source unchanged",
+  "images": [
+    {
+      "file": "sources/calm.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/cloud.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/end.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/leaf.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/rain.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/snow.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/stone.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/swipe.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "sources/tap.jpg",
+      "width": 1080,
+      "height": 900,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/01-calm.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/02-tap.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/03-swipe.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/04-leaf.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/05-stone.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/06-rain.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/07-snow.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/08-cloud.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    },
+    {
+      "file": "frames/09-end.jpg",
+      "width": 1080,
+      "height": 1440,
+      "format": "JPEG"
+    }
+  ],
+  "all_source_images_loaded": true,
+  "all_frame_images_loaded": true,
+  "core_scene_bottom_px_max": 1019,
+  "title_bottom_px_max": 451,
+  "closing_descriptor_bottom_px": 1071,
+  "bottom_quiet_area_begins_px": 1080,
+  "visual_review": "Nine-frame board inspected; no game toolbar/toast or clipped text"
+}
