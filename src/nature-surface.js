@@ -16,7 +16,7 @@
     '}else if(uObject<1.5){vec3 n=normalize(aPosition);float rough=1.+.018*sin(n.x*23.)*sin(n.y*19.)*sin(n.z*27.)+.008*sin(n.x*51.+n.z*39.);',
     'p=uBall.xyz+rotate(n*rough)*uBall.w;vNormal=rotate(n);',
     '}else if(uObject>2.5){p=aPosition;vNormal=aNormal;}else {p=aPosition;p.x*=uAspect;p.y=mod(p.y-uTime*(.5+fract(p.x)*.6),6.);p.z+=sin(uTime*.3+p.x)*.15;vNormal=vec3(0.,1.,0.);}',
-    'vWorld=p;gl_Position=uCamera*vec4(p,1.);gl_PointSize=clamp(30./gl_Position.w,1.,3.);}'
+    'vWorld=p;gl_Position=uCamera*vec4(p,1.);gl_PointSize=clamp(48./gl_Position.w,1.5,4.5);}'
   ].join('\n');
   var fragment = [
     'precision mediump float;uniform float uCloud,uLight,uObject,uShadowCount;uniform vec4 uShadows[12];',
@@ -143,7 +143,7 @@
     for(var y=0;y<=ny;y++)for(var x=0;x<=nx;x++){var a=x/nx*Math.PI*2,b=y/ny*Math.PI;vertices.push(Math.sin(b)*Math.cos(a),Math.cos(b),Math.sin(b)*Math.sin(a));}
     for(y=0;y<ny;y++)for(x=0;x<nx;x++){var k=y*(nx+1)+x;indices.push(k,k+nx+1,k+1,k+1,k+nx+1,k+nx+2);}
     this.ballMesh=this.mesh(vertices,indices);this.treeMesh=this.trees();
-    var rng=window.GardenNature.random(551),flakes=[];for(var i=0;i<90;i++)flakes.push((rng()-.5)*14,rng()*6,(rng()-.5)*15);
+    var rng=window.GardenNature.random(551),flakes=[];for(var i=0;i<(this.low?150:360);i++)flakes.push((rng()-.5)*14,rng()*6,(rng()-.5)*15);
     this.flakeMesh=this.mesh(flakes,[]);this.meshQuality=this.low;this.meshAspect=this.aspect;this.meshView=!!this.oblique;
   };
   Surface.prototype.sample=function(u,v){
@@ -216,7 +216,7 @@
       for(i=0;i<snow.balls.length;i++){
         var ball=snow.balls[i];gl.uniform4fv(U.uBall,this.shadowData.subarray(i*4,i*4+4));gl.uniform4fv(U.uRotation,ball.rotation||[0,0,0,1]);gl.drawElements(gl.TRIANGLES,this.ballMesh.count,gl.UNSIGNED_SHORT,0);this.count+=this.ballMesh.count;this.drawCalls++;
       }
-      if(weather&&!reduced&&!this.low){this.bind(this.flakeMesh);gl.uniform1f(U.uObject,2);gl.drawArrays(gl.POINTS,0,this.flakeMesh.vertices);this.drawCalls++;}
+      if(weather&&!reduced){this.bind(this.flakeMesh);gl.uniform1f(U.uObject,2);gl.drawArrays(gl.POINTS,0,this.flakeMesh.vertices);this.drawCalls++;}
     }
     return true;
   };

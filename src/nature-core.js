@@ -114,7 +114,7 @@
   };
   Snow.prototype.update = function (dt, falling) {
     if (!falling) return;
-    var changed = false, amount = dt * .022;
+    var changed = false, amount = dt * .044;
     for (var i = 0; i < this.depth.length; i++) {
       var d = this.depth[i];
       if (d !== 0) { this.depth[i] = d > 0 ? Math.max(0, d - amount) : Math.min(0, d + amount); changed = true; }

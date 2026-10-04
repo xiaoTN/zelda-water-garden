@@ -2,6 +2,15 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Snow, Clouds } = require('../src/nature-core.js');
 
+test('snowfall fills depressions and smooths banks at twice the previous rate, without overshooting', () => {
+  const snow=new Snow();snow.depth[0]=.5;snow.depth[1]=-.5;
+  snow.update(5,true);
+  assert(Math.abs(snow.depth[0]-.28)<1e-6);
+  assert(Math.abs(snow.depth[1]+.28)<1e-6);
+  snow.update(100,false);assert(Math.abs(snow.depth[0]-.28)<1e-6);
+  snow.update(100,true);assert.equal(snow.depth[0],0);assert.equal(snow.depth[1],0);
+});
+
 test('footprints have a mirrored medial arch, broad forefoot, heel and conserved displaced snow', () => {
   const radius=.09;
   for(const side of [-1,1]){
