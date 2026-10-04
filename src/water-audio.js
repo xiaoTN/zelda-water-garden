@@ -60,8 +60,9 @@
       voice.fading=true;fadeParameter(this.context,voice.gain.gain,.12);voice.source.stop(this.context.currentTime+.65);
     }
   };
-  function loopBuffer(context, original) {
-    var overlap=Math.min(Math.floor(original.sampleRate*.12),Math.floor(original.length/4)),length=original.length-overlap;
+  function loopBuffer(context, original, seconds, overlapSeconds) {
+    var samples=seconds?Math.min(original.length,Math.floor(original.sampleRate*seconds)):original.length;
+    var overlap=Math.min(Math.floor(original.sampleRate*(overlapSeconds||.12)),Math.floor(samples/4)),length=samples-overlap;
     var buffer=context.createBuffer(original.numberOfChannels,length,original.sampleRate);
     for(var channel=0;channel<original.numberOfChannels;channel++){
       var input=original.getChannelData(channel),output=buffer.getChannelData(channel);
@@ -80,7 +81,7 @@
       var raw=root.atob(asset.base64),bytes=new Uint8Array(raw.length);
       for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
       var decoded=context.decodeAudioData(bytes.buffer,function(original){
-        self.buffer=loopBuffer(context,original);
+        self.buffer=loopBuffer(context,original,asset.seconds,asset.overlap);
         if(ready)ready();
       },fail);
       if(decoded&&decoded.catch)decoded.catch(fail);
@@ -89,7 +90,7 @@
   function startLoop(self) {
     var source=self.context.createBufferSource(),gain=self.context.createGain();
     source.buffer=self.buffer;source.loop=true;gain.gain.value=0;
-    source.connect(gain);gain.connect(self.output);source.start();
+    source.connect(gain);gain.connect(self.output);source.start(0,self.offset||0);self.startedAt=self.context.currentTime;
     self.node={source:source,gain:gain};
   }
   function StrokeAudio(context, output, asset) {
@@ -126,6 +127,21 @@
     try{n.source.stop();}catch(error){}
     n.source.disconnect();n.gain.disconnect();
   };
+  // A paused rolling sound remembers its loop phase while releasing silent nodes.
+  function RollingAudio(context,output,asset){
+    this.offset=0;this.startedAt=0;
+    StrokeAudio.call(this,context,output,asset);
+  }
+  RollingAudio.prototype=Object.create(StrokeAudio.prototype);
+  RollingAudio.prototype.constructor=RollingAudio;
+  RollingAudio.prototype.position=function(){
+    if(!this.buffer)return 0;
+    return (this.offset+(this.node?Math.max(0,this.context.currentTime-this.startedAt):0))%this.buffer.duration;
+  };
+  RollingAudio.prototype.stop=function(immediate){
+    if(this.node&&(immediate||this.context.state!=='running'))this.offset=this.position();
+    StrokeAudio.prototype.stop.call(this,immediate);
+  };
   function RippleAudio(context, output, asset) {
     this.context=context;this.output=output;this.buffer=null;this.node=null;this.failed=false;this.fadeEnd=0;this.level=0;
     decodeLoop(this,asset);
@@ -154,6 +170,6 @@
     try{n.source.stop();}catch(error){}
     n.source.disconnect();n.gain.disconnect();
   };
-  root.WaterSound = { Stroke: StrokeAudio, Ripple: RippleAudio, Tap: TapAudio, OneShot: TapAudio, SceneMixer: SceneMixer, fadeParameter: fadeParameter };
+  root.WaterSound = { Stroke: StrokeAudio, Rolling: RollingAudio, Ripple: RippleAudio, Tap: TapAudio, OneShot: TapAudio, SceneMixer: SceneMixer, fadeParameter: fadeParameter };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.WaterSound;
 }(typeof window !== 'undefined' ? window : global));

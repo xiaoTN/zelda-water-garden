@@ -1,6 +1,6 @@
 {
   "name": "zelda-water-garden",
-  "version": "1.11.22",
+  "version": "1.11.23",
   "private": true,
   "description": "片刻：在水光、雪落与云间，留一点宁静",
   "engines": {
@@ -13,6 +13,7 @@
     "assets:land": "node scripts/prepare-hyrule-background.cjs",
     "physics": "node scripts/bundle-physics.cjs",
     "audio": "node scripts/bundle-audio.cjs",
+    "audio:snow": "node scripts/prepare-snow-audio.cjs",
     "test": "node --test tests/water.test.cjs tests/nature.test.cjs tests/nature-3d.test.cjs",
     "check": "node scripts/verify-package.cjs",
     "build": "node scripts/build.cjs",

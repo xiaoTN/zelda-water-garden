@@ -118,16 +118,46 @@ test('scene changes fade recorded short effects without changing their normal at
 });
 
 function strokeFixture(kind='Stroke'){
-  const Controller=require('../src/water-audio.js')[kind],sample=kind==='Ripple'?'water-ripples':'water-swipe',asset=require('../src/'+sample+'-asset.js');
+  const Controller=require('../src/water-audio.js')[kind],sample=kind==='Ripple'?'water-ripples':kind==='Rolling'?'snowball-roll':'water-swipe',asset=require('../src/'+sample+'-asset.js');
   const fs=require('fs');assert(Buffer.from(asset.base64,'base64').equals(fs.readFileSync(require('path').join(__dirname,'../assets-source/audio/'+sample+'.mp3'))));
   const nodes=[],targets=[],buffers=[];let success,failure,decodes=0;
-  function node(){const n={gain:{value:0,setTargetAtTime(value,time,fade){targets.push({value,time,fade});}},connect(){},disconnect(){this.disconnected=true;},start(){},stop(){this.stopped=true;}};nodes.push(n);return n;}
+  function node(){const n={gain:{value:0,setTargetAtTime(value,time,fade){targets.push({value,time,fade});}},connect(){},disconnect(){this.disconnected=true;},start(time,offset){this.offset=offset;},stop(){this.stopped=true;}};nodes.push(n);return n;}
   const context={state:'running',currentTime:0,decodeAudioData(bytes,done,fail){decodes++;assert.equal(bytes.byteLength,asset.bytes);success=done;failure=fail;},createBuffer(channels,length,rate){const data=Array.from({length:channels},()=>new Float32Array(length)),b={length,sampleRate:rate,numberOfChannels:channels,duration:length/rate,getChannelData:i=>data[i]};buffers.push(b);return b;},createBufferSource:node,createGain:node};
-  const original=context.createBuffer(2,16000,8000);
+  const original=context.createBuffer(2,kind==='Rolling'?112000:16000,8000);
   for(let channel=0;channel<2;channel++)for(let i=0;i<original.length;i++)original.getChannelData(channel)[i]=Math.sin(i*.01+channel)*.1+i/original.length*.2;
   const audio=new Controller(context,{},asset);
   return {audio,context,nodes,targets,buffers,original,decode:()=>success(original),fail:()=>failure(),decodes:()=>decodes};
 }
+
+test('rolling resumes its saved loop phase after silence, wraps and reverses quick fades without restarting',()=>{
+  const f=strokeFixture('Rolling'),{audio,context,nodes,targets}=f;f.decode();audio.update();assert.equal(audio.node,null);
+  audio.stroke(.8);const first=audio.node;context.currentTime=.4;audio.release();assert.equal(targets.at(-1).value,0);
+  context.currentTime=.5;audio.stroke(.8);assert.equal(audio.node,first);assert.equal(audio.fadeEnd,0);
+  context.currentTime=.8;audio.release();context.currentTime=1.5;audio.update();assert.equal(audio.node,null);assert.equal(audio.position(),1.5);
+  context.currentTime=30;assert.equal(audio.position(),1.5,'silence does not advance the paused sound');audio.stroke(.8);
+  assert.equal(audio.node.source.offset,1.5);assert.notEqual(audio.node,first);
+  context.currentTime=40;assert(Math.abs(audio.position()-2.1)<1e-8,'the phase wraps within the processed loop');
+  audio.stop(true);assert.equal(audio.node,null);assert(nodes.every(n=>n.disconnected));assert(targets.every(t=>t.fade>0));
+  context.state='suspended';audio.stroke(.8);assert.equal(audio.node,null);
+});
+
+test('rolling uses only the first ten decoded seconds and crossfades adjacent samples at its loop seam',()=>{
+  const f=strokeFixture('Rolling');f.decode();assert.equal(f.audio.buffer.duration,9.4);assert.equal(f.decodes(),1);
+  for(let channel=0;channel<2;channel++){
+    const loop=f.audio.buffer.getChannelData(channel),input=f.original.getChannelData(channel);
+    assert.equal(loop[0],input[4800]);assert.equal(loop.at(-1),input[4799]);
+    assert(Math.abs(loop.at(-1)-loop[0])<.002);assert(loop.every(Number.isFinite));
+  }
+});
+
+test('late rolling decoding and decoder failure cannot revive a stopped ball',()=>{
+  for(const action of ['release','stop','idle']){
+    const f=strokeFixture('Rolling');f.audio.stroke(.8);
+    if(action==='idle'){f.context.currentTime=.2;f.audio.update();}else f.audio[action]();
+    f.decode();assert.equal(f.audio.node,null);
+  }
+  const f=strokeFixture('Rolling');f.audio.stroke(.8);f.fail();f.audio.stroke(1);assert.equal(f.audio.node,null);assert.equal(f.audio.speed,0);
+});
 
 test('ripple recording follows actual wave strength, preserves its loop and reverses fades on the same source',()=>{
   const f=strokeFixture('Ripple'),{audio,context,nodes,targets}=f;f.decode();

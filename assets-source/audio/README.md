@@ -10,6 +10,10 @@
 
 `water-ripples.mp3`：用户于 2026-10-04 指定的水波荡漾声，来源为 [爱给音频文件](https://s8.aigei.com/src/aud/mp3/0a/0a3c08d94728401d9f719716336b566c.mp3)，下载时使用用户提供的临时链接。完整保留原始字节：64,827 字节，22,050 Hz、双声道、容器时长约 8.011 秒。SHA-256：`36b14179708f11b3aa98b29c32a4b642b9ee9c76be77e2dd85884eb700d2bdae`。运行时循环尾首交叉淡化 120 毫秒，音量随实际波场强度平滑变化，水波消散后淡出。
 
-`npm run audio` 将这四个样本生成至 `src/water-tap-asset.js`、`src/water-swipe-asset.js`、`src/stone-impact-asset.js` 和 `src/water-ripples-asset.js`，完整构建自动执行该步骤。小工具上传类型清单未列出 MP3，运行包因此携带小型 Base64 字节数据，通过 Web Audio 直接解码为可复用的 AudioBuffer；不使用媒体 data URL、网络请求或运行时文件读取。原始 MP3 只保留在素材目录中，ZIP 中的脚本与原始字节一致性由测试验证。
+`snowball-roll-original.mp3`：用户于 2026-10-04 提供的雪球滚动音频，来源为 [爱给音频文件](https://s1.aigei.com/pvaud/aud/mp3/d0/d075e3084d304cdaad00d43c6ea73f59.mp3)，下载时使用用户提供的临时链接。完整保留原始字节：1,523,923 字节，22,050 Hz、双声道，容器时长约 190.433 秒。SHA-256：`fa86bd6d6c34900df64f6ccecb082eed9ab89c160e5d1f458b01ebec134c0e71`。
+
+`snowball-roll.mp3`：由上述原始文件的前 10 秒生成，22,050 Hz、单声道、48 kbps，共 60,569 字节。SHA-256：`ef435b7a756d57d5438218e44a8250b0bd9572d80c7446660b9c11643b44c478`。复用环境已安装的 FFmpeg，运行 `npm run audio:snow` 可重新截取；常规构建只打包已保存的裁剪素材，不依赖 FFmpeg。运行时在前 10 秒内部做 600 毫秒尾首交叉淡化，得到约 9.4 秒的循环。按用户补充要求，划雪和滚雪球共用此声音及暂停进度，仅实际移动时播放，停下后淡出并释放声源，恢复移动时从保存的位置继续。
+
+`npm run audio` 将五个运行样本生成至对应的 `src/*-asset.js`，其中雪声为 `src/snowball-roll-asset.js`；完整构建自动执行该步骤。小工具上传类型清单未列出 MP3，运行包因此携带小型 Base64 字节数据，通过 Web Audio 直接解码为可复用的 AudioBuffer；不使用媒体 data URL、网络请求或运行时文件读取。完整原始 MP3 只保留在素材目录中，ZIP 中的脚本与对应运行素材的字节一致性由测试验证。
 
 滑动录音在运行时把尾部与开头交叉淡化 120 毫秒，形成约 6.38 秒的循环；原始 MP3 保持完整。滑动只复用一个循环声源，音量随手速变化，停手后淡出。

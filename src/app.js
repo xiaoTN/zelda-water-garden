@@ -5,7 +5,7 @@
   var fctx = fallback.getContext('2d'), hint = document.getElementById('hint'), cursor = document.getElementById('cursor');
   var renderer = null, scene, field, width = 1, height = 1, mode = 'touch', light = 0, rain = false;
   var leaves = [], drops = [], rings = [], dust = [], fingers = {}, reduced = false;
-  var weather = new window.WaterWeather.System(), weatherAudio = null, strokeAudio = null, tapAudio = null, stoneAudio = null, rippleAudio = null;
+  var weather = new window.WaterWeather.System(), weatherAudio = null, strokeAudio = null, tapAudio = null, stoneAudio = null, rippleAudio = null, rollAudio = null;
   var rainOptions = document.getElementById('rain-options'), rainButtons = document.querySelectorAll('[data-rain]');
   var fishSchool = new window.WaterFish.System();
   var stoneDrops = new window.WaterStones.System(), fallbackTerrain = null, fallbackBed = null, stoneBedDirty = false;
@@ -36,6 +36,7 @@
       tapAudio = new window.WaterSound.Tap(audio, waterOutput, window.WaterTapAsset);
       stoneAudio = new window.WaterSound.OneShot(audio, waterOutput, window.StoneImpactAsset);
       rippleAudio = new window.WaterSound.Ripple(audio, waterOutput, window.WaterRipplesAsset);
+      rollAudio = new window.WaterSound.Rolling(audio, sceneAudio.output('snow'), window.SnowballRollAsset);
       weatherAudio.setLevel(sceneKind === 'water' ? weather.level : 0);
       if (audio.state === 'suspended') audio.resume().catch(function () {});
       return true;
@@ -76,6 +77,7 @@
     if (tapAudio) { if(immediate)tapAudio.stop();else tapAudio.fadeOut(); }
     if (stoneAudio) { if(immediate)stoneAudio.stop();else stoneAudio.fadeOut(); }
     if (rippleAudio) rippleAudio.stop(immediate);
+    if (rollAudio) rollAudio.stop(immediate);
     for (var i = audioNodes.length-1; i >= 0; i--) {
       var node=audioNodes[i];
       try {
@@ -119,6 +121,7 @@
     fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0;
     if (strokeAudio) strokeAudio.stop();
     if (rippleAudio) rippleAudio.stop();
+    if (rollAudio) rollAudio.stop();
     // Three small existing leaves make the pool feel alive before the first touch.
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29);
     dust.length = 0;
@@ -196,7 +199,7 @@
     if (sceneKind !== 'water') {
       if(!natureRenderer.available())return;
       // Camera picking can move with an animated cloud surface; require actual pointer movement.
-      if(sceneKind==='cloud'&&Math.hypot(x-f.screenX,y-f.screenY)<1)return;
+      if(Math.hypot(x-f.screenX,y-f.screenY)<1)return;
       p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,false);if(!p)return;
       f.screenX=x;f.screenY=y;distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height);moveNature(f,p,distance);return;
     }
@@ -213,7 +216,11 @@
   }
   function end(id, cancelled) {
     var f = fingers[id]; if (!f) return;
-    if (sceneKind !== 'water') { delete fingers[id]; return; }
+    if (sceneKind !== 'water') {
+      delete fingers[id];
+      if(rollAudio&&!Object.keys(fingers).some(function(key){return fingers[key].ball||sceneKind==='snow'&&natureModes.snow===0;}))rollAudio.release();
+      return;
+    }
     if (!cancelled && mode === 'touch' && f.charged) { splash(f.u, f.v, Math.min(1.1, .45 + (now - f.born) * .18), true); sound(1, true); }
     else if (!cancelled && f.travel < 15) {
       // Wait until release to distinguish a tap from a swipe; swipes have no drawn rings.
@@ -313,6 +320,7 @@
   var natureButtons = document.querySelectorAll('[data-nature]');
   for (var ni = 0; ni < natureButtons.length; ni++) natureButtons[ni].addEventListener('click', function () {
     if(sceneKind!=='snow')return;
+    if(rollAudio)rollAudio.stop();
     fingers = {}; var selected=Number(this.getAttribute('data-nature'));
     if(sceneKind==='snow'&&selected===2){
       if(snow.balls.length)snow.balls.length=0;
@@ -337,15 +345,22 @@
       if(p.ball)f.ball=p.ball;
       else if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
       else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
-      sound(.22, false);
+      if(!f.ball&&selected===1)sound(.22, false);
     }
   }
   function moveNature(f, p, distance) {
     p.u += f.offsetU; p.v += f.offsetV;
     var selected = natureModes[sceneKind], r = natureRadius();
     if (sceneKind === 'snow') {
-      if(f.ball)snow.roll(f.ball,p.u,p.v);
-      else if (selected === 0) snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
+      var snowMove=0;
+      if(f.ball){
+        var oldU=f.ball.u,oldV=f.ball.v;snow.roll(f.ball,p.u,p.v);
+        snowMove=Math.hypot((f.ball.u-oldU)*snow.aspect,f.ball.v-oldV);
+      }
+      else if (selected === 0) {
+        snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
+        snowMove=Math.hypot((p.u-f.u)*snow.aspect,p.v-f.v);
+      }
       else if (selected === 1 && distance > 0) {
         var dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, step = Math.min(width, height) * .15;
         f.angle = Math.atan2(dy, dx) + Math.PI / 2;
@@ -353,6 +368,8 @@
         for (; next <= actual; next += step) snow.footprint(f.u + (p.u - f.u) * next / actual, f.v + (p.v - f.v) * next / actual, f.angle, r * .07);
         f.spacing = (f.spacing + actual) % step;
       }
+      if(rollAudio&&snowMove>.00001)rollAudio.stroke(snowMove*12/Math.max(.016,now-f.movedAt));
+      f.movedAt=now;
     } else {
       garden.classList.add('touched');
       var count = Math.min(24, Math.max(1, Math.ceil(distance / 8)));
@@ -360,11 +377,11 @@
       for (var i = 1; i <= count; i++) clouds.touch(f.u + (p.u - f.u) * i / count, f.v + (p.v - f.v) * i / count, 'part', (p.u - f.u) / count, (p.v - f.v) / count, .016,speed);
       f.movedAt=now;
     }
-    if (distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }
+    if (!f.ball && (sceneKind==='cloud'||selected===1) && distance > 2 && now - f.last > .16) { sound(.15, false); f.last = now; }
     f.travel += distance; f.u = p.u; f.v = p.v;
   }
   function updateNature(dt) {
-    if(!natureRenderer.available()){fingers={};natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
+    if(!natureRenderer.available()){fingers={};if(rollAudio)rollAudio.stop();natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
     for (var id in fingers) {
       var f = fingers[id], selected = natureModes[sceneKind];
       if (sceneKind === 'snow' && !f.ball && selected === 0 && f.travel < 15 && now - f.born > .3) snow.stamp(f.u, f.v, natureRadius() * .04, Math.min(1, .65 + (now - f.born) * .2));
@@ -415,6 +432,7 @@
   document.getElementById('reset').addEventListener('click', function () {
     if(sceneKind==='cloud')return;
     if (strokeAudio) strokeAudio.stop();
+    if (rollAudio) rollAudio.stop();
     if (rippleAudio) rippleAudio.stop();
     if (tapAudio) tapAudio.stop();
     if (stoneAudio) stoneAudio.stop();
@@ -530,6 +548,7 @@
       var dt = Math.min(.08, (time - lastRender) / 1000 || .033); lastRender = time;
       // Long audio tails finish even while their water scene is inactive.
       if (strokeAudio) strokeAudio.update();
+      if (rollAudio) rollAudio.update();
       if (weatherAudio) weatherAudio.update();
       if (sceneKind !== 'water') { accumulator = 0; updateNature(dt); }
       else if(renderer) {
@@ -601,6 +620,8 @@
     stoneFading: stoneAudio ? stoneAudio.voices.filter(function(voice){return voice.fading;}).length : 0,
     rippleReady: !!(rippleAudio && rippleAudio.buffer), rippleAudio: !!(rippleAudio && rippleAudio.node), rippleLevel: rippleAudio ? rippleAudio.level : 0,
     rippleFading: !!(rippleAudio && rippleAudio.fadeEnd), rippleDuration: rippleAudio && rippleAudio.buffer ? rippleAudio.buffer.duration : 0,
+    rollReady: !!(rollAudio && rollAudio.buffer), rollAudio: !!(rollAudio && rollAudio.node), rollSpeed: rollAudio ? rollAudio.speed : 0,
+    rollFading: !!(rollAudio && rollAudio.fadeEnd), rollPosition: rollAudio ? rollAudio.position() : 0, rollDuration: rollAudio && rollAudio.buffer ? rollAudio.buffer.duration : 0,
     audioEnabled: true, leaves: leaves.length, leafPositions: leaves.map(function (leaf) { return { u: leaf.u, v: leaf.v }; }), drops: drops.length, rings: rings.length,
     energy: field ? field.energy() : 0, steps: field ? field.steps : 0, quality: quality, renderer: renderer ? 'webgl' : 'unavailable',
     surfaceVertices: renderer && renderer.mesh ? renderer.mesh.count : 0, surfaceTriangles: renderer && renderer.mesh ? renderer.mesh.indices.length / 3 : 0,

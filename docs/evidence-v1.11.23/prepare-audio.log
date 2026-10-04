@@ -1,0 +1,20 @@
+
+> zelda-water-garden@1.11.23 audio:snow
+> node scripts/prepare-snow-audio.cjs
+
+Input #0, mp3, from 'D:\Projects\guardian-parry\tools\zelda-water-garden\assets-source\audio\snowball-roll-original.mp3':
+  Metadata:
+    encoder         : Lavf57.14.100
+  Duration: 00:03:10.43, start: 0.050113, bitrate: 64 kb/s
+  Stream #0:0: Audio: mp3 (mp3float), 22050 Hz, stereo, fltp, 64 kb/s, start 0.050113
+Stream mapping:
+  Stream #0:0 -> #0:0 (mp3 (mp3float) -> mp3 (libmp3lame))
+Press [q] to stop, [?] for help
+Output #0, mp3, to 'D:\Projects\guardian-parry\tools\zelda-water-garden\assets-source\audio\snowball-roll.mp3':
+  Metadata:
+    TSSE            : Lavf63.1.101
+  Stream #0:0: Audio: mp3, 22050 Hz, mono, fltp, 48 kb/s
+    Metadata:
+      encoder         : Lavc63.1.101 libmp3lame
+[out#0/mp3 @ 000001667d332240] video:0KiB audio:59KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.374526%
+size=      59KiB time=00:00:10.00 bitrate=  48.5kbits/s speed= 339x elapsed=0:00:00.02    

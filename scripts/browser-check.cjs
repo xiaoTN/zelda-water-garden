@@ -193,9 +193,10 @@ async function run() {
             surface.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:0,pointerId:913,pointerType:'touch',clientX:195,clientY:410}));
             const before=WaterGarden.inspect();document.querySelector('button[data-scene="'+next+'"]').click();return {before,after:WaterGarden.inspect()};
           },next);
-          assert(transition.before.sceneSoundNodes>0&&transition.after.sceneSoundFading>0&&transition.after.audioScene===next,'nature sound retains a fading tail on '+next);
-          natureTails.push({from:transition.before.audioScene,to:next,retained:transition.after.sceneSoundFading});
-          await page.waitForFunction(()=>WaterGarden.inspect().sceneSoundNodes===0);
+          const beforeVoices=transition.before.sceneSoundNodes+(transition.before.rollAudio?1:0),retained=transition.after.sceneSoundFading+(transition.after.rollFading?1:0);
+          assert(beforeVoices>0&&retained>0&&transition.after.audioScene===next,'nature sound retains a fading tail on '+next);
+          natureTails.push({from:transition.before.audioScene,to:next,retained});
+          await page.waitForFunction(()=>WaterGarden.inspect().sceneSoundNodes===0&&!WaterGarden.inspect().rollAudio);
         }
         reports.push({scenario:'water tap, snow and cloud sounds retain fading tails across every scene boundary and release their nodes',tapRetained:tapSwitch.after.tapFading,natureTails,result:'passed'});
         await page.locator('#reset').click();

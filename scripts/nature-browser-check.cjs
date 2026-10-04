@@ -38,7 +38,12 @@ async function run() {
         const b = await page.locator(selector).boundingBox(); assert(b.x >= 0 && b.x + b.width <= viewport.width && b.y >= 0 && b.y + b.height <= viewport.height, selector + ' must fit viewport'); assert(b.width >= 44 && b.height >= 44);
       }
       const steps = await page.evaluate(() => WaterGarden.inspect().steps);
-      await page.mouse.move(x - viewport.width * .2,y); await page.mouse.down(); await page.mouse.move(x + viewport.width * .2,y + 20,{steps:20}); await page.mouse.up();
+      await page.waitForFunction(()=>WaterGarden.inspect().rollReady);
+      await page.mouse.move(x - viewport.width * .2,y); await page.mouse.down();await page.waitForTimeout(150);
+      assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollAudio),false,'stationary pressure on snow stays silent');
+      await page.mouse.move(x + viewport.width * .2,y + 20,{steps:20});assert(await page.evaluate(()=>WaterGarden.inspect().rollAudio&&WaterGarden.inspect().rollSpeed>0),'snow swipes use the recorded motion sound');
+      await page.waitForTimeout(160);assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollSpeed),0,'stopping movement fades the sound even while holding');
+      await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);await page.mouse.up();
       let s = await state(); assert(s.snow.markedCells > 100); assert.equal(s.activePointers,0); assert(s.bufferWidth*s.bufferHeight <= 2000000);
       assert.equal(await page.evaluate(() => WaterGarden.inspect().steps), steps, 'inactive water simulation pauses');
       const depth = s.snow.depth; await page.waitForTimeout(150); assert((await state()).snow.depth<depth);
@@ -50,8 +55,47 @@ async function run() {
       await page.touchscreen.tap(x,y);assert.equal((await state()).snow.balls.length,0,'ground taps never create balls');
       await ballButton.click();assert.equal(await ballButton.getAttribute('aria-pressed'),'true');
       const ballPoint=await page.evaluate(()=>{const s=testSurface3D,p=s.camera.project(s.ballPosition(s.snow.balls[0]));return {x:p.u*innerWidth,y:p.v*innerHeight};});
+      await page.waitForFunction(()=>WaterGarden.inspect().rollReady);
       await page.mouse.move(ballPoint.x,ballPoint.y);await page.mouse.down();const radius=(await state()).snow.balls[0].radius;
-      await page.mouse.move(ballPoint.x+60,ballPoint.y+30,{steps:12});await page.mouse.up();s=await state();assert.equal(s.snow.balls.length,1);assert(s.snow.balls[0].radius>radius);
+      await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollAudio),false,'holding a stationary snowball stays silent');
+      await page.mouse.move(ballPoint.x+60,ballPoint.y+30,{steps:12});
+      const rolling=await page.evaluate(()=>WaterGarden.inspect());assert(rolling.rollAudio&&rolling.rollSpeed>0);
+      await page.mouse.up();s=await state();assert.equal(s.snow.balls.length,1);assert(s.snow.balls[0].radius>radius);
+      await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);
+      const paused=await page.evaluate(()=>WaterGarden.inspect().rollPosition);assert(paused>0);
+      await page.waitForTimeout(120);assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollPosition),paused,'silence keeps the saved phase');
+      if(viewport.width===390){
+        const p=await page.evaluate(()=>{const s=testSurface3D,p=s.camera.project(s.ballPosition(s.snow.balls[0]));return {x:p.u*innerWidth,y:p.v*innerHeight};});
+        await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.move(p.x-40,p.y+10,{steps:8});
+        const resumed=await page.evaluate(()=>WaterGarden.inspect());assert(resumed.rollAudio&&resumed.rollPosition>=paused&&resumed.rollPosition<paused+1);
+        await select('cloud');assert(await page.evaluate(()=>WaterGarden.inspect().rollFading),'scene exit fades the shared snow recording');
+        await page.mouse.up();await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);await select('snow');
+        assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollAudio),false,'returning to snow does not play a stationary ball');
+        reports.push({scenario:'snow swipes and rolling share recorded motion audio; stationary holds and release become silent; later rolls resume phase and scene exits fade',paused,resumed:resumed.rollPosition,result:'passed'});
+        const pcm=await page.evaluate(async()=>{
+          const c=new OfflineAudioContext(1,22050*30,22050);let original;
+          const controller=await new Promise((resolve,reject)=>{
+            const decode=c.decodeAudioData.bind(c);c.decodeAudioData=(bytes,done)=>decode(bytes,b=>{original=b;done(b);resolve(a);},reject);
+            const a=new WaterSound.Rolling(c,c.destination,SnowballRollAsset);
+          });
+          const b=controller.buffer,source=c.createBufferSource();source.buffer=b;source.loop=true;source.connect(c.destination);source.start();
+          const samples=(await c.startRendering()).getChannelData(0),data=b.getChannelData(0),input=original.getChannelData(0);
+          function rms(t){let sum=0;for(let i=Math.floor(t*22050);i<Math.floor((t+.05)*22050);i++)sum+=samples[i]*samples[i];return Math.sqrt(sum/1102);}
+          const seams=[b.duration,b.duration*2].map(t=>({before:rms(t-.05),after:rms(t)}));
+          const overlap=Math.floor(original.sampleRate*.6);
+          const f=new OfflineAudioContext(1,8000*4,8000),constant=f.createBuffer(1,8000*10,8000);constant.getChannelData(0).fill(1);let time=0;
+          // Keep offline graph connections until rendering; scheduled stops still end each voice.
+          const clock={state:'running',get currentTime(){return time;},decodeAudioData(bytes,done){done(constant);},createBuffer:f.createBuffer.bind(f),createGain(){const g=f.createGain();g.disconnect=()=>{};return g;},createBufferSource(){const s=f.createBufferSource(),start=s.start.bind(s),stop=s.stop.bind(s);s.start=(when,offset)=>start(time,offset);s.stop=()=>stop(time);s.disconnect=()=>{};return s;}};
+          const a=new WaterSound.Rolling(clock,f.destination,SnowballRollAsset);a.stroke(1.4);time=1;a.release();time=1.7;a.update();const paused=a.position();time=2.5;a.stroke(1.4);const phase=a.position();time=3.4;a.release();
+          const fades=(await f.startRendering()).getChannelData(0);
+          function level(t){let sum=0;for(let i=Math.round(t*8000);i<Math.round(t*8000)+80;i++)sum+=Math.abs(fades[i]);return sum/80;}
+          return {duration:original.duration,loopDuration:b.duration,bytes:SnowballRollAsset.bytes,seam:Math.abs(data[0]-data[data.length-1]),adjacent:Math.abs(input[overlap]-input[overlap-1]),seams,fade:{early:level(.01),settled:level(.8),tail:level(1.2),silent:level(2),resumeStart:level(2.51),resumed:level(3.2),paused,phase}};
+        });
+        assert(Math.abs(pcm.duration-10)<.02&&Math.abs(pcm.loopDuration-9.4)<.002);assert(Math.abs(pcm.seam-pcm.adjacent)<1e-6);
+        assert(pcm.seams.every(s=>s.before>.005&&s.after>.005),'two real loop seams remain audible');
+        const f=pcm.fade;assert(f.early<f.settled*.3&&f.tail>0&&f.tail<f.settled*.3&&f.silent===0);assert(f.resumeStart<f.resumed*.3&&f.resumed>.85&&f.phase===f.paused);
+        reports.push({scenario:'first ten seconds render across two seamless loop boundaries; real PCM fades to silence and resumes its saved phase',...pcm,result:'passed'});
+      }
       const support=await page.evaluate(()=>{
         const surface=testSurface3D,ball=surface.snow.balls[0],p=surface.ballPosition(ball),r=p[3];
         let penetration=-Infinity,gap=Infinity;
@@ -194,6 +238,13 @@ async function run() {
     await page.waitForFunction(()=>window.offlineSurface && offlineSurface.snowMaps===2);
     await page.waitForFunction(()=>offlineSurface.landReady);
     assert.equal(await page.evaluate(()=>NatureGarden.inspect().renderer),'webgl');
+    await page.waitForFunction(()=>WaterGarden.inspect().rollReady);
+    const snowTouch=await context.newCDPSession(page);
+    await snowTouch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:145,y:410,id:1}]});
+    await snowTouch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:205,y:430,id:1}]});
+    assert(await page.evaluate(()=>WaterGarden.inspect().rollAudio&&WaterGarden.inspect().rollSpeed>0),'offline touch fallback plays the snow recording');
+    await snowTouch.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await snowTouch.detach();
+    await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);
     await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloudCarve),0);
     assert.equal(await page.locator('.toolbar').isVisible(),false);
     const cdp=await context.newCDPSession(page);
