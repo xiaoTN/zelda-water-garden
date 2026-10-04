@@ -129,7 +129,7 @@ test('stepping on a sphere returns its snow volume to the terrain and leaves a s
   assert(snow.depth[snow.index(.5+radius*1.3/snow.aspect,.5)]<-.15,'snow next to the footprint is raised');
   const deposited=-snow.depth.reduce((sum,d)=>sum+d,0)*cellArea*.38;
   assert(Math.abs(deposited-volume)<1e-5,'sphere volume and displaced sole material stay on the snow surface');
-  assert(snow.depth.every(d=>Number.isFinite(d)&&d>=-1&&d<=1));
+  assert(snow.depth.every(d=>Number.isFinite(d)&&d>=-16&&d<=1));
   const saved=snow.inspect();assert.equal(snow.crush(ball),false);assert.deepEqual(snow.inspect(),saved,'an old pointer cannot deposit the same sphere twice');
   snow.update(10,false);assert.deepEqual(snow.inspect(),saved);snow.clear();assert.equal(snow.inspect().raised,0);
 });
@@ -139,13 +139,29 @@ test('crushed volume spreads across clipped or already raised snow without excee
     const ball=snow.ball(snow.origin+.02,snow.origin+.03,.065),before=snow.depth.reduce((sum,d)=>sum+d,0);
     assert(snow.crush(ball));assert.equal(snow.balls.length,0);
     const actual=(before-snow.depth.reduce((sum,d)=>sum+d,0))*(12*snow.span/snow.size)**2*aspect*.38;
-    assert(Math.abs(actual-4*Math.PI/3*(ball.radius*12)**3)<.0001);assert(snow.depth.every(d=>d>=-1&&d<=1));
+    assert(Math.abs(actual-4*Math.PI/3*(ball.radius*12)**3)<.0001);assert(snow.depth.every(d=>d>=-16&&d<=1));
   }
 });
 test('ordinary footprints keep unselected spheres and full terrain cannot erase their volume',()=>{
   const snow=new Snow(),ball=snow.ball(.5,.5,.03);
   snow.footprint(.5,.5,0,.035);assert(snow.balls.includes(ball));assert(!ball.crushed);
-  snow.depth.fill(-1);const before=snow.inspect();assert.equal(snow.crush(ball),false);assert.deepEqual(snow.inspect(),before);
+  snow.depth.fill(-16);const before=snow.inspect();assert.equal(snow.crush(ball),false);assert.deepEqual(snow.inspect(),before);
+});
+test('crushed snow forms uneven local heaps and leaves distant terrain exactly unchanged',()=>{
+  for(const radius of [.035,.085,.18]){
+    const snow=new Snow();snow.aspect=.8;const ball=snow.ball(.5,.52,radius),reach=radius*1.9;
+    const before=snow.depth.slice();snow.crush(ball);
+    let outside=0;for(let y=0;y<snow.size;y++)for(let x=0;x<snow.size;x++){
+      const distance=Math.hypot((snow.origin+(x+.5)/snow.size*snow.span-ball.u)*snow.aspect,snow.origin+(y+.5)/snow.size*snow.span-ball.v);
+      if(distance>=reach){outside++;assert.equal(snow.depth[y*snow.size+x],before[y*snow.size+x]);}
+    }
+    assert(outside>snow.depth.length*.8,'the deposit remains close to the original sphere, even after merging');
+    const ring=[];for(let i=0;i<24;i++){const angle=i*Math.PI/12;ring.push(-snow.depth[snow.index(ball.u+Math.cos(angle)*reach*.45/snow.aspect,ball.v+Math.sin(angle)*reach*.45)]*.38);}
+    assert(Math.max(...ring)-Math.min(...ring)>radius*12*.45,'separate heap crests and lower gaps create a visible silhouette');
+    assert(Math.max(...ring)>radius*12*.75,'the pile grows taller as the broken ball grows');
+    assert.equal(snow.renderDepth()[snow.index(.05,.05)],0,'render smoothing does not move the distant surface');
+    snow.clear();assert.equal(snow.bankLimit,1);
+  }
 });
 test('parting clouds opens a local gap which recovers over time', () => {
   const clouds = new Clouds(); clouds.aspect = .46;

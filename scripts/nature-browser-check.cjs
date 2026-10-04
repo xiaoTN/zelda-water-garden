@@ -95,6 +95,7 @@ async function run() {
           const near=Math.max(radius*.95,Math.min(innerWidth,innerHeight)/innerHeight*.07*1.6);
           window.stompNear=[(ball.u-.5)*12*surface.aspect+near*12,(ball.v-.5)*12];
           window.stompHeight=surface.height(stompNear[0],stompNear[1],'snow',snow,surface.clouds);
+          window.stompFar=[[.06,.12],[.93,.18],[.89,.9]].map(([u,v])=>{const x=(u-.5)*12*surface.aspect,z=(v-.5)*12;return {x,z,height:surface.height(x,z,'snow',snow,surface.clouds)};});
           surface.draw('snow',0,snow,surface.clouds,0,true,false);
           const screen=surface.camera.project(surface.ballPosition(ball)),hit=surface.point(screen.u,screen.v,'snow',surface.clouds,true);
           return {x:screen.u*innerWidth,y:screen.v*innerHeight,picked:hit&&hit.ball===ball};
@@ -105,9 +106,18 @@ async function run() {
         const result=await page.evaluate(()=>{
           const surface=testSurface3D,snow=surface.snow;
           surface.draw('snow',0,snow,surface.clouds,0,true,false);
-          return {balls:snow.balls.length,crushed:stompBall.crushed,footprints:snow.foot,sole:snow.depth[snow.index(stompBall.u,stompBall.v)],raised:surface.height(stompNear[0],stompNear[1],'snow',snow,surface.clouds)-stompHeight,stale:snow.roll(stompBall,.6,.5)===null};
+          const empty={size:snow.size,origin:snow.origin,span:snow.span,depth:new Float32Array(snow.depth.length)},profile=[];let crest;
+          for(let i=0;i<24;i++){const angle=i*Math.PI/12,d=stompBall.radius*1.9*.6,x=(stompBall.u-.5)*12*surface.aspect+Math.cos(angle)*d*12,z=(stompBall.v-.5)*12+Math.sin(angle)*d*12,height=surface.height(x,z,'snow',snow,surface.clouds),delta=height-surface.height(x,z,'snow',empty,surface.clouds);profile.push(delta);if(!crest||height>crest[1])crest=[x,height,z];}
+          const reach=Math.max(stompBall.radius*1.9,Math.min(innerWidth,innerHeight)/innerHeight*.07*3);
+          for(let j=-24;j<=24;j++)for(let i=-24;i<=24;i++){const x=(stompBall.u-.5)*12*surface.aspect+i/24*reach*12,z=(stompBall.v-.5)*12+j/24*reach*12,height=surface.height(x,z,'snow',snow,surface.clouds);if(height>crest[1])crest=[x,height,z];}
+          const screen=surface.camera.project(crest),hit=surface.point(screen.u,screen.v,'snow',surface.clouds,false),pickError=hit?Math.hypot((hit.u-.5)*12*surface.aspect-crest[0],(hit.v-.5)*12-crest[2]):Infinity;
+          let packingError=0,soleCut=0;const heights=snow.renderDepth(),footRadius=Math.min(innerWidth,innerHeight)/innerHeight*.07;
+          for(let j=-10;j<=10;j++)for(let i=-10;i<=10;i++)if(i*i+j*j<=100)soleCut=Math.max(soleCut,snow.depth[snow.index(stompBall.u+i/10*footRadius/snow.aspect,stompBall.v+j/10*footRadius)]);
+          for(let i=0;i<heights.length;i++){const decoded=(surface.pixels[i*4+1]+surface.pixels[i*4+2]/255)/255*16;packingError=Math.max(packingError,Math.abs(decoded-Math.max(0,-heights[i])));}
+          return {balls:snow.balls.length,crushed:stompBall.crushed,footprints:snow.foot,sole:snow.depth[snow.index(stompBall.u,stompBall.v)],soleCut,raised:surface.height(stompNear[0],stompNear[1],'snow',snow,surface.clouds)-stompHeight,stale:snow.roll(stompBall,.6,.5)===null,profileRange:Math.max(...profile)-Math.min(...profile),peak:Math.max(...profile),farDelta:Math.max(...stompFar.map(p=>Math.abs(surface.height(p.x,p.z,'snow',snow,surface.clouds)-p.height))),packingError,pickError};
         });
-        assert.equal(result.balls,1,'stepping crushes the target and keeps the other sphere');assert(result.crushed&&result.stale);assert(result.footprints>=1&&result.sole>.01,'a sole remains in the broken sphere pile');assert(result.raised>.03,'nearby snow rises in the real world mesh');
+        assert.equal(result.balls,1,'stepping crushes the target and keeps the other sphere');assert(result.crushed&&result.stale);assert(result.footprints>=1&&result.soleCut>.1,'a sole remains in the broken sphere pile: '+JSON.stringify({viewport,low,oblique,...result}));assert(result.raised>.03,'nearby snow rises in the real world mesh');
+        assert(result.peak>.2&&result.profileRange>.1,'local heaps have visible high crests and lower gaps');assert.equal(result.farDelta,0,'distant terrain stays at exactly the same height');assert(result.packingError<.000124,'tall banks reach the GPU texture without clipping or byte wrap');assert(result.pickError<.03,'ray picking follows the local crest: '+JSON.stringify({viewport,low,oblique,...result}));
         crushed.push({low,oblique,...result});
         if(viewport.width===390&&oblique&&!low)await page.screenshot({path:path.join(out,'snow-crushed-footprint.png')});
         await page.evaluate(()=>{const s=testSurface3D;s.snow.update=stompUpdate;s.oblique=stompSurface.oblique;s.resize(stompSurface.width,stompSurface.height,stompSurface.low);});

@@ -21,3 +21,11 @@ test('rolling rotates around the direction of travel, stays normalized and rever
   assert(Math.abs(Math.hypot(...turning)-1)<1e-12);
   assert(Math.abs(rotation(identity,0,.4,.2)[0])>.5);
 });
+test('fine ray steps pick a tall narrow snow crest in both camera views',()=>{
+  const height=(x,z)=>.2+2*Math.exp(-(x*x+z*z)/.012);
+  for(const oblique of [false,true]){
+    const camera=new Camera(.46,oblique),crest=[0,height(0,0),0],screen=camera.project(crest);
+    const picked=intersect(camera,screen.u,screen.v,height,.025);
+    assert(picked);assert(Math.hypot(...picked.map((v,i)=>v-crest[i]))<.0001,'the front crest is not skipped for the ground behind it');
+  }
+});
