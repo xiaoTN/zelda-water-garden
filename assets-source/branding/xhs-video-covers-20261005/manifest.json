@@ -1,0 +1,26 @@
+[
+  {
+    "file": "01-water-ripples.png",
+    "size": [
+      1086,
+      1448
+    ],
+    "sha256": "c8607bc7710eac227bd781a5057f1dfac130ef3718a902881b4c33e963f5fbfc"
+  },
+  {
+    "file": "02-a-quiet-moment.png",
+    "size": [
+      1086,
+      1448
+    ],
+    "sha256": "c920f4aaf04e6224934df9c348b44871c3b74101dc0b14ef2ff74142506e77d7"
+  },
+  {
+    "file": "03-quiet-water.png",
+    "size": [
+      1086,
+      1448
+    ],
+    "sha256": "5d1f3b88eaf84051aba45d0e2c4d2b5050c2bb698584ac7da978f969cc86472f"
+  }
+]
