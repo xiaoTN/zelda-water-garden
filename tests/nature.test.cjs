@@ -169,9 +169,9 @@ test('multiple snowballs stay in the shared geometry budget and reset clears the
   snow.clear(); assert.equal(snow.inspect().footprints, 0);assert.equal(snow.balls.length,0);
 });
 test('fresh snowballs have a visible seed radius and grow only with finite rolling travel',()=>{
-  const snow=new Snow(),ball=snow.startBall(.3,.5);assert.equal(ball.radius,.025);
-  snow.roll(ball,.3,.5);assert.equal(ball.radius,.025);assert.deepEqual(ball.rotation,[0,0,0,1]);
-  snow.roll(ball,.6,.5);assert(Math.abs(ball.radius-.0355)<1e-12);assert(ball.rotation.every(Number.isFinite));
+  const snow=new Snow(),ball=snow.startBall(.3,.5);assert.equal(ball.radius,.01);
+  snow.roll(ball,.3,.5);assert.equal(ball.radius,.01);assert.deepEqual(ball.rotation,[0,0,0,1]);
+  snow.roll(ball,.6,.5);assert(Math.abs(ball.radius-.0205)<1e-12);assert(ball.rotation.every(Number.isFinite));
   assert(Math.abs(Math.hypot(...ball.rotation)-1)<1e-12);assert(snow.inspect().markedCells>0);
   const before=snow.inspect();snow.roll(ball,NaN,0);assert.deepEqual(snow.inspect(),before);
 });

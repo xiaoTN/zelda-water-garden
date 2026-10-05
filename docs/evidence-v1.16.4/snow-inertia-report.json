@@ -1,0 +1,137 @@
+{
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "quality": "normal",
+      "released": {
+        "u": 0.596700460069309,
+        "v": 0.46930117592765497,
+        "radius": 0.01700843313910807,
+        "rotation": [
+          -0.008737841340344854,
+          0.046625816076337555,
+          -0.23409972136879093,
+          -0.9710545833571772
+        ],
+        "vx": 8.412079934764702,
+        "vz": -0.010266184398299108,
+        "speed": 8.412086199238153
+      },
+      "coast": {
+        "u": 0.6463585083136691,
+        "v": 0.46927317209483543,
+        "radius": 0.017811552645407923,
+        "rotation": [
+          0.022208974884689748,
+          0.042118139848533215,
+          0.4061364857358737,
+          -0.9125710814420896
+        ],
+        "vx": 8.077828213274476,
+        "vz": -0.009858260337320299,
+        "speed": 8.077834228830769
+      },
+      "distance": 0.27535525930280597,
+      "grabSpeed": 0,
+      "persistentPanel": true,
+      "defaults": {
+        "boatInertia": 1.1,
+        "boatFriction": 1.25,
+        "boatThrowThreshold": 0.15,
+        "boatMaxSpeed": 1.5,
+        "boatSize": 0.6,
+        "boatRocking": 0.7,
+        "boatFlow": 1,
+        "inertia": 1.15,
+        "friction": 4.6,
+        "throwThreshold": 3.8,
+        "maxSpeed": 10,
+        "growth": 0.035,
+        "initialRadius": 0.01,
+        "snowBrush": 0.04,
+        "snowfall": 1,
+        "waterStroke": 1,
+        "cloudBrush": 0.065,
+        "cloudHalo": 0.18,
+        "cloudPush": 2.6,
+        "cloudRecovery": 1,
+        "sceneDuration": 0.84
+      }
+    },
+    {
+      "quality": "low",
+      "released": {
+        "u": 0.4920399730944318,
+        "v": 0.46791285400903104,
+        "radius": 0.03679801978703928,
+        "rotation": [
+          0.0421366975364308,
+          0.05512940970101846,
+          -0.24274781038428775,
+          -0.9676046441911976
+        ],
+        "vx": 9.999986087559895,
+        "vz": 0.016680785608934406,
+        "speed": 10
+      },
+      "coast": {
+        "u": 0.507680211915377,
+        "v": 0.4679693136776377,
+        "radius": 0.03798266926792122,
+        "rotation": [
+          0.06122733135577458,
+          0.031472438328559546,
+          0.20259944959387824,
+          -0.9768388621184984
+        ],
+        "vx": 9.529946035644196,
+        "vz": 0.015896720784747097,
+        "speed": 9.529959294142984
+      },
+      "distance": 0.406165536302378,
+      "grabSpeed": 0,
+      "persistentPanel": true,
+      "defaults": {
+        "boatInertia": 1.1,
+        "boatFriction": 1.25,
+        "boatThrowThreshold": 0.15,
+        "boatMaxSpeed": 1.5,
+        "boatSize": 0.6,
+        "boatRocking": 0.7,
+        "boatFlow": 1,
+        "inertia": 1.15,
+        "friction": 4.6,
+        "throwThreshold": 3.8,
+        "maxSpeed": 10,
+        "growth": 0.035,
+        "initialRadius": 0.01,
+        "snowBrush": 0.04,
+        "snowfall": 1,
+        "waterStroke": 1,
+        "cloudBrush": 0.065,
+        "cloudHalo": 0.18,
+        "cloudPush": 2.6,
+        "cloudRecovery": 1,
+        "sceneDuration": 0.84
+      }
+    },
+    {
+      "scenario": "native touch fallback and page exit",
+      "launchSpeed": 6.587720682201722,
+      "result": "passed"
+    },
+    {
+      "scenario": "compact panel layout and safe area",
+      "result": "passed"
+    },
+    {
+      "scenario": "offline file URL",
+      "developerPanel": false
+    },
+    {
+      "scenario": "bridged container",
+      "developerPanel": false
+    }
+  ]
+}

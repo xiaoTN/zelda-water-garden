@@ -58,7 +58,7 @@ async function run() {
       await page.mouse.move(x-viewport.width*.14,y-viewport.height*.10);await page.mouse.down();
       assert.equal((await state()).snow.balls.length,0,'pointer down waits for travel');
       await page.mouse.move(x-viewport.width*.14+4,y-viewport.height*.10);const seed=(await state()).snow.balls[0];
-      assert(seed&&seed.radius>=.025*Math.min(viewport.width/viewport.height,1),'first short move starts a visible sphere instead of a zero-size ball');
+      assert(seed&&seed.radius>=.01*Math.min(viewport.width/viewport.height,1),'first short move starts a visible sphere instead of a zero-size ball');
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snow-initial-sphere.png')});
       await page.mouse.move(x+viewport.width*.07,y-viewport.height*.10,{steps:18});await releaseStationary();
       assert.equal((await state()).snow.balls.length,1);assert((await state()).snow.balls[0].radius>0);

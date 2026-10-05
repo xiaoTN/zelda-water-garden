@@ -123,7 +123,7 @@
     var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1], vx:0, vz:0 }; this.balls.push(item); return item;
   };
   Snow.prototype.startBall = function(u,v){
-    var radius=clamp(setting(this.tuning,'initialRadius',.025),.01,.05)*Math.min(this.aspect,1);
+    var radius=clamp(setting(this.tuning,'initialRadius',.01),.01,.05)*Math.min(this.aspect,1);
     return this.ball(u,v,radius);
   };
   Snow.prototype.ballCenter = function (ball, position) {

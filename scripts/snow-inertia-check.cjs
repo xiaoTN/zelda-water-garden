@@ -54,7 +54,7 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
       await page.locator('.dev-toggle').click();
       await page.getByRole('button',{name:'查看参数',exact:true}).click();assert(/"inertia"/.test(await page.locator('.dev-json').inputValue()));
       await page.getByRole('button',{name:'恢复默认',exact:true}).click();assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.friction),4.6);
-      const defaults=await page.evaluate(()=>WaterGarden.inspect().tuning);assert.equal(defaults.boatSize,.6);assert.equal(defaults.throwThreshold,3.8);assert.equal(defaults.growth,.035);assert.equal(defaults.initialRadius,.025);
+      const defaults=await page.evaluate(()=>WaterGarden.inspect().tuning);assert.equal(defaults.boatSize,.6);assert.equal(defaults.throwThreshold,3.8);assert.equal(defaults.growth,.035);assert.equal(defaults.initialRadius,.01);
       await page.screenshot({path:path.join(out,'developer-panel-'+(low?'wide':'portrait')+'.png')});
       reports.push({quality:await page.evaluate(()=>WaterGarden.inspect().quality),released:release.ball,coast,distance,grabSpeed:grab.snow.balls[0].speed,persistentPanel:true,defaults});
       await context.close();
