@@ -88,10 +88,24 @@
   System.prototype.add = function (u,v) {
     var angle=-.2;
     if(this.items.length>=limit || !this.clearAt(u,v,angle,null))return null;
-    var b={id:++this.serial,u:u,v:v,angle:angle,vx:0,vz:0,held:false,pitch:0,roll:0};this.items.push(b);this.pose(b);return b;
+    var b={id:++this.serial,u:u,v:v,angle:angle,vx:0,vz:0,flowX:0,flowZ:0,held:false,pitch:0,roll:0};this.items.push(b);this.pose(b);return b;
   };
-  System.prototype.stopMotion = function () { for(var i=0;i<this.items.length;i++){this.items[i].vx=0;this.items[i].vz=0;this.items[i].held=false;} };
+  System.prototype.stopMotion = function () { for(var i=0;i<this.items.length;i++){this.items[i].vx=0;this.items[i].vz=0;this.items[i].flowX=0;this.items[i].flowZ=0;this.items[i].held=false;} };
   System.prototype.clear = function () { this.items.length=0; };
+  System.prototype.limitFlow = function(b){
+    var speed=Math.hypot(b.flowX,b.flowZ),max=Math.min(value(this.tuning,'boatMaxSpeed',1.5),.20*Math.min(1,this.aspect));
+    if(speed>max){b.flowX*=max/speed;b.flowZ*=max/speed;}
+  };
+  System.prototype.push = function(u,v,du,dv,radius){
+    var strength=value(this.tuning,'boatFlow',1);
+    for(var i=0;i<this.items.length;i++){
+      var b=this.items[i],distance=Math.hypot((b.u-u)*this.aspect,b.v-v);
+      if(b.held || distance>=radius)continue;
+      var force=(1-distance/radius)*3.5*strength;
+      b.flowX+=du*2*this.aspect*force;b.flowZ+=dv/slope*force;
+      this.limitFlow(b);
+    }
+  };
   System.prototype.drag = function (b,u,v,heading) {
     var dx=(u-b.u)*2*this.aspect,dz=(v-b.v)/slope,distance=Math.hypot(dx,dz),startU=b.u,startV=b.v,startAngle=b.angle;
     var target=typeof heading==='number'&&isFinite(heading)?heading:distance>this.size()*.006?Math.atan2(-dz,dx):startAngle,turn=angleDelta(startAngle,target);
@@ -114,18 +128,36 @@
     if(!factor || !this.turn(b,Math.atan2(-vz,vx))){b.vx=0;b.vz=0;return;}
     b.vx=vx*factor;b.vz=vz*factor;
   };
-  System.prototype.update = function (dt,time) {
+  System.prototype.update = function (dt,time,reduced) {
     this.clock=time;dt=Math.min(.08,Math.max(0,dt));
     for(var i=0;i<this.items.length;i++){
-      var b=this.items[i],speed=Math.hypot(b.vx,b.vz);
+      var b=this.items[i],speed=Math.hypot(b.vx,b.vz),strength=value(this.tuning,'boatFlow',1);
       var max=value(this.tuning,'boatMaxSpeed',1.5);if(speed>max){b.vx*=max/speed;b.vz*=max/speed;speed=max;}
-      if(!b.held && speed>0){
+      if(b.held){b.flowX=0;b.flowZ=0;this.pose(b);continue;}
+      this.limitFlow(b);var oldFlowX=b.flowX,oldFlowZ=b.flowZ;
+      var resistance=value(this.tuning,'boatFriction',1.25),flowDecay=Math.exp(-resistance*dt),flowStep=resistance>0?(1-flowDecay)/resistance:dt;
+      if(this.field && strength>0){
+        // Follow the same local wave-slope direction and gentle current as floating leaves.
+        var gx=this.field.sample(b.u+.005,b.v)-this.field.sample(b.u-.005,b.v),gz=this.field.sample(b.u,b.v+.005)-this.field.sample(b.u,b.v-.005);
+        var currentX=reduced?0:.0012*Math.sin(time*.3+i)*2*this.aspect*strength,currentZ=reduced?0:.0007/slope*strength;
+        b.flowX=b.flowX*flowDecay-gx*.45*2*this.aspect*strength*flowStep+currentX*(1-flowDecay);
+        b.flowZ=b.flowZ*flowDecay-gz*.45/slope*strength*flowStep+currentZ*(1-flowDecay);
+      }else{b.flowX*=flowDecay;b.flowZ*=flowDecay;}
+      if(strength<=0){b.flowX=0;b.flowZ=0;oldFlowX=0;oldFlowZ=0;}
+      this.limitFlow(b);
+      if(speed>0 || Math.hypot(b.flowX,b.flowZ)>.00001){
         var oldU=b.u,oldV=b.v,decay=Math.exp(-value(this.tuning,'boatFriction',1.25)*dt),vx=b.vx,vz=b.vz;
-        var length=speed*dt*(1+decay)/2;
-        var moved=this.drag(b,b.u+vx/speed*length/(2*this.aspect),b.v+vz/speed*length*slope);
+        var dx=vx*dt*(1+decay)/2+(oldFlowX+b.flowX)*dt/2,dz=vz*dt*(1+decay)/2+(oldFlowZ+b.flowZ)*dt/2,length=Math.hypot(dx,dz);
+        if(length>max*dt){dx*=max*dt/length;dz*=max*dt/length;length=max*dt;}
+        var heading=length>.000001?Math.atan2(-dz,dx):b.angle;
+        // Slow drift gently turns the bow; a deliberate fling continues to face its travel.
+        if(speed<.012)heading=Math.hypot(b.flowX,b.flowZ)>.004?b.angle+core.clamp(angleDelta(b.angle,heading),-dt*1.5,dt*1.5):b.angle;
+        var moved=this.drag(b,b.u+dx/(2*this.aspect),b.v+dz*slope,heading);
         // Swept hull contact stops the boat without passing through rocks or jittering on shore.
-        if(moved<length-.00001 || speed*decay<.012){b.vx=0;b.vz=0;}else{b.vx=vx*decay;b.vz=vz*decay;}
-        if(moved>.0001 && this.field)this.field.stroke(oldU,oldV,b.u,b.v,Math.min(.07,speed*.035));
+        if(moved<length-.00001){b.vx=0;b.vz=0;b.flowX=0;b.flowZ=0;}
+        else if(speed*decay<.012){b.vx=0;b.vz=0;}else{b.vx=vx*decay;b.vz=vz*decay;}
+        // Passive drift does not generate its own driving waves or an endless audio tail.
+        if(speed>.012 && moved>.0001 && this.field)this.field.stroke(oldU,oldV,b.u,b.v,Math.min(.07,speed*.035));
       }
       this.pose(b);
     }
@@ -174,7 +206,7 @@
     return hit;
   };
   System.prototype.inspect = function () {
-    return this.items.map(function(b){return {id:b.id,u:b.u,v:b.v,x:b.x,y:b.y,z:b.z,angle:b.angle,pitch:b.pitch,roll:b.roll,speed:Math.hypot(b.vx,b.vz),held:b.held,screenU:.5+b.x/(2*this.aspect),screenV:.5+b.z*slope-(b.y+this.size()*.25)*.25};},this);
+    return this.items.map(function(b){return {id:b.id,u:b.u,v:b.v,x:b.x,y:b.y,z:b.z,angle:b.angle,pitch:b.pitch,roll:b.roll,speed:Math.hypot(b.vx,b.vz),driftSpeed:Math.hypot(b.flowX,b.flowZ),flowX:b.flowX,flowZ:b.flowZ,held:b.held,screenU:.5+b.x/(2*this.aspect),screenV:.5+b.z*slope-(b.y+this.size()*.25)*.25};},this);
   };
   var api={System:System,limit:limit,triangles:faces.length};root.WaterBoats=api;
   if(typeof module!=='undefined' && module.exports)module.exports=api;

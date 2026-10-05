@@ -23,6 +23,7 @@ test('paper boats use folded lit 3D geometry and the same camera rays as water',
 });
 test('released paper boats coast, lose speed, disturb water and stop at swept obstacles',()=>{
   const values=new BoatTuning().values,boats=new PaperBoats(values),field=new WaveField(90,192,.462);
+  values.boatFlow=0; // Isolate fling friction from externally driven water motion.
   boats.attach(.462,field,(u,v)=>u>.65);const b=boats.add(.45,.49);assert(b);
   boats.launch(b,3,0);assert.equal(b.vx,values.boatMaxSpeed);const start=b.u;
   boats.update(.04,1);assert(b.u>start&&b.vx>0&&b.vx<values.boatMaxSpeed);assert(field.energy()>0);
@@ -69,6 +70,46 @@ test('boat coast is stable across frame rates and live speed/friction tuning app
     t.boatFriction=5;for(let i=0;i<300;i++)boats.update(dt,2+i*dt);assert.equal(b.vx,0);
   }
   assert(Math.max(...travel)-Math.min(...travel)<.0001);
+});
+
+test('water slopes push paper boats in leaf directions without self-generated waves; held boats stay put',()=>{
+  for(const aspect of [.462,1,2.16]){
+    const boats=new PaperBoats(),field={sample:(u,v)=>6*(u-.5)+3*(v-.49),stroke:()=>assert.fail('passive drifting must not drive its own wave field')};
+    boats.attach(aspect,field,()=>false);const b=boats.add(.5,.49);
+    for(let i=0;i<30;i++)boats.update(1/60,i/60,true);
+    assert(b.u<.5&&b.v<.49,'the same negative slope that moves leaves must move the boat');assert(b.flowX<0&&b.flowZ<0);assert.equal(b.vx,0);
+    const u=b.u,v=b.v;b.held=true;for(let i=0;i<20;i++)boats.update(1/60,i/60);
+    assert.equal(b.u,u);assert.equal(b.v,v);assert.equal(b.flowX,0);assert.equal(b.flowZ,0);
+    b.held=false;boats.update(.04,1,true);assert(b.u<u);boats.stopMotion();assert.equal(b.flowX,0);assert.equal(b.flowZ,0);
+  }
+  const boats=new PaperBoats(),calm={sample:()=>0,stroke:()=>assert.fail('calm current must not create ripples')};boats.attach(1,calm,()=>false);const b=boats.add(.5,.49);
+  boats.update(.08,1,true);assert.equal(b.u,.5);assert.equal(b.v,.49);
+  for(let i=0;i<60;i++)boats.update(1/60,i/60);assert(b.v>.49,'calm ambient current carries boats as it carries leaves');
+});
+
+test('nearby finger flow pushes free boats, adds to fling and respects flow tuning and swept contact',()=>{
+  const settings=new BoatTuning().values,boats=new PaperBoats(settings),field={sample:()=>0,stroke:()=>{}};
+  boats.attach(1,field,()=>false);const b=boats.add(.5,.49),peer=boats.add(.7,.69);assert(peer);
+  boats.push(.49,.50,.03,-.01,.12);assert(b.flowX>0&&b.flowZ<0);assert.equal(peer.flowX,0);
+  b.held=true;const held=b.flowX;boats.push(.5,.49,.1,0,.12);assert.equal(b.flowX,held);b.held=false;
+  boats.launch(b,.3,0);const u=b.u,v=b.v;boats.update(.04,1,true);assert(b.u>u&&b.v<v,'water flow adds to fling rather than replacing it');
+  settings.boatFlow=0;boats.update(.04,1,true);assert.equal(b.flowX,0);assert.equal(b.flowZ,0);assert(b.vx>0,'turning flow off preserves the independent fling');
+  boats.stopMotion();settings.boatFlow=1;boats.obstacle=(u,v)=>u>.61;
+  for(let i=0;i<120;i++){boats.push(b.u,b.v,1,0,.12);boats.update(1/60,2+i/60,true);assert(boats.clearAt(b.u,b.v,b.angle,b));assert(boats.inspect()[0].driftSpeed<=.2+.000001);}
+  assert(b.u<.61);assert.equal(b.flowX,0,'blocked hull stops the flow velocity');
+});
+
+test('wave-driven paper boat drift is consistent across frame rates and real ripples can move a resting boat',()=>{
+  const travel=[];
+  for(const dt of [1/60,1/30,1/15]){
+    const boats=new PaperBoats();boats.attach(1,{sample:u=>8*u,stroke:()=>{}},()=>false);const b=boats.add(.5,.49);
+    for(let i=0;i<Math.round(1/dt);i++)boats.update(dt,i*dt,true);travel.push(b.u);
+  }
+  assert(Math.max(...travel)-Math.min(...travel)<.0001);
+  const field=new WaveField(128,128,1),boats=new PaperBoats();boats.attach(1,field,()=>false);const b=boats.add(.54,.49);
+  field.disturb(.51,.49,.8,.035);let moved=0;
+  for(let i=0;i<100;i++){field.step();boats.update(1/60,i/60,true);moved=Math.max(moved,Math.hypot(b.u-.54,b.v-.49));}
+  assert(moved>.0001,'actual wave propagation displaces a resting boat without any finger impulse');
 });
 test('boat footprint avoids banks, other boats and rocks during dragging and resize',()=>{
   const boats=new PaperBoats();boats.attach(.462,null,()=>false);

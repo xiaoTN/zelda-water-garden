@@ -240,7 +240,7 @@
     if(boat && boat.held)return;
     if(boat || mode==='boat'){
       if(!boat){boat=boats.add(surface.u,surface.v);if(!boat){notice(boats.items.length>=window.WaterBoats.limit?'让这些纸船先漂一会儿吧':'在宽一些的水面，轻放纸船');return;}splash(boat.u,boat.v,.12,true,true);}
-      initAudio();garden.classList.add('touched');boat.vx=0;boat.vz=0;boat.held=true;
+      initAudio();garden.classList.add('touched');boat.vx=0;boat.vz=0;boat.flowX=0;boat.flowZ=0;boat.held=true;
       fingers[id]={boat:boat,u:boat.u,v:boat.v,screenX:x,screenY:y,gestureU:p.u,gestureV:p.v,offsetU:boat.u-surface.u,offsetV:boat.v-surface.v,movedAt:gesture,fling:new window.GardenNature.Fling(p.u,p.v,gesture,boats.aspect,2*boats.aspect,1/.4330127)};
       return;
     }
@@ -286,7 +286,7 @@
       fishSchool.scare(p.u,p.v,Math.min(1,.35+distance/65),f.u,f.v);
       field.stroke(f.u, f.v, p.u, p.v, Math.min(.17, .035 + distance * .002) * tuning.values.waterStroke);
       if (strokeAudio && distance > .5) strokeAudio.stroke(distance / Math.min(width, height) / Math.max(.016, now - f.movedAt));
-      pushLeaves(p.u, p.v, dx / width, dy / height);
+      pushFloaters(p.u, p.v, dx / width, dy / height);
       swipeRipple(f, p, distance);
     } else { f.rippleDistance = 0; }
     f.u = p.u; f.v = p.v; f.movedAt = now;
@@ -315,7 +315,8 @@
     delete fingers[id];
     if (strokeAudio && !Object.keys(fingers).length) strokeAudio.release();
   }
-  function pushLeaves(u, v, dx, dy) {
+  function pushFloaters(u, v, dx, dy) {
+    boats.push(u,v,dx,dy,130/height);
     for (var i = 0; i < leaves.length; i++) {
       var leaf = leaves[i], x = (leaf.u - u) * width, y = (leaf.v - v) * height, r = Math.sqrt(x * x + y * y);
       if (r < 130) { var force = (1 - r / 130) * 3.5; leaf.vx += dx * force; leaf.vy += dy * force; leaf.turn += dx * 7; }
@@ -692,7 +693,7 @@
       field.updateRain(dt);
       while (accumulator >= 1 / 60 && steps < 5) { field.step(); accumulator -= 1 / 60; steps++; }
       if (steps === 5) accumulator = 0;
-      boats.update(dt,reduced ? 0 : now);
+      boats.update(dt,reduced ? 0 : now,reduced);
       renderer.draw(reduced ? 0 : now, light);
       drawLife(dt);
       }
