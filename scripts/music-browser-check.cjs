@@ -36,13 +36,13 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
     await page.mouse.click(195,410);
     const snapshots=[];
     for(const scene of ['water','snow','cloud','water']){
-      await page.locator('[data-scene="'+scene+'"]').click();
+      await page.locator('button[data-scene="'+scene+'"]').click();
       await page.waitForFunction(scene=>WaterGarden.inspect().music.voices.some(v=>v.scene===scene&&!v.fading),scene);
       const state=await page.evaluate(()=>WaterGarden.inspect().music);snapshots.push(state);
       const current=state.voices.find(v=>v.scene===scene);assert(current.loop&&current.offset>0&&current.offset<current.duration/2);
       await page.waitForTimeout(1700);assert.equal((await page.evaluate(()=>WaterGarden.inspect().music)).voices.length,1);
     }
-    for(let i=0;i<12;i++)await page.locator('[data-scene="'+['snow','cloud','water'][i%3]+'"]').click();
+    for(let i=0;i<12;i++)await page.locator('button[data-scene="'+['snow','cloud','water'][i%3]+'"]').click();
     await page.waitForTimeout(1800);assert.equal((await page.evaluate(()=>WaterGarden.inspect().music)).voices.length,1);
     const paused=await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));return WaterGarden.inspect().music;});
     assert.equal(paused.voices.length,0);

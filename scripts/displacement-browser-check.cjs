@@ -9,8 +9,9 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
   try{
     await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.NatureGarden&&getComputedStyle(document.getElementById('loading')).opacity==='0');
     await page.evaluate(()=>{const draw=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.displacementSurface=this;return draw.apply(this,arguments);};});
+    const select=async kind=>{await page.locator('button[data-scene="'+kind+'"]').click();await page.waitForFunction(kind=>NatureGarden.inspect().scene===kind&&WaterGarden.inspect().sceneTransition.phase==='idle',kind);};
     for(const kind of ['snow','cloud']){
-      await page.locator('button[data-scene="'+kind+'"]').click();
+      await select(kind);
       await page.locator('#nature').press('Enter');
       for(const sweep of [false,true]){
         const report=await page.evaluate(({kind,sweep})=>{
@@ -45,7 +46,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
       }
     }
     // The visible continuous material must move, not just the legacy cloud markers.
-    await page.locator('button[data-scene="cloud"]').click();
+    await select('cloud');
     for(const lowTier of [false,true]){
       const pushed=await page.evaluate(lowTier=>{
         const s=displacementSurface,c=s.clouds;c.clear();s.resize(s.canvas.width,s.canvas.height,lowTier);
@@ -77,7 +78,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
     for(const viewport of [{width:390,height:844},{width:844,height:390}]){
       await page.setViewportSize(viewport);await page.waitForFunction(w=>WaterGarden.inspect().width===w,viewport.width);
       for(const kind of ['snow','cloud']){
-        await page.locator('button[data-scene="'+kind+'"]').click();
+        await select(kind);
         const edges=await page.evaluate(kind=>{
           const s=displacementSurface,field=kind==='snow'?s.snow:s.clouds.field;field.clear();const points=[];
           for(const [u,v] of [[.001,.001],[.999,.001],[.001,.999],[.999,.999],[.5,.001],[.5,.999],[.001,.5],[.999,.5]]){

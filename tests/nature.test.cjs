@@ -1,6 +1,41 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Snow, Clouds } = require('../src/nature-core.js');
+const SceneTransition = require('../src/scene-transition.js');
+
+test('scene swaps happen only under an opaque veil and reveal the live destination', () => {
+  const t = new SceneTransition('water', false);
+  assert(t.request('snow')); assert.equal(t.current, 'water'); assert.equal(t.opacity, 0);
+  assert.equal(t.update(.14), null); assert.equal(t.current, 'water'); assert(Math.abs(t.opacity - .5) < 1e-8);
+  assert.equal(t.update(.14), 'snow'); assert.equal(t.opacity, 1);
+  assert.equal(t.update(.28), null); assert(Math.abs(t.opacity - .5) < 1e-8);
+  t.update(.28); assert.deepEqual(t.inspect(), {current:'snow',target:'snow',phase:'idle',opacity:0});
+});
+test('rapid requests preserve opacity, skip superseded scenes and can return to the current scene', () => {
+  const t = new SceneTransition('water', false);
+  t.request('snow'); t.update(.14); const level = t.opacity;
+  t.request('cloud'); assert.equal(t.opacity, level); assert.equal(t.update(.14), 'cloud');
+  t.update(.20); const revealed = t.opacity;
+  t.request('snow'); assert.equal(t.opacity, revealed);
+  t.request('cloud'); assert.equal(t.opacity, revealed); t.update(1);
+  assert.equal(t.current, 'cloud'); assert.equal(t.phase, 'idle');
+  t.request('water'); t.update(.1); const covered = t.opacity;
+  t.request('cloud'); assert.equal(t.opacity, covered); t.update(1);
+  assert.equal(t.current, 'cloud'); assert.equal(t.opacity, 0);
+});
+test('hidden pages settle the latest destination; repeated clicks and reduced motion remain bounded', () => {
+  for (const reduced of [false, true]) {
+    const t = new SceneTransition('water', reduced);
+    assert.equal(t.request('water'), false); assert.equal(t.request('invalid'), false);
+    t.request('snow'); t.update(.05); const before=t.inspect();
+    assert.equal(t.request('snow'), false); assert.deepEqual(t.inspect(), before);
+    t.request('cloud'); assert.equal(t.finish(), 'cloud'); assert.equal(t.finish(), null);
+    assert.deepEqual(t.inspect(), {current:'cloud',target:'cloud',phase:'idle',opacity:0});
+    t.request('water'); let commits = 0;
+    for(let i=0;i<100;i++){if(t.update(.01))commits++;assert(t.opacity>=0&&t.opacity<=1);}
+    assert.equal(commits,1); assert.equal(t.phase,'idle');
+  }
+});
 
 test('fast cloud gestures open deeper gaps without widening the brush',()=>{
   const slow=new Clouds(),fast=new Clouds();

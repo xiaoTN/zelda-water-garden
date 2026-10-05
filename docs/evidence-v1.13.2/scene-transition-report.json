@@ -1,0 +1,116 @@
+{
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "quality": "normal",
+      "from": "water",
+      "to": "snow",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "normal",
+      "from": "snow",
+      "to": "cloud",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "normal",
+      "from": "cloud",
+      "to": "water",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "normal",
+      "from": "water",
+      "to": "cloud",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "normal",
+      "from": "cloud",
+      "to": "snow",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "normal",
+      "from": "snow",
+      "to": "water",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "normal",
+      "scenario": "retarget, page return, resize, real context loss/recovery and picking",
+      "result": "passed"
+    },
+    {
+      "quality": "low",
+      "from": "water",
+      "to": "snow",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "low",
+      "from": "snow",
+      "to": "cloud",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "low",
+      "from": "cloud",
+      "to": "water",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "low",
+      "from": "water",
+      "to": "cloud",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "low",
+      "from": "cloud",
+      "to": "snow",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "low",
+      "from": "snow",
+      "to": "water",
+      "cover": 0.5000000053571428,
+      "midpoint": 1,
+      "reveal": 0.49999999732142864
+    },
+    {
+      "quality": "low",
+      "scenario": "retarget, page return, resize, real context loss/recovery and picking",
+      "result": "passed"
+    },
+    {
+      "scenario": "reduced motion uses a shorter opacity-only transition",
+      "result": "passed"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ async function run() {
       await page.goto('http://127.0.0.1:' + server.address().port); await page.waitForFunction(() => window.WaterGarden && WaterGarden.inspect().steps > 5);
       await page.evaluate(()=>{const original=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.testSurface3D=this;return original.apply(this,arguments);};});
       const state = () => page.evaluate(() => NatureGarden.inspect());
-      const select = kind => page.locator('button[data-scene="' + kind + '"]').click();
+      const select = async kind => { await page.locator('button[data-scene="' + kind + '"]').click(); await page.waitForFunction(kind => NatureGarden.inspect().scene === kind && WaterGarden.inspect().sceneTransition.phase === 'idle', kind); };
       assert.equal(await page.locator('#view-3d').count(),0,'the camera toggle is removed from the page');
       const copyChecks = [];
       const checkCopy = async kind => {
@@ -261,7 +261,7 @@ async function run() {
     await page.addInitScript(()=>{window.PointerEvent=undefined;});
     await page.goto(pathToFileURL(path.join(root,'src/index.html')).href);await page.waitForFunction(()=>window.NatureGarden);
     await page.evaluate(()=>{const draw=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.offlineSurface=this;return draw.apply(this,arguments);};});
-    await page.locator('button[data-scene="snow"]').click(); await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().snow.markedCells>0));
+    await page.locator('button[data-scene="snow"]').click(); await page.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle'); await page.touchscreen.tap(195,410);assert(await page.evaluate(()=>NatureGarden.inspect().snow.markedCells>0));
     await page.waitForFunction(()=>window.offlineSurface && offlineSurface.snowMaps===2);
     await page.waitForFunction(()=>offlineSurface.landReady);
     assert.equal(await page.evaluate(()=>NatureGarden.inspect().renderer),'webgl');
@@ -272,7 +272,7 @@ async function run() {
     assert(await page.evaluate(()=>WaterGarden.inspect().rollAudio&&WaterGarden.inspect().rollSpeed>0),'offline touch fallback plays the snow recording');
     await snowTouch.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await snowTouch.detach();
     await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);
-    await page.locator('button[data-scene="cloud"]').click();await page.touchscreen.tap(195,410);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloudCarve),0);
+    await page.locator('button[data-scene="cloud"]').click();await page.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle');await page.touchscreen.tap(195,410);assert.equal(await page.evaluate(()=>NatureGarden.inspect().cloudCarve),0);
     assert.equal(await page.locator('.toolbar').isVisible(),false);
     const cdp=await context.newCDPSession(page);
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:145,y:410,id:1}]});
@@ -286,7 +286,7 @@ async function run() {
     unsupported.on('pageerror',e=>errors.push(e.message));
     await unsupported.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type){return type==='webgl'?null:original.apply(this,arguments);};});
     await unsupported.goto(pathToFileURL(path.join(root,'src/index.html')).href);await unsupported.waitForFunction(()=>window.NatureGarden);
-    for(const kind of ['snow','cloud']){await unsupported.locator('button[data-scene="'+kind+'"]').click();assert.equal(await unsupported.evaluate(()=>NatureGarden.inspect().renderer),'unavailable');assert(await unsupported.locator('#render-status').isVisible());}
+    for(const kind of ['snow','cloud']){await unsupported.locator('button[data-scene="'+kind+'"]').click();await unsupported.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle');assert.equal(await unsupported.evaluate(()=>NatureGarden.inspect().renderer),'unavailable');assert(await unsupported.locator('#render-status').isVisible());}
     assert.equal(await unsupported.evaluate(()=>NatureGarden.inspect().snow.markedCells),0);
     await unavailable.close();reports.push({scenario:'unsupported hardware shows explicit 3D unavailable state',result:'passed'});
     assert.deepEqual(errors,[]);

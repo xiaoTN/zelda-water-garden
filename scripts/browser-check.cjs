@@ -187,8 +187,9 @@ async function run() {
         const tapSwitch=await page.evaluate(()=>{
           const before=WaterGarden.inspect();document.querySelector('button[data-scene="snow"]').click();return {before,after:WaterGarden.inspect()};
         });
-        assert(tapSwitch.before.tapVoices>0&&tapSwitch.after.tapFading>0&&tapSwitch.after.audioScene==='snow');
+        assert(tapSwitch.before.tapVoices>0&&tapSwitch.after.tapFading>0&&tapSwitch.after.sceneTransition.target==='snow');
         await page.waitForFunction(()=>WaterGarden.inspect().tapVoices===0);
+        await page.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle'&&NatureGarden.inspect().scene==='snow');
         const natureTails=[];
         for(const next of ['cloud','water']){
           await page.waitForTimeout(250);
@@ -201,9 +202,10 @@ async function run() {
             const before=WaterGarden.inspect();document.querySelector('button[data-scene="'+next+'"]').click();return {before,after:WaterGarden.inspect()};
           },next);
           const beforeVoices=transition.before.sceneSoundNodes+(transition.before.rollAudio?1:0),retained=transition.after.sceneSoundFading+(transition.after.rollFading?1:0);
-          assert(beforeVoices>0&&retained>0&&transition.after.audioScene===next,'nature sound retains a fading tail on '+next);
+          assert(beforeVoices>0&&retained>0&&transition.after.sceneTransition.target===next,'nature sound retains a fading tail on '+next);
           natureTails.push({from:transition.before.audioScene,to:next,retained});
           await page.waitForFunction(()=>WaterGarden.inspect().sceneSoundNodes===0&&!WaterGarden.inspect().rollAudio);
+          await page.waitForFunction(next=>WaterGarden.inspect().sceneTransition.phase==='idle'&&NatureGarden.inspect().scene===next,next);
         }
         reports.push({scenario:'water tap, snow and cloud sounds retain fading tails across every scene boundary and release their nodes',tapRetained:tapSwitch.after.tapFading,natureTails,result:'passed'});
         await page.locator('#reset').click();
@@ -525,11 +527,12 @@ async function run() {
         await page.locator('#rain').click();
         await page.mouse.move(x-25,y);await page.mouse.down();await page.mouse.move(x+25,y,{steps:8});
         assert((await inspect()).strokeAudio);await page.mouse.up();
-        await page.locator('button[data-scene="snow"]').click();assert.equal(await page.evaluate(()=>NatureGarden.inspect().scene),'snow');
+        await page.locator('button[data-scene="snow"]').click();assert.equal(await page.evaluate(()=>WaterGarden.inspect().sceneTransition.target),'snow');
         assert((await inspect()).rainAudioFading);
         await page.waitForFunction(()=>!WaterGarden.inspect().strokeAudio&&!WaterGarden.inspect().rainAudioFading&&!WaterGarden.inspect().rippleAudio);
+        await page.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle'&&NatureGarden.inspect().scene==='snow');
         assert.equal((await inspect()).audioState,'running','scene changes keep default audio available');
-        await page.locator('button[data-scene="cloud"]').click();await page.locator('button[data-scene="water"]').click();assert((await inspect()).rainAudio);
+        await page.locator('button[data-scene="cloud"]').click();await page.locator('button[data-scene="water"]').click();await page.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle'&&NatureGarden.inspect().scene==='water');assert((await inspect()).rainAudio);
         await page.locator('#reset').click();
         reports.push({scenario:'water audio tails fade and release across snow/cloud scene switches, then resume on return',result:'passed'});
       }
@@ -615,6 +618,7 @@ async function run() {
         assert(stoneSwitch.leaving.stoneFading>0&&stoneSwitch.leaving.stoneVoices>0);
         assert.equal(stoneSwitch.returning.stonePlayed,state.stonePlayed,'a rapid return must not replay an interrupted impact');
         await page.waitForFunction(()=>WaterGarden.inspect().stoneVoices===0);
+        await page.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle'&&NatureGarden.inspect().scene==='water');
         reports.push({scenario:'recorded impact fades on scene exit and rapid three-scene return does not replay it',retained:stoneSwitch.leaving.stoneFading,result:'passed'});
         await page.screenshot({path:path.join(out,'stone-impact.png')});
         await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'stone-ripples.png')});

@@ -20,6 +20,7 @@
   var natureModes = { snow: 0 }, natureWeather = { snow: true, cloud: true };
   var snowHints = ['滑动留痕 · 长按轻压新雪', '轻点留下脚印 · 拖动串起足迹', '滑动雪面，从小滚大 · 松手留下雪球 · 相碰合并'];
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var sceneTransition = new window.SceneTransition(sceneKind, reduced), sceneVeil = document.getElementById('scene-veil');
   function notice(text) {
     var element = document.getElementById('notice'); element.textContent = text; element.classList.add('show');
     clearTimeout(noticeTimer); noticeTimer = setTimeout(function () { element.classList.remove('show'); }, 2400);
@@ -185,6 +186,7 @@
     if(event!=='impact')return;
     field.stoneImpact(stone.u,stone.v,stone.radius);
     fishSchool.scare(stone.u,stone.v,1.5);
+    if (sceneTransition.phase !== 'idle') return;
     if (!stoneAudio || !stoneAudio.play(.9)) sound(.9,true);
   }
   function addLeaf(u, v) {
@@ -215,6 +217,7 @@
     }
   }
   function begin(id, x, y) {
+    if (sceneTransition.phase !== 'idle') return;
     var p = point(x, y);
     if(sceneKind==='water'&&!renderer)return;
     if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,true); if(p)beginNature(id, p, x, y); return; }
@@ -337,7 +340,7 @@
     document.getElementById('reset').setAttribute('aria-label', water ? '让水池归于平静' : '铺一场新雪，清除足迹和雪球');
     toolbar.setAttribute('aria-label', water ? '水面互动' : '雪地互动');
   }
-  function setScene(kind) {
+  function commitScene(kind) {
     if (kind === sceneKind) return;
     fingers = {}; cursor.style.display = 'none'; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; stopAudio(); sceneKind = kind;
     if(sceneAudio)sceneAudio.select(kind);
@@ -354,7 +357,23 @@
     showRainOptions(false); if(weatherAudio){weatherAudio.stop();if(kind==='water')weatherAudio.setLevel(weather.level);}
     syncSurfaces(); syncNatureControls();
     if (kind !== 'water') natureRenderer.draw(kind, light, now, natureWeather[kind], reduced);
-    initAudio();
+    if (audioActive()) initAudio();
+  }
+  function syncSceneTransition() {
+    sceneVeil.hidden = sceneTransition.phase === 'idle';
+    sceneVeil.style.opacity = String(sceneTransition.opacity);
+    garden.setAttribute('aria-busy', String(!sceneVeil.hidden));
+  }
+  function setScene(kind) {
+    if (!sceneTransition.request(kind)) return;
+    fingers = {}; cursor.style.display = 'none'; stopAudio();
+    sceneVeil.setAttribute('data-light', String(light));
+    syncSceneTransition();
+  }
+  function finishSceneTransition() {
+    var kind = sceneTransition.finish();
+    if (kind) commitScene(kind);
+    syncSceneTransition();
   }
   var sceneButtons = document.querySelectorAll('button[data-scene]');
   for (var si = 0; si < sceneButtons.length; si++) sceneButtons[si].addEventListener('click', function () { setScene(this.getAttribute('data-scene')); });
@@ -581,7 +600,7 @@
     if (terrain && terrain.blocks(u, v)) return false;
     return field.rainImpact(u, v, strength, quality !== 'normal', scale);
   }
-  function thunder(strength) { if (weatherAudio) weatherAudio.thunder(strength); }
+  function thunder(strength) { if (weatherAudio && sceneTransition.phase === 'idle') weatherAudio.thunder(strength); }
   function tick(time) {
     frameId = 0;
     if (!audioActive()) return;
@@ -589,6 +608,12 @@
     var frameDt = Math.min(.08, Math.max(0, (time - lastFrame) / 1000));
     lastFrame = time; now += frameDt; accumulator += frameDt;
     if (resized) resize();
+    var transitionWasActive = sceneTransition.phase !== 'idle', nextScene = sceneTransition.update(frameDt);
+    if (nextScene) commitScene(nextScene);
+    if (transitionWasActive) {
+      syncSceneTransition();
+      if (sceneTransition.phase === 'idle') restoreAudio();
+    }
     if (time - lastRender >= (quality === 'normal' ? 32 : 40)) {
       var dt = Math.min(.08, (time - lastRender) / 1000 || .033); lastRender = time;
       // Long audio tails finish even while their water scene is inactive.
@@ -618,7 +643,7 @@
       renderer.draw(reduced ? 0 : now, light);
       drawLife(dt);
       }
-      if (rippleAudio) rippleAudio.update(sceneKind === 'water' && renderer ? Math.sqrt(field.energy() / field.current.length) : 0);
+      if (rippleAudio) rippleAudio.update(sceneKind === 'water' && renderer && sceneTransition.phase === 'idle' ? Math.sqrt(field.energy() / field.current.length) : 0);
     }
     // Slow callback delivery can also come from the host scheduler. Lower quality,
     // but never treat it as proof that WebGL is unavailable or stop simulation.
@@ -633,7 +658,9 @@
   }
   canvas.addEventListener('webglcontextlost', function (event) {
     event.preventDefault(); lostCount++; fallbackOn('3D 水面暂时中断，等待恢复'); fingers = {};
+    if (sceneKind === 'water') finishSceneTransition();
   });
+  natureCanvas.addEventListener('webglcontextlost', function () { if (sceneKind !== 'water') { finishSceneTransition(); syncSurfaces(); } });
   canvas.addEventListener('webglcontextrestored', function () {
     if (lostCount > 1) return;
     fallbackMode = false; quality = 'low'; syncSurfaces(); resized = true;
@@ -641,6 +668,7 @@
   window.addEventListener('resize', function () { resized = true; });
   window.addEventListener('blur', function () { fingers = {}; cursor.style.display = 'none'; });
   function pauseExperience() {
+    finishSceneTransition();
     cancelAnimationFrame(frameId);frameId=0;fingers={};clearTimeout(noticeTimer);document.getElementById('notice').classList.remove('show');
     stopAudio(true);if(music)music.stop();if(audio)suspendAudio(audio);
   }
@@ -657,6 +685,7 @@
   window.addEventListener('focus',function(){if(!document.hidden){pageInactive=false;returnExperience();}});
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return {
+    sceneTransition: sceneTransition.inspect(),
     fishTime: fishSchool.clock, fish: fishSchool.items.map(function(f){return {u:f.u,v:f.v,y:f.y,angle:f.angle,fear:f.fear,speed:f.speed,swim:f.swim,flowX:f.flowX,flowZ:f.flowZ};}), fishTriangles: fishSchool.vertices.length/33,
     ready: !!field,
     stones: stoneDrops.items.map(function(s){return {u:s.u,v:s.v,y:s.y,radius:s.radius,top:s.top,entered:s.entered,settled:s.settled,speed:s.body.velocity.length(),rotation:[s.body.quaternion.x,s.body.quaternion.y,s.body.quaternion.z,s.body.quaternion.w]};}),
