@@ -43,8 +43,9 @@ def main():
             continue
         source = ORIGINALS / SOURCES[shot['source']][1]
         duration = shot['duration'] / 30
-        # Central live water/snow/cloud surface only; no source header, toast or toolbar.
-        crop = 'crop=740:510:0:245' if shot['id'] == 'rain' else 'crop=740:570:0:245'
+        # Whole real game viewport. The nature recording is two pixels wider;
+        # remove only those pixels so both sources share the same portrait ratio.
+        crop = 'crop=740:1080:0:0'
         if shot['id'] != 'end' and not args.audio_only:
             run(['-threads', '1', '-ss', shot['start'], '-i', source, '-t', duration,
                  '-vf', f'{crop},setpts=PTS-STARTPTS,setsar=1,fps=30:start_time=0', '-an',

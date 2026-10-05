@@ -4,13 +4,13 @@ from pathlib import Path
 import re
 import subprocess
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-VIDEO = ROOT / 'artifacts/promo/moment-water-promo-v4.mp4'
-QA = ROOT / 'tmp/promo-qa-v4'
-DOCS = ROOT / 'docs/promo-video-2026-10-05/revision-4'
+VIDEO = ROOT / 'artifacts/promo/moment-water-promo-v5.mp4'
+QA = ROOT / 'tmp/promo-qa-v5'
+DOCS = ROOT / 'docs/promo-video-2026-10-05/revision-5'
 QA.mkdir(parents=True, exist_ok=True)
 DOCS.mkdir(parents=True, exist_ok=True)
 shots = json.loads((HERE / 'src/timeline.json').read_text(encoding='utf-8'))
@@ -24,13 +24,14 @@ def ff(*args):
 probe = json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format','-show_streams','-of','json',str(VIDEO)]))
 v = next(s for s in probe['streams'] if s['codec_type']=='video')
 a = next(s for s in probe['streams'] if s['codec_type']=='audio')
-assert (v['width'],v['height'],v['r_frame_rate']) == (1080,1440,'30/1')
+assert (v['width'],v['height'],v['r_frame_rate']) == (1080,1576,'30/1')
 assert abs(float(probe['format']['duration'])-seconds)<.1
 assert v['codec_name']=='h264' and a['codec_name']=='aac'
 font = ImageFont.truetype('C:/Windows/Fonts/msyh.ttc',20)
-sheet = Image.new('RGB',(990,1440),'#102923')
+sheet = Image.new('RGB',(990,1560),'#102923')
 draw = ImageDraw.Draw(sheet)
 checked=[]
+source_fidelity={}
 for i,s in enumerate(shots):
     # First, peak and tail frame, plus a stable middle frame for the overview.
     frames = sorted(set([s['from']+10,s['from']+round(s['duration']*.5),s['from']+s['duration']-24]))
@@ -38,20 +39,34 @@ for i,s in enumerate(shots):
         p=QA/f'f{f:04d}.png'
         ff('-ss',f/30,'-i',VIDEO,'-frames:v',1,p)
         im=Image.open(p).convert('RGB')
-        # All bottom 25% content must stay near the flat background (codec tolerance).
-        roi=np.asarray(im)[1090:]
-        assert np.max(np.std(roi.astype(float),axis=(0,1)))<1.1, f'Bottom safe area disturbed f{f}'
+        # The game must reach every edge, including the previously blank bottom.
+        # Check stable frames only: the opening/cut fade intentionally blends pictures.
+        if s['id']!='end' and f==s['from']+round(s['duration']*.5):
+            pixels=np.asarray(im).astype(float)
+            regions=[pixels[:100],pixels[-100:],pixels[:,:60],pixels[:,-60:]]
+            assert all(float(np.max(np.std(roi,axis=(0,1))))>3 for roi in regions), f'Flat picture border at f{f}'
+            # Compare uncaptioned edges with the exact source frame. This catches
+            # accidental crops or simulated backgrounds, beyond border variance.
+            local=f-s['from']
+            source=Image.open(HERE/'public/frames'/s['id']/f'{local:04d}.jpg').convert('RGB')
+            assert source.size==(740,1080), 'Full original game viewport is required'
+            expected_picture=np.asarray(ImageOps.fit(source,im.size,method=Image.Resampling.BILINEAR)).astype(float)
+            border=np.zeros(pixels.shape[:2],dtype=bool)
+            border[:270]=True; border[1240:]=True; border[:,:40]=True; border[:,-40:]=True
+            error=float(np.mean(abs(pixels-expected_picture)[border]))
+            assert error<6, f'Full source viewport differs at f{f}: {error}'
+            source_fidelity[s['id']]=round(error,3)
         checked.append(f)
     f=frames[len(frames)//2]
-    im=Image.open(QA/f'f{f:04d}.png').convert('RGB').resize((324,432))
-    x=(i%3)*330;y=(i//3)*480
+    im=Image.open(QA/f'f{f:04d}.png').convert('RGB').resize((324,473))
+    x=(i%3)*330;y=(i//3)*520
     sheet.paste(im,(x,y+36))
     draw.text((x+8,y+7),f"{s['label']} · {f/30:.1f}s",font=font,fill='#e6ead6')
 sheet.save(DOCS/'contact-sheet.jpg',quality=93)
 
 hold=[]
 for sec in [47,49]:
-    pixels=ff('-ss',sec,'-i',VIDEO,'-frames:v',1,'-vf','crop=920:465:80:420','-f','rawvideo','-pix_fmt','gray','pipe:1')
+    pixels=ff('-ss',sec,'-i',VIDEO,'-frames:v',1,'-vf','crop=1008:550:36:435','-f','rawvideo','-pix_fmt','gray','pipe:1')
     hold.append(np.frombuffer(pixels,dtype=np.uint8).astype(float))
 ending_difference=float(np.mean(abs(hold[0]-hold[1])))
 assert ending_difference<1.2, 'Ending screenshots should hold without water interaction'
@@ -88,12 +103,12 @@ for sec in [10,19,30,37,42,47]:
     j=int(np.argmax(scores));lag=-2400+j*8
     lags.append({'at_seconds':sec,'lag_samples':lag,'lag_frames':round(lag/1600,3),'correlation':round(scores[j],5)})
     assert abs(lag)<=800, f'Audio offset exceeds half frame: {lag}'
-report={'duration_seconds':float(probe['format']['duration']),'dimensions':[1080,1440],'fps':30,'bytes':VIDEO.stat().st_size,
+report={'duration_seconds':float(probe['format']['duration']),'dimensions':[1080,1576],'fps':30,'bytes':VIDEO.stat().st_size,
         'primary_durations_seconds':primary_durations,'ending_hold_pixel_difference':round(ending_difference,4),
         'video_codec':v['codec_name'],'audio_codec':a['codec_name'],'sample_rate':a['sample_rate'],
-        'checked_frames':checked,'motion':motion,'peak_dbfs':round(20*np.log10(peak+1e-12),2),
+        'checked_frames':checked,'source_edge_pixel_error':source_fidelity,'motion':motion,'peak_dbfs':round(20*np.log10(peak+1e-12),2),
         'rms_dbfs':round(float(20*np.log10(np.sqrt(np.mean(pcm**2))+1e-12)),2),'audio_sync_probes':lags,
-        'bottom_safe_area':'y >= 1090 remains flat; no essential content below y=1081',
+        'picture_layout':'Whole recorded game fills all four edges; no blank lower quarter. Poetic copy ends above y=1182; game controls are retained.',
         'all_checks_passed':True}
 (DOCS/'validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 print(json.dumps(report,ensure_ascii=False,indent=2))
