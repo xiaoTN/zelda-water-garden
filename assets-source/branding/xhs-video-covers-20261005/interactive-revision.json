@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-05",
+  "tool": "Built-in image_gen",
+  "use_case": "text-localization",
+  "input": "01-water-snow-serene.png",
+  "output": "01-water-snow-interactive.png",
+  "generated_original": "C:/Users/1/.codex/generated_images/01a105ba-e5b2-7cc0-8bcf-20506c93ce0a/exec-14c605b8-8877-4190-accd-0a5fbabc6573.png",
+  "text": [
+    "片刻",
+    "自由拨动",
+    "这片水面",
+    "轻点起涟漪 · 滑动拨水"
+  ],
+  "prompt": "Use case: text-localization. Edit target: the supplied approved Xiaohongshu portrait cover for the actual interactive nature game 片刻. Make ONLY a typography/copy revision to clearly communicate that the water is freely interactive. Preserve the current 3:4 portrait aspect ratio and the entire background composition: turquoise water dominates upper two thirds, original bright concentric stone ripples at upper left, fish and golden leaves, low-poly shoreline stones; lower one third shows the same soft snow, tracks and snowballs, with the exact same feathered water-to-snow transition. Do not repaint/reposition the water, ripple, snow or objects. Keep small top brand 「— 片刻 —」. Completely replace old main text 水光轻漾 / 心归宁静 with EXACT new headline in two lines: first line 「自由拨动」, second line 「这片水面」. This headline is the most noticeable element at thumbnail size, in the same elegant warm-ivory Kai calligraphic visual family but with substantially fuller confident strokes and slightly larger letters (about 12% larger than the existing headline); subtly deepen ONLY the immediate water behind lettering for legibility if necessary, no separate text box, no broad hard scrim. Keep its existing center-right placement and do NOT obscure the bright ripple center at left. Under the headline add the exact small but clearly readable subtitle 「轻点起涟漪 · 滑动拨水」, in matching warm-ivory refined Chinese typography, large enough for mobile thumbnail reading; subtitle about one third to two fifths of headline glyph height, positioned safely within the central water area. All important copy must stay above 62% image height; bottom snow scene has no words. Render all Chinese lettering as part of the generated image, with correct characters, spacing and polished composition. Mood stays poetic, tranquil and beautiful, premium game cover, no loud promotional stickers, no neon, no arrows, no people or hands, no UI controls, no watermark, no Zelda/Hyrule content, no 水面模拟器 and no 一池. Output one finished edited cover, no comparison collage.",
+  "validation": "Visually checked exact Chinese headline and subtitle, larger/fuller ivory lettering, clear touch/swipe interaction message, retained water majority with stone ripple and supporting lower snow, soft transition, no bottom text, no forbidden simulator/一池/Zelda terms. No programmatic lettering or image compositing. Marketing asset only; game and upload ZIP unchanged.",
+  "dimensions": [
+    1086,
+    1448
+  ],
+  "bytes": 1842011,
+  "sha256": "a51a49ced0767a3fa56ba5fe2845c99dbfaf0ff1fc2b379c2c775a57276e57de"
+}
