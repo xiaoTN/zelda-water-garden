@@ -12,6 +12,7 @@
   var now = 0, lastFrame = 0, lastRender = 0, accumulator = 0, frameId = 0, lostCount = 0, fallbackMode = false;
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
   var audio = null, master = null, sceneAudio = null, music = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
+  var pageInactive = false;
   var hints = { touch: '轻触起涟漪 · 滑动拨水 · 长按蓄波', leaf: '轻放一片叶 · 拨水送它远行', stone: '轻点落石，让涟漪慢慢散开' };
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
   var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
@@ -24,7 +25,8 @@
     clearTimeout(noticeTimer); noticeTimer = setTimeout(function () { element.classList.remove('show'); }, 2400);
   }
   function initAudio() {
-    if (audio) { if (audio.state === 'suspended') audio.resume().catch(function () {}); return true; }
+    if (audio && audio.state === 'closed') releaseAudio();
+    if (audio) { resumeAudio(audio); return true; }
     var Constructor = window.AudioContext || window.webkitAudioContext;
     if (!Constructor) { notice('这里暂时无法播放声音，仍可继续体验'); return false; }
     try {
@@ -39,11 +41,49 @@
       rippleAudio = new window.WaterSound.Ripple(audio, waterOutput, window.WaterRipplesAsset);
       rollAudio = new window.WaterSound.Rolling(audio, sceneAudio.output('snow'), window.SnowballRollAsset);
       weatherAudio.setLevel(sceneKind === 'water' ? weather.level : 0);
-      if (audio.state === 'suspended') audio.resume().catch(function () {});
+      var context=audio;
+      context.onstatechange=function(){
+        if(context!==audio||context.state==='closed')return;
+        if(audioActive())resumeAudio(context);
+        else if(context.state==='running')suspendAudio(context);
+      };
+      resumeAudio(context);
       return true;
-    } catch (error) { notice('这里暂时无法播放声音，仍可继续体验'); return false; }
+    } catch (error) { releaseAudio(); notice('这里暂时无法播放声音，仍可继续体验'); return false; }
   }
-  function unlockAudio() { if (!document.hidden && (!audio || audio.state !== 'running')) initAudio(); }
+  function audioActive() { return !document.hidden && !pageInactive; }
+  function restoreAudio() {
+    if(!audioActive()||!audio||audio.state!=='running')return;
+    if(sceneAudio)sceneAudio.select(sceneKind);
+    if(weatherAudio)weatherAudio.setLevel(sceneKind==='water'?weather.level:0);
+    if(music)music.select(sceneKind);
+  }
+  function resumeAudio(context) {
+    if(!audioActive()||context!==audio||context.state==='closed')return;
+    if(context.state==='running'){restoreAudio();return;}
+    // Retry interrupted as well as suspended contexts, including within a new gesture.
+    try{context.resume().then(function(){
+      if(context!==audio)return;
+      if(audioActive())restoreAudio();else suspendAudio(context);
+    }).catch(function(){});}catch(error){}
+  }
+  function suspendAudio(context) {
+    if(!context||context.state==='closed')return;
+    try{context.suspend().then(function(){
+      // A late background suspend must not silence a page that has already returned.
+      if(context===audio&&audioActive())resumeAudio(context);
+    }).catch(function(){});}catch(error){}
+  }
+  function releaseAudio() {
+    var old=audio;if(old)old.onstatechange=null;
+    stopAudio(true);if(music)music.stop();
+    if(sceneAudio)for(var kind in sceneAudio.buses)sceneAudio.buses[kind].disconnect();
+    if(master)master.disconnect();
+    audio=null;master=null;sceneAudio=null;music=null;
+    weatherAudio=null;strokeAudio=null;tapAudio=null;stoneAudio=null;rippleAudio=null;rollAudio=null;
+    if(old&&old.state!=='closed')try{old.close().catch(function(){});}catch(error){}
+  }
+  function unlockAudio() { if (audioActive() && (!audio || audio.state !== 'running')) initAudio(); }
   // Initialize within the first user gesture, including toolbar and keyboard use.
   document.addEventListener(window.PointerEvent ? 'pointerdown' : 'mousedown', unlockAudio, true);
   if (!window.PointerEvent) document.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
@@ -89,7 +129,6 @@
         }
       } catch (error) {}
     }
-    if (immediate && audio && audio.state === 'running') audio.suspend().catch(function () {});
   }
   function fallbackOn(message) {
     if (renderer) renderer.destroy(); renderer = null; fallbackMode = true; quality = 'unavailable';
@@ -545,7 +584,7 @@
   function thunder(strength) { if (weatherAudio) weatherAudio.thunder(strength); }
   function tick(time) {
     frameId = 0;
-    if (document.hidden) return;
+    if (!audioActive()) return;
     if (!lastFrame) lastFrame = time;
     var frameDt = Math.min(.08, Math.max(0, (time - lastFrame) / 1000));
     lastFrame = time; now += frameDt; accumulator += frameDt;
@@ -601,10 +640,21 @@
   });
   window.addEventListener('resize', function () { resized = true; });
   window.addEventListener('blur', function () { fingers = {}; cursor.style.display = 'none'; });
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { cancelAnimationFrame(frameId); frameId = 0; fingers = {}; clearTimeout(noticeTimer); document.getElementById('notice').classList.remove('show'); stopAudio(true); if(music)music.stop(); }
-    else { lastFrame = 0; lastRender = 0; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; if (audio) { audio.resume().catch(function () {}); if (weatherAudio) weatherAudio.setLevel(sceneKind==='water'?weather.level:0); if(music)music.select(sceneKind); } if (!frameId) frameId = requestAnimationFrame(tick); }
+  function pauseExperience() {
+    cancelAnimationFrame(frameId);frameId=0;fingers={};clearTimeout(noticeTimer);document.getElementById('notice').classList.remove('show');
+    stopAudio(true);if(music)music.stop();if(audio)suspendAudio(audio);
+  }
+  function returnExperience() {
+    if(!audioActive())return;
+    lastFrame=0;lastRender=0;accumulator=0;slowFrames=0;frameSamples=0;frameTotal=0;
+    if(audio)initAudio();if(!frameId)frameId=requestAnimationFrame(tick);
+  }
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden)pauseExperience();else{pageInactive=false;returnExperience();}
   });
+  window.addEventListener('pagehide',function(){pageInactive=true;pauseExperience();});
+  window.addEventListener('pageshow',function(){pageInactive=false;returnExperience();});
+  window.addEventListener('focus',function(){if(!document.hidden){pageInactive=false;returnExperience();}});
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return {
     fishTime: fishSchool.clock, fish: fishSchool.items.map(function(f){return {u:f.u,v:f.v,y:f.y,angle:f.angle,fear:f.fear,speed:f.speed,swim:f.swim,flowX:f.flowX,flowZ:f.flowZ};}), fishTriangles: fishSchool.vertices.length/33,
@@ -640,5 +690,5 @@
   }; } };
   window.NatureGarden = { inspect: function () { return { scene: sceneKind, renderLight: natureRenderer.light, renderer: natureRenderer.available() ? 'webgl' : 'unavailable', camera: natureRenderer.surface && natureRenderer.surface.camera ? 'perspective' : null, ballMeshes: natureRenderer.available() && sceneKind === 'snow' ? snow.balls.length : 0, drawCalls: natureRenderer.surface ? natureRenderer.surface.drawCalls : 0, closedCloudMesh: !!(natureRenderer.surface && natureRenderer.surface.cloudMesh), triangles: natureRenderer.surface ? natureRenderer.surface.count / 3 : 0, cloudCarve: clouds.field.inspect().depth, mode: sceneKind === 'cloud' ? 'swipe' : natureModes[sceneKind], weather: sceneKind === 'water' ? rain : natureWeather[sceneKind], snow: snow.inspect(), cloud: clouds.inspect(), activePointers: Object.keys(fingers).length, bufferWidth: natureCanvas.width, bufferHeight: natureCanvas.height }; } };
   resize();
-  requestAnimationFrame(function () { garden.classList.add('ready'); frameId = requestAnimationFrame(tick); });
+  frameId=requestAnimationFrame(function () { garden.classList.add('ready'); frameId = requestAnimationFrame(tick); });
 }());
