@@ -119,7 +119,7 @@
   };
   Snow.prototype.ball = function (u, v, radius) {
     if(!isFinite(u+v+radius)||radius<0)return null;
-    if (this.balls.length >= this.ballLimit) return null;
+    if (this.balls.length >= this.ballLimit) this.stopBall(this.balls.shift());
     var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1], vx:0, vz:0 }; this.balls.push(item); return item;
   };
   Snow.prototype.startBall = function(u,v){

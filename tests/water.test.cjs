@@ -21,6 +21,21 @@ test('paper boats use folded lit 3D geometry and the same camera rays as water',
     assert.equal(boats.shadows().length,66);
   }
 });
+test('full boat fleets replace the oldest validly placed boat and detach its motion',()=>{
+  const boats=new PaperBoats();boats.attach(1,null,()=>false);
+  for(const v of [.36,.49,.62])for(const u of [.28,.44,.60,.76])assert(boats.add(u,v));
+  assert.equal(boats.items.length,boatLimit);
+  const before=boats.items.slice();assert.equal(boats.add(0,0),null);assert.equal(boats.add(NaN,.5),null);
+  assert.equal(boats.add(before[1].u,before[1].v),null);assert.deepEqual(boats.items,before,'failed placement keeps the fleet intact');
+  for(let i=0;i<30;i++){
+    const oldest=boats.items[0],others=boats.items.slice(1);oldest.vx=1;oldest.flowZ=.1;oldest.held=true;
+    const added=boats.add(oldest.u,oldest.v);assert(added);assert.deepEqual(boats.items,others.concat(added));
+    assert.equal(oldest.vx,0);assert.equal(oldest.flowZ,0);assert.equal(oldest.held,false);
+    const position=[oldest.u,oldest.v];assert.equal(boats.drag(oldest,.5,.5),0);boats.launch(oldest,2,0);
+    assert.deepEqual([oldest.u,oldest.v],position);assert.equal(oldest.vx,0);
+    assert.equal(boats.geometry().length,boatLimit*boatTriangles*33);assert.equal(boats.shadows().length,boatLimit*66);
+  }
+});
 test('released paper boats coast, lose speed, disturb water and stop at swept obstacles',()=>{
   const values=new BoatTuning().values,boats=new PaperBoats(values),field=new WaveField(90,192,.462);
   values.boatFlow=0; // Isolate fling friction from externally driven water motion.

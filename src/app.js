@@ -231,6 +231,9 @@
       splash(p.u,p.v,.15,true,true); f.rippleDistance %= 10; f.last = now;
     }
   }
+  function pruneObjectPointers() {
+    for(var id in fingers){var f=fingers[id];if(f.boat&&boats.items.indexOf(f.boat)<0||f.ball&&snow.balls.indexOf(f.ball)<0)delete fingers[id];}
+  }
   function begin(id, x, y, time) {
     if (sceneTransition.phase !== 'idle') return;
     var p = point(x, y);
@@ -239,19 +242,18 @@
     var boat=boats.pick(p.u,p.v,true),surface=boats.surface(p.u,p.v),gesture=time===undefined?inputTime():time;
     if(boat && boat.held)return;
     if(boat || mode==='boat'){
-      if(!boat){boat=boats.add(surface.u,surface.v);if(!boat){notice(boats.items.length>=window.WaterBoats.limit?'让这些纸船先漂一会儿吧':'在宽一些的水面，轻放纸船');return;}splash(boat.u,boat.v,.12,true,true);}
+      if(!boat){boat=boats.add(surface.u,surface.v);if(!boat)return;pruneObjectPointers();splash(boat.u,boat.v,.12,true,true);}
       initAudio();garden.classList.add('touched');boat.vx=0;boat.vz=0;boat.flowX=0;boat.flowZ=0;boat.held=true;
       fingers[id]={boat:boat,u:boat.u,v:boat.v,screenX:x,screenY:y,gestureU:p.u,gestureV:p.v,offsetU:boat.u-surface.u,offsetV:boat.v-surface.v,movedAt:gesture,fling:new window.GardenNature.Fling(p.u,p.v,gesture,boats.aspect,2*boats.aspect,1/.4330127)};
       return;
     }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
     if (mode!=='stone' && renderer && renderer.terrain.blocks(p.u, p.v)) return;
-    if (core.shore(p.u, p.v) >= -.025) { notice('轻触池中的青绿水面'); return; }
+    if (core.shore(p.u, p.v) >= -.025) return;
     garden.classList.add('touched');
     initAudio();
     if(mode==='stone'){
-      if(!stoneDrops.add(p.u,p.v))notice('轻点池中的位置落石');
-      else {stoneBedDirty=true;fishSchool.scare(p.u,p.v,.9);}
+      if(stoneDrops.add(p.u,p.v)){stoneBedDirty=true;fishSchool.scare(p.u,p.v,.9);}
       return;
     }
     fingers[id] = { u: p.u, v: p.v, startU: p.u, startV: p.v, born: now, last: now, movedAt: now, rippleDistance: 0, travel: 0, charged: false };
@@ -461,10 +463,11 @@
       else if(selected===2&&!f.rollFinished&&f.travel+distance>=3){
         f.ball=snow.startBall(f.u,f.v);
         if(f.ball){
+          pruneObjectPointers();
           if(snow.roll(f.ball,p.u,p.v,snowBallPosition))snowMove=Math.hypot((f.ball.u-f.u)*snow.aspect,f.ball.v-f.v);
           else {f.ball=null;f.rollFinished=true;}
         }
-        else {f.rollFinished=true;notice('雪球已经很多了，滚到一起合并后还能继续');}
+        else f.rollFinished=true;
       }
       else if (selected === 0) {
         snow.stroke(f.u, f.v, p.u, p.v, r * tuning.values.snowBrush, .65);

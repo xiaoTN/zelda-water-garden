@@ -162,9 +162,15 @@ test('rolling a selected snowball grows it and leaves a compressed track', () =>
   snow.clear(); assert.equal(snow.balls.length, 0); assert.equal(snow.inspect().markedCells, 0);
 });
 test('multiple snowballs stay in the shared geometry budget and reset clears them with footprints', () => {
-  const snow = new Snow();
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) snow.ball(.1 + x * .2, .32 + y * .13, .02);
-  assert.equal(snow.balls.length, 12);assert.equal(snow.ball(.9,.9,.02),null,'a full scene keeps existing balls instead of deleting them');
+  const snow = new Snow(),created=[];
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) created.push(snow.ball(.1 + x * .2, .32 + y * .13, .02));
+  assert.deepEqual(snow.balls,created.slice(-12),'the newest twelve spheres remain');
+  const before=snow.balls.slice();assert.equal(snow.ball(NaN,.5,.02),null);assert.deepEqual(snow.balls,before,'invalid input cannot evict a sphere');
+  for(let i=0;i<30;i++){
+    const oldest=snow.balls[0],others=snow.balls.slice(1);snow.launch(oldest,6,0);
+    const added=snow.startBall(.9,.9);assert(added);assert.deepEqual(snow.balls,others.concat(added));
+    assert.equal(oldest.vx,0);assert.equal(snow.roll(oldest,.5,.5),null);assert.equal(snow.launch(oldest,6,0),false);
+  }
   snow.footprint(.5, .5, 0, .04); assert.equal(snow.inspect().footprints, 1);
   snow.clear(); assert.equal(snow.inspect().footprints, 0);assert.equal(snow.balls.length,0);
 });

@@ -86,8 +86,9 @@
     return true;
   }
   System.prototype.add = function (u,v) {
-    var angle=-.2;
-    if(this.items.length>=limit || !this.clearAt(u,v,angle,null))return null;
+    var angle=-.2,oldest=this.items.length>=limit?this.items[0]:null;
+    if(!isFinite(u+v) || !this.clearAt(u,v,angle,oldest))return null;
+    if(oldest){oldest.vx=0;oldest.vz=0;oldest.flowX=0;oldest.flowZ=0;oldest.held=false;this.items.shift();}
     var b={id:++this.serial,u:u,v:v,angle:angle,vx:0,vz:0,flowX:0,flowZ:0,held:false,pitch:0,roll:0};this.items.push(b);this.pose(b);return b;
   };
   System.prototype.stopMotion = function () { for(var i=0;i<this.items.length;i++){this.items[i].vx=0;this.items[i].vz=0;this.items[i].flowX=0;this.items[i].flowZ=0;this.items[i].held=false;} };
@@ -107,6 +108,7 @@
     }
   };
   System.prototype.drag = function (b,u,v,heading) {
+    if(this.items.indexOf(b)<0)return 0;
     var dx=(u-b.u)*2*this.aspect,dz=(v-b.v)/slope,distance=Math.hypot(dx,dz),startU=b.u,startV=b.v,startAngle=b.angle;
     var target=typeof heading==='number'&&isFinite(heading)?heading:distance>this.size()*.006?Math.atan2(-dz,dx):startAngle,turn=angleDelta(startAngle,target);
     var steps=Math.max(1,Math.ceil(distance/(this.size()*.18)),Math.ceil(Math.abs(turn)/.10));
@@ -122,6 +124,7 @@
     b.angle=Math.atan2(Math.sin(b.angle),Math.cos(b.angle));this.pose(b);return true;
   };
   System.prototype.launch = function (b,vx,vz) {
+    if(this.items.indexOf(b)<0)return;
     b.held=false;var speed=Math.hypot(vx,vz),strength=value(this.tuning,'boatInertia',1.1),max=value(this.tuning,'boatMaxSpeed',1.5);
     if(speed<value(this.tuning,'boatThrowThreshold',.15) || !isFinite(speed)){b.vx=0;b.vz=0;return;}
     var factor=Math.min(speed*strength,max)/speed;
