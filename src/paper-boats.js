@@ -2,9 +2,35 @@
   'use strict';
   var core = typeof module !== 'undefined' && module.exports ? require('./water-core.js') : root.WaterCore;
   var slope = .4330127, limit = 12;
-  // Folded hull, inner paper and the raised central fold are all world-space triangles.
-  var points = [[-1,.18,0],[-.58,.18,-.44],[.58,.18,-.44],[1,.18,0],[.58,.18,.44],[-.58,.18,.44],[-.65,0,0],[.65,0,0],[-.55,.22,0],[.55,.22,0],[0,1.5,0],[0,.22,-.13],[0,.22,.13]];
-  var faces = [[0,6,1],[1,6,7],[1,7,2],[2,7,3],[3,7,4],[4,7,6],[4,6,5],[5,6,0],[0,1,8],[1,2,9],[1,9,8],[2,3,9],[3,4,9],[4,5,8],[4,8,9],[5,0,8],[8,11,10],[11,9,10],[8,10,12],[12,10,9]];
+  // A classic folded rectangle: pointed ends, high side walls, open pockets and a peaked central fold.
+  // Inner and outer sheets have a small physical thickness; the bright lip is actual geometry.
+  var points=[[-1.18,.57,0],[-.52,.48,-.40],[.52,.48,-.40],[1.18,.57,0],[.52,.48,.40],[-.52,.48,.40],[-.78,.04,0],[-.46,.07,-.30],[.46,.07,-.30],[.78,.04,0],[.46,.07,.30],[-.46,.07,.30],[0,.025,0]];
+  var faces=[],colors=[],paper=[.985,.978,.946],inside=[.925,.920,.884],edge=[1,.994,.966],fold=[.995,.987,.959];
+  function face(a,b,c,color){faces.push([a,b,c]);colors.push(color||paper);}
+  function vertex(x,y,z){points.push([x,y,z]);return points.length-1;}
+  var inner=[],floor=[],i,j;
+  for(i=0;i<6;i++){
+    var rim=points[i],bottom=points[6+i];
+    inner.push(vertex(rim[0]*.983,rim[1]-.016,rim[2]*.964));
+    floor.push(vertex(bottom[0]*.976,bottom[1]+.027,bottom[2]*.94));
+  }
+  var well=vertex(0,.061,0);
+  for(i=0;i<6;i++){
+    j=(i+1)%6;
+    face(i,6+i,6+j);face(i,6+j,j);
+    face(6+i,12,6+j);
+    face(i,j,inner[j],edge);face(i,inner[j],inner[i],edge);
+    face(inner[i],inner[j],floor[j],inside);face(inner[i],floor[j],floor[i],inside);
+    face(floor[i],floor[j],well,inside);
+  }
+  // The centre is a folded triangle, not a flat cap: two ridges meet at the high crease.
+  var rear=vertex(-.70,.17,0),front=vertex(.70,.17,0),peak=vertex(.025,2.05,0);
+  var nearFold=vertex(0,.20,.09),farFold=vertex(0,.20,-.09);
+  face(rear,nearFold,peak,fold);face(nearFold,front,peak,paper);
+  face(rear,peak,farFold,paper);face(farFold,peak,front,fold);
+  face(rear,farFold,nearFold,inside);face(nearFold,farFold,front,inside);
+  // Fine triangular tuck-ins at each bow, separated from the raised central triangle.
+  face(inner[0],floor[0],rear,fold);face(inner[3],front,floor[3],fold);
   function value(t,key,fallback) { return typeof t[key] === 'number' ? t[key] : fallback; }
   function System(tuning) {
     this.tuning = tuning || {}; this.items = []; this.aspect = 1; this.field = null; this.obstacle = function(){return false;}; this.clock = 0; this.serial = 0;
@@ -14,7 +40,7 @@
     this.hullA=new Float32Array(12);this.hullB=new Float32Array(12);
   }
   System.prototype.attach = function (aspect, field, obstacle) { this.aspect=aspect; this.field=field; this.obstacle=obstacle; this.stopMotion(); };
-  System.prototype.size = function () { return .16 * Math.min(1,this.aspect) * value(this.tuning,'boatSize',1); };
+  System.prototype.size = function () { return .105 * Math.min(1,this.aspect) * value(this.tuning,'boatSize',1); };
   System.prototype.height = function (u,v) {
     var x=(u-.5)*2*this.aspect,z=(v-.5)/slope,wet=core.clamp((-core.shore(u,v)-.005)/.125,0,1);wet=wet*wet*(3-2*wet);
     return (Math.sin(x*5.5+z*7-this.clock*1.2)*.014+Math.sin(x*-8+z*3.5-this.clock*.9)*.009+Math.sin(x*11+z*9+this.clock*1.6)*.004+(this.field?this.field.sample(u,v)*.065:0))*wet;
@@ -44,7 +70,7 @@
       if(core.shore(a,b)>-.045 || this.obstacle(a,b))return false;
     }
     for(i=0;i<this.items.length;i++){
-      var other=this.items[i];if(other===ignore || Math.hypot((u-other.u)*2*this.aspect,(v-other.v)/slope)>s*2.05)continue;
+      var other=this.items[i];if(other===ignore || Math.hypot((u-other.u)*2*this.aspect,(v-other.v)/slope)>s*2.4)continue;
       var co=Math.cos(other.angle),no=Math.sin(other.angle),xo=(other.u-.5)*2*this.aspect,zo=(other.v-.5)/slope;
       for(var k=0;k<6;k++){p=points[k];this.hullB[k*2]=xo+p[0]*s*co+p[2]*s*no;this.hullB[k*2+1]=zo-p[0]*s*no+p[2]*s*co;}
       if(overlap(this.hullA,this.hullB,s*.02))return false;
@@ -66,16 +92,27 @@
   };
   System.prototype.stopMotion = function () { for(var i=0;i<this.items.length;i++){this.items[i].vx=0;this.items[i].vz=0;this.items[i].held=false;} };
   System.prototype.clear = function () { this.items.length=0; };
-  System.prototype.drag = function (b,u,v) {
-    var dx=(u-b.u)*2*this.aspect,dz=(v-b.v)/slope,distance=Math.hypot(dx,dz),steps=Math.max(1,Math.ceil(distance/(this.size()*.22))),startU=b.u,startV=b.v;
+  System.prototype.drag = function (b,u,v,heading) {
+    var dx=(u-b.u)*2*this.aspect,dz=(v-b.v)/slope,distance=Math.hypot(dx,dz),startU=b.u,startV=b.v,startAngle=b.angle;
+    var target=typeof heading==='number'&&isFinite(heading)?heading:distance>this.size()*.006?Math.atan2(-dz,dx):startAngle,turn=angleDelta(startAngle,target);
+    var steps=Math.max(1,Math.ceil(distance/(this.size()*.18)),Math.ceil(Math.abs(turn)/.10));
     b.vx=0;b.vz=0;
-    for(var i=1;i<=steps;i++){var a=startU+(u-startU)*i/steps,d=startV+(v-startV)*i/steps;if(!this.clearAt(a,d,b.angle,b))break;b.u=a;b.v=d;}
+    for(var i=1;i<=steps;i++){var a=startU+(u-startU)*i/steps,d=startV+(v-startV)*i/steps,angle=startAngle+turn*i/steps;if(!this.clearAt(a,d,angle,b))break;b.u=a;b.v=d;b.angle=angle;}
+    b.angle=Math.atan2(Math.sin(b.angle),Math.cos(b.angle));
     this.pose(b);return Math.hypot((b.u-startU)*2*this.aspect,(b.v-startV)/slope);
+  };
+  function angleDelta(from,to){return Math.atan2(Math.sin(to-from),Math.cos(to-from));}
+  System.prototype.turn = function(b,target){
+    var start=b.angle,delta=angleDelta(start,target),steps=Math.max(1,Math.ceil(Math.abs(delta)/.10));
+    for(var i=1;i<=steps;i++){var angle=start+delta*i/steps;if(!this.clearAt(b.u,b.v,angle,b)){this.pose(b);return false;}b.angle=angle;}
+    b.angle=Math.atan2(Math.sin(b.angle),Math.cos(b.angle));this.pose(b);return true;
   };
   System.prototype.launch = function (b,vx,vz) {
     b.held=false;var speed=Math.hypot(vx,vz),strength=value(this.tuning,'boatInertia',1.1),max=value(this.tuning,'boatMaxSpeed',1.5);
     if(speed<value(this.tuning,'boatThrowThreshold',.15) || !isFinite(speed)){b.vx=0;b.vz=0;return;}
-    var factor=Math.min(speed*strength,max)/speed;b.vx=vx*factor;b.vz=vz*factor;
+    var factor=Math.min(speed*strength,max)/speed;
+    if(!factor || !this.turn(b,Math.atan2(-vz,vx))){b.vx=0;b.vz=0;return;}
+    b.vx=vx*factor;b.vz=vz*factor;
   };
   System.prototype.update = function (dt,time) {
     this.clock=time;dt=Math.min(.08,Math.max(0,dt));
@@ -107,8 +144,8 @@
       var b=this.items[i],p=this.transformed(b);
       for(var j=0;j<faces.length;j++){
         var f=faces[j],a=f[0]*3,d=f[1]*3,e=f[2]*3,ax=p[d]-p[a],ay=p[d+1]-p[a+1],az=p[d+2]-p[a+2],bx=p[e]-p[a],by=p[e+1]-p[a+1],bz=p[e+2]-p[a+2];
-        var nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,len=Math.hypot(nx,ny,nz),shade=j<8 ? .90:j<16 ? .97:1;
-        for(var k=0;k<3;k++){var v=f[k]*3;out[at++]=p[v];out[at++]=p[v+1];out[at++]=p[v+2];out[at++]=0;out[at++]=0;out[at++]=nx/len;out[at++]=ny/len;out[at++]=nz/len;out[at++]=shade;out[at++]=shade*(b.id%3===0 ? .88:.96);out[at++]=shade*.84;}
+        var nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,len=Math.hypot(nx,ny,nz),color=colors[j];
+        for(var k=0;k<3;k++){var v=f[k]*3,local=points[f[k]];out[at++]=p[v];out[at++]=p[v+1];out[at++]=p[v+2];out[at++]=local[0]/2.36+.5;out[at++]=local[1]/2.05;out[at++]=nx/len;out[at++]=ny/len;out[at++]=nz/len;out[at++]=color[0];out[at++]=color[1];out[at++]=color[2];}
       }
     }
     return out.subarray(0,at);

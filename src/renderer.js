@@ -42,6 +42,13 @@
     ' return mix(mix(waveAt(a),waveAt(vec2(b.x,a.y)),g1.x),mix(waveAt(vec2(a.x,b.y)),waveAt(b),g1.x),g1.y);',
     '}',
     'void main(){',
+    ' if(uPass>5.5){',
+    '  vec3 n=normalize(vNormal);if(!gl_FrontFacing)n=-n;',
+    '  float sun=max(0.,dot(n,normalize(vec3(-.45,1.,-.35))));',
+    '  vec3 paper=vColor*(.82+sun*.18);',
+    '  if(uLight>.5&&uLight<1.5)paper*=vec3(1.04,.93,.86);if(uLight>1.5)paper*=vec3(.54,.69,.85);',
+    '  gl_FragColor=vec4(paper,1.);return;',
+    ' }',
     ' if(uPass>4.5){',
     '  float sun=abs(dot(normalize(vNormal),normalize(vec3(-.45,1.,-.35))));',
     '  vec3 fish=vColor*(.72+sun*.28);',
@@ -257,7 +264,7 @@
       var boatShadows=this.boatSystem.shadows(),boats=this.boatSystem.geometry();
       gl.bindBuffer(gl.ARRAY_BUFFER,this.boatShadows);gl.bufferData(gl.ARRAY_BUFFER,boatShadows,gl.DYNAMIC_DRAW);this.drawSolid(this.boatShadows,boatShadows.length/11,4);
       gl.depthMask(true);gl.disable(gl.BLEND);
-      gl.bindBuffer(gl.ARRAY_BUFFER,this.boatBuffer);gl.bufferData(gl.ARRAY_BUFFER,boats,gl.DYNAMIC_DRAW);this.drawSolid(this.boatBuffer,boats.length/11,5);
+      gl.bindBuffer(gl.ARRAY_BUFFER,this.boatBuffer);gl.bufferData(gl.ARRAY_BUFFER,boats,gl.DYNAMIC_DRAW);this.drawSolid(this.boatBuffer,boats.length/11,6);
     }
     gl.depthMask(true);gl.disable(gl.BLEND);
   };

@@ -38,6 +38,28 @@ test('boat gesture velocities use world distances and ignore a held pause',()=>{
   const [x,z]=fling.velocity(1.09);assert(Math.abs(x-1.25)<1e-6);assert(Math.abs(z-.57735027)<1e-6);
   assert.deepEqual(fling.velocity(1.3),[0,0]);
 });
+test('classic paper boats face horizontal, vertical and diagonal world movement while dragging and coasting',()=>{
+  for(const aspect of [.462,1,2.16])for(const [dx,dz] of [[.06,0],[-.06,0],[0,.06],[0,-.06],[.06,.06],[-.06,-.06]]){
+    const boats=new PaperBoats();boats.attach(aspect,null,()=>false);const b=boats.add(.5,.49);
+    boats.drag(b,b.u+dx/(2*aspect),b.v+dz*.4330127);
+    const target=Math.atan2(-dz,dx);assert(Math.abs(Math.atan2(Math.sin(b.angle-target),Math.cos(b.angle-target)))<1e-6);
+    assert(boats.clearAt(b.u,b.v,b.angle,b));
+    boats.launch(b,dx*10,dz*10);const start={u:b.u,v:b.v,angle:b.angle};boats.update(.04,1);
+    assert(Math.cos(b.angle)*(b.u-start.u)*2*aspect-Math.sin(b.angle)*(b.v-start.v)/.4330127>0);
+    assert(Math.abs(b.angle-target)<1e-6);assert(b.vx*dx+b.vz*dz>0);
+    const position=boats.inspect()[0];assert.equal(boats.pick(position.screenU,position.screenV),b,'camera picking follows rotated paper geometry');
+  }
+});
+test('paper boat turning takes the short arc and cannot sweep through a nearby rock',()=>{
+  const boats=new PaperBoats();boats.attach(1,null,()=>false);const b=boats.add(.5,.49);b.angle=Math.PI-.03;
+  const tested=[],clear=boats.clearAt.bind(boats);boats.clearAt=function(u,v,a,ignore){tested.push(a);return clear(u,v,a,ignore);};
+  assert(boats.turn(b,-Math.PI+.03));assert(tested.every(a=>Math.abs(a-Math.PI)<.04),'angle wrap avoids a full turn');
+  boats.clearAt=clear;b.angle=0;
+  boats.obstacle=(u,v)=>Math.hypot((u-.5)*2,(v-.49)/.4330127+.10)<.015;
+  assert(boats.clearAt(b.u,b.v,b.angle,b));assert.equal(boats.turn(b,Math.PI/2),false);
+  assert(boats.clearAt(b.u,b.v,b.angle,b));assert(b.angle<Math.PI/2);
+  boats.launch(b,0,-1);assert.equal(Math.hypot(b.vx,b.vz),0,'blocked rotation cannot launch an intersecting boat');
+});
 test('boat coast is stable across frame rates and live speed/friction tuning applies',()=>{
   const travel=[];
   for(const dt of [1/60,1/30,1/15]){

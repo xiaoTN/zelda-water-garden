@@ -241,7 +241,7 @@
     if(boat || mode==='boat'){
       if(!boat){boat=boats.add(surface.u,surface.v);if(!boat){notice(boats.items.length>=window.WaterBoats.limit?'让这些纸船先漂一会儿吧':'在宽一些的水面，轻放纸船');return;}splash(boat.u,boat.v,.12,true,true);}
       initAudio();garden.classList.add('touched');boat.vx=0;boat.vz=0;boat.held=true;
-      fingers[id]={boat:boat,u:boat.u,v:boat.v,offsetU:boat.u-surface.u,offsetV:boat.v-surface.v,movedAt:gesture,fling:new window.GardenNature.Fling(boat.u,boat.v,gesture,boats.aspect,2*boats.aspect,1/.4330127)};
+      fingers[id]={boat:boat,u:boat.u,v:boat.v,screenX:x,screenY:y,gestureU:p.u,gestureV:p.v,offsetU:boat.u-surface.u,offsetV:boat.v-surface.v,movedAt:gesture,fling:new window.GardenNature.Fling(p.u,p.v,gesture,boats.aspect,2*boats.aspect,1/.4330127)};
       return;
     }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
@@ -270,8 +270,13 @@
       f.screenX=x;f.screenY=y;distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height);moveNature(f,p,distance,time);return;
     }
     if(f.boat){
-      var surface=boats.surface(p.u,p.v),gesture=time===undefined?inputTime():time,oldU=f.boat.u,oldV=f.boat.v,moved=boats.drag(f.boat,surface.u+f.offsetU,surface.v+f.offsetV);
-      f.fling.sample(f.boat.u,f.boat.v,gesture);
+      if(Math.hypot(x-f.screenX,y-f.screenY)<.6)return;
+      // Project gesture direction onto the camera's water plane; bobbing must not steer the bow.
+      var pointerX=x-f.screenX,pointerY=y-f.screenY,heading=Math.atan2(-pointerY/.4330127,pointerX*2);
+      var surface=boats.surface(p.u,p.v),gesture=time===undefined?inputTime():time,oldU=f.boat.u,oldV=f.boat.v,targetU=surface.u+f.offsetU,targetV=surface.v+f.offsetV;
+      var requested=Math.hypot((targetU-oldU)*2*boats.aspect,(targetV-oldV)/.4330127),moved=boats.drag(f.boat,targetU,targetV,heading),fraction=requested>.00001?Math.min(1,moved/requested):0;
+      f.gestureU+=pointerX/width*fraction;f.gestureV+=pointerY/height*fraction;f.screenX=x;f.screenY=y;
+      f.fling.sample(f.gestureU,f.gestureV,gesture);
       if(moved>.0001){field.stroke(oldU,oldV,f.boat.u,f.boat.v,.06);fishSchool.scare(f.boat.u,f.boat.v,.4);if(strokeAudio)strokeAudio.stroke(moved/Math.max(.016,gesture-f.movedAt));}
       f.u=f.boat.u;f.v=f.boat.v;f.movedAt=gesture;return;
     }

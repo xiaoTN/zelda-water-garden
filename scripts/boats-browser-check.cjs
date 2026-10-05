@@ -11,8 +11,8 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
       await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.WaterGarden&&WaterGarden.inspect().steps>5);
       if(low){await page.evaluate(()=>window.forceSlow=true);await page.waitForFunction(()=>WaterGarden.inspect().quality==='low');await page.evaluate(()=>window.forceSlow=false);}
       await page.locator('[data-mode="boat"]').click();await page.mouse.click(page.viewportSize().width*.38,page.viewportSize().height*.49);
-      let state=await page.evaluate(()=>WaterGarden.inspect());assert.equal(state.boats.length,1);assert.equal(state.boatTriangles,20);assert.equal(state.boats[0].speed,0);
-      const placed=state.boats[0];assert(placed.y>-.05);await page.waitForTimeout(1100);await page.screenshot({path:path.join(out,'paper-boat-'+(low?'low':'normal')+'.png')});
+      let state=await page.evaluate(()=>WaterGarden.inspect());assert.equal(state.boats.length,1);assert.equal(state.boatTriangles,56);assert.equal(state.boats[0].speed,0);
+      const placed=state.boats[0];assert(placed.y>-.05);await page.waitForTimeout(1100);await page.mouse.move(3,3);await page.screenshot({path:path.join(out,'paper-boat-'+(low?'low':'normal')+'.png')});
       // Catch the actually rendered folded mesh, then flick toward the clear centre.
       const thrown=await page.evaluate(async()=>{
         const c=document.getElementById('water'),b=WaterGarden.inspect().boats[0],x=b.screenU*innerWidth,y=b.screenV*innerHeight;
@@ -22,12 +22,32 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
         return {grabbed,state:WaterGarden.inspect()};
       });
       assert(thrown.grabbed);assert.equal(thrown.state.boats.length,1,'dragging picks the existing paper mesh instead of placing another boat');assert(thrown.state.boats[0].speed>.1);assert.equal(thrown.state.activePointers,0);
+      assert(Math.abs(thrown.state.boats[0].angle)<.06,'the bow faces the rightward throw');
       await page.waitForTimeout(120);state=await page.evaluate(()=>WaterGarden.inspect());assert(state.boats[0].u>thrown.state.boats[0].u);assert(state.boats[0].speed<thrown.state.boats[0].speed);assert(state.energy>0);
       // Grab in ordinary water mode too. A pause or cancelled gesture must not re-launch it.
       await page.locator('[data-mode="touch"]').click();
       const grab=await page.evaluate(()=>{const b=WaterGarden.inspect().boats[0],c=document.getElementById('water');c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerId:712,clientX:b.screenU*innerWidth,clientY:b.screenV*innerHeight}));return WaterGarden.inspect();});
       assert(grab.boats[0].held);assert.equal(grab.boats[0].speed,0);
       await page.evaluate(()=>document.getElementById('water').dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,pointerId:712})));assert.equal(await page.evaluate(()=>WaterGarden.inspect().boats[0].held),false);
+      const turns=[];
+      for(const [dx,dy] of [[-18,-18],[0,20]]){
+        const result=await page.evaluate(async([dx,dy])=>{
+          const c=document.getElementById('water'),before=WaterGarden.inspect().boats[0],x=before.screenU*innerWidth,y=before.screenV*innerHeight;
+          function send(type,f){c.dispatchEvent(new PointerEvent(type,{bubbles:true,button:0,buttons:type==='pointerup'?0:1,pointerId:715,clientX:x+dx*f,clientY:y+dy*f}));}
+          send('pointerdown',0);for(const f of [1/3,2/3,1]){await new Promise(resolve=>setTimeout(resolve,20));send('pointermove',f);}
+          const held=WaterGarden.inspect().boats[0];send('pointerup',1);return {before,held,released:WaterGarden.inspect().boats[0]};
+        },[dx,dy]);
+        assert(result.held.held&&result.released.speed>.1);
+        const fx=Math.cos(result.held.angle)*.5,fy=-Math.sin(result.held.angle)*.4330127;
+        assert((fx*dx+fy*dy)/Math.hypot(fx,fy)/Math.hypot(dx,dy)>.999,'projected folded bow follows the actual finger direction regardless of water bobbing');
+        assert(Math.cos(result.released.angle-result.held.angle)>.98,'release does not turn away from the gesture');
+        await page.waitForTimeout(80);const coast=await page.evaluate(()=>WaterGarden.inspect().boats[0]);
+        const cx=(coast.u-result.released.u)*2*page.viewportSize().width/page.viewportSize().height,cz=(coast.v-result.released.v)/.4330127;
+        assert((Math.cos(coast.angle)*cx-Math.sin(coast.angle)*cz)/Math.hypot(cx,cz)>.99,'inertial bow and travel agree');
+        turns.push({gesture:[dx,dy],heldAngle:result.held.angle,releasedAngle:result.released.angle,coastingAngle:coast.angle});
+        await page.evaluate(()=>{const b=WaterGarden.inspect().boats[0],c=document.getElementById('water');c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerId:716,clientX:b.screenU*innerWidth,clientY:b.screenV*innerHeight}));c.dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,pointerId:716}));});
+      }
+      await page.screenshot({path:path.join(out,'paper-boat-turning-'+(low?'low':'normal')+'.png')});
       await page.locator('.dev-toggle').click();await page.locator('#tuning-boatInertia').fill('0');await page.locator('#tuning-boatInertia').dispatchEvent('input');await page.locator('#tuning-boatInertia').dispatchEvent('change');assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.boatInertia),0);
       await page.screenshot({path:path.join(out,'compact-boat-parameters-'+(low?'wide':'portrait')+'.png')});
       const rows=await page.locator('.dev-row').evaluateAll(rows=>rows.map(row=>{const [label,range,number]=Array.from(row.children).map(n=>n.getBoundingClientRect());return {height:row.getBoundingClientRect().height,aligned:Math.abs(label.top+label.height/2-number.top-number.height/2)<2&&Math.abs(range.top+range.height/2-number.top-number.height/2)<2};}));assert(rows.every(row=>row.aligned&&row.height<=30),'every parameter fits on one compact line');
@@ -45,15 +65,15 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
         if(await page.evaluate(()=>WaterGarden.inspect().boats.length===12))break;
         await page.mouse.click(u*page.viewportSize().width,v*page.viewportSize().height);
       }
-      await page.waitForTimeout(100);const fleet=await page.evaluate(()=>WaterGarden.inspect());assert.equal(fleet.boats.length,12);assert.equal(fleet.boatTriangles,240);
+      await page.waitForTimeout(100);const fleet=await page.evaluate(()=>WaterGarden.inspect());assert.equal(fleet.boats.length,12);assert.equal(fleet.boatTriangles,672);
       await page.mouse.click(page.viewportSize().width*.62,page.viewportSize().height*.38);assert.equal(await page.evaluate(()=>WaterGarden.inspect().boats.length),12);
       await page.screenshot({path:path.join(out,'paper-boat-fleet-'+(low?'low':'normal')+'.png')});
-      reports.push({quality:low?'low':'normal',placed,releaseSpeed:thrown.state.boats[0].speed,coast:state.boats[0],rows:rows.length,contextRecovery:true});await context.close();
+      reports.push({quality:low?'low':'normal',placed,releaseSpeed:thrown.state.boats[0].speed,coast:state.boats[0],turns,rows:rows.length,contextRecovery:true});await context.close();
     }
     const page=await browser.newPage({viewport:{width:320,height:568},hasTouch:true});page.on('pageerror',error=>errors.push(error.message));await page.addInitScript(()=>window.PointerEvent=undefined);
     await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.WaterGarden);await page.locator('[data-mode="boat"]').click();
     const cdp=await page.context().newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:140,y:285,id:1}]});for(const x of [150,160,170]){await page.waitForTimeout(20);await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:285,id:1}]});}await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    assert((await page.evaluate(()=>WaterGarden.inspect().boats[0])).speed>0,'native touch fallback launches paper boats');
+    const touched=await page.evaluate(()=>WaterGarden.inspect().boats[0]);assert(touched.speed>0,'native touch fallback launches paper boats');assert(Math.abs(touched.angle)<.06,'native touch bow faces the rightward fling');
     await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));assert.equal(await page.evaluate(()=>WaterGarden.inspect().boats[0].speed),0);await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
     await page.locator('.dev-toggle').click();const overflow=await page.locator('.dev-body').evaluate(n=>n.scrollWidth>n.clientWidth);assert.equal(overflow,false);await page.screenshot({path:path.join(out,'paper-boat-small-screen.png')});
     for(const b of await page.locator('[data-mode]').all()){const box=await b.boundingBox();assert(box.x>=0&&box.x+box.width<=320);}

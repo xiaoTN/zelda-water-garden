@@ -1,0 +1,158 @@
+{
+  "date": "2026-10-05",
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "scenario": "snow swipes and rolling share recorded motion audio; stationary holds and release become silent; later rolls resume phase and scene exits fade",
+      "paused": 3.168,
+      "resumed": 3.237333333333334,
+      "result": "passed"
+    },
+    {
+      "scenario": "first ten seconds render across two seamless loop boundaries; real PCM fades to silence and resumes its saved phase",
+      "duration": 10,
+      "loopDuration": 9.4,
+      "bytes": 60569,
+      "seam": 0.02126111090183258,
+      "adjacent": 0.02126111090183258,
+      "seams": [
+        {
+          "before": 0.20793185281987817,
+          "after": 0.13117376621017574
+        },
+        {
+          "before": 0.20793185281987817,
+          "after": 0.13117376621017574
+        }
+      ],
+      "fade": {
+        "early": 0.15280450815334917,
+        "settled": 0.8999999761581421,
+        "tail": 0.16318309716880322,
+        "silent": 0,
+        "resumeStart": 0.152804505918175,
+        "resumed": 0.899865997582674,
+        "paused": 1.7,
+        "phase": 1.7
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "poetic nature copy stays free of franchise references across all three scenes",
+      "copy": [
+        {
+          "scene": "water",
+          "title": "片刻 · 水光",
+          "subtitle": "风过水面，留下一点温柔"
+        },
+        {
+          "scene": "snow",
+          "title": "片刻 · 雪落",
+          "subtitle": "雪落无声，时光也轻了"
+        },
+        {
+          "scene": "cloud",
+          "title": "片刻 · 云间",
+          "subtitle": "天光轻落，云影缓行"
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "cloud toolbar removed; taps, stationary movement, holds and hidden controls do not interact; swipes alone part the cloud",
+      "stationary": {
+        "before": 122.02451184857637,
+        "after": 122.02451184857637,
+        "calls": 0,
+        "mode": "swipe"
+      },
+      "swipeCalls": 15,
+      "result": "passed"
+    },
+    {
+      "scenario": "closed 3D cloud volume, twelve sphere meshes, ray picking, depth and both GPU budgets",
+      "result": "passed",
+      "geometry": {
+        "closed": true,
+        "budgets": [
+          {
+            "low": false,
+            "cameraEye": [
+              0,
+              12,
+              6
+            ],
+            "snow": 98624,
+            "calls": 14,
+            "balls": 12,
+            "flakes": 720,
+            "picked": true,
+            "depth": true,
+            "pixels": 740610,
+            "reducedHidesFlakes": true,
+            "cloud": 98594
+          },
+          {
+            "low": true,
+            "cameraEye": [
+              0,
+              12,
+              6
+            ],
+            "snow": 38472,
+            "calls": 14,
+            "balls": 12,
+            "flakes": 300,
+            "picked": true,
+            "depth": true,
+            "pixels": 329160,
+            "reducedHidesFlakes": true,
+            "cloud": 49282
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "two-finger rolling starts only on travel and cancellation leaves both spheres",
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "result": "passed"
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "offline WebGL, touch fallback, reduced motion",
+      "result": "passed",
+      "networkRequests": 0
+    },
+    {
+      "scenario": "unsupported hardware shows explicit 3D unavailable state",
+      "result": "passed"
+    }
+  ]
+}
