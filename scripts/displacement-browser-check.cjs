@@ -44,6 +44,36 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
         await page.screenshot({path:path.join(out,kind+(sweep?'-fully-swept':kind==='cloud'?'-no-raised-banks':'-raised-banks')+'.png')});reports.push(report);
       }
     }
+    // The visible continuous material must move, not just the legacy cloud markers.
+    await page.locator('button[data-scene="cloud"]').click();
+    for(const lowTier of [false,true]){
+      const pushed=await page.evaluate(lowTier=>{
+        const s=displacementSurface,c=s.clouds;c.clear();s.resize(s.canvas.width,s.canvas.height,lowTier);
+        const center=s.point(.5,.5,'cloud',c,false),scale=Math.min(c.aspect,1),samples=[];
+        for(let i=0;i<12;i++){
+          const angle=i*Math.PI/6,u=center.u+Math.cos(angle)*scale*.10/c.aspect,v=center.v+Math.sin(angle)*scale*.10;
+          const x=(u-.5)*12*s.aspect,z=(v-.5)*12;samples.push({u,v,x,z,before:s.height(x,z,'cloud',c.field,c)});
+        }
+        for(let i=0;i<16;i++)c.touch(center.u,center.v,'part',.01,0,.016,.8);
+        s.draw('cloud',0,s.snow,c,0,false,true);
+        let change=0,pickError=0,outward=0,channelError=0;
+        for(const p of samples){
+          const offset=c.offset(p.u,p.v),height=s.height(p.x,p.z,'cloud',c.field,c);
+          change=Math.max(change,Math.abs(height-p.before));
+          outward=Math.min(outward||1,offset[0]*(p.u-center.u)*c.aspect*c.aspect+offset[1]*(p.v-center.v));
+          const screen=s.camera.project([p.x,height,p.z]),hit=s.point(screen.u,screen.v,'cloud',c,false);
+          pickError=Math.max(pickError,Math.hypot((hit.u-p.u)*s.aspect,hit.v-p.v));
+        }
+        for(let i=0;i<c.pushX.length;i++)channelError=Math.max(channelError,Math.abs(s.pixels[i*4+2]-(128+Math.round(c.pushX[i]/.08*127))),Math.abs(s.pixels[i*4+3]-(128+Math.round(c.pushY[i]/.08*127))));
+        const outsideCut=samples.every(p=>c.field.depth[c.field.index(p.u,p.v)]===0);
+        return {low:lowTier,change,pickError,outward,channelError,outsideCut,triangles:s.count/3,drawCalls:s.drawCalls};
+      },lowTier);
+      assert(pushed.outsideCut&&pushed.change>.005,'the halo visibly shifts 3D cloud geometry beyond the thinned opening');
+      assert(pushed.outward>0&&pushed.channelError===0,'both GPU channels carry the outward displacement');
+      assert(pushed.pickError<.001,'camera picking follows the displaced geometry');
+      assert(pushed.triangles<=(lowTier?50000:100000)&&pushed.drawCalls<=(lowTier?50:100));
+      await page.screenshot({path:path.join(out,'cloud-outward-push-'+(lowTier?'low':'high')+'.png')});reports.push({cloudPush:pushed});
+    }
     for(const viewport of [{width:390,height:844},{width:844,height:390}]){
       await page.setViewportSize(viewport);await page.waitForFunction(w=>WaterGarden.inspect().width===w,viewport.width);
       for(const kind of ['snow','cloud']){
@@ -69,6 +99,6 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
       }
     }
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'displacement-report.json'),JSON.stringify({browser:await browser.version(),errors,reports},null,2)+'\n');
-    console.log('Displacement browser checks passed: snow retains conserved banks; cloud strokes and repeated sweeps have no raised world heights or GPU displacement in either tier; camera picking and edge swipes pass.');
+    console.log('Displacement browser checks passed: snow retains conserved banks; clouds have no piled banks, their outer halo moves the continuous 3D material in both tiers, GPU channels and camera picking agree, and edge swipes pass.');
   }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

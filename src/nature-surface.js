@@ -4,9 +4,10 @@
     'precision highp float; attribute vec3 aPosition; uniform mat4 uCamera;',
     'uniform sampler2D uNoise,uTracks; uniform float uAspect,uTime; uniform mediump float uCloud,uObject; uniform vec2 uFlow,uFieldDomain;',
     'uniform vec4 uBall;uniform mediump vec4 uRotation; varying mediump vec3 vNormal,vWorld,vLocal; varying mediump float vCut,vNoise,vBottom;',
-    'float noiseAt(vec2 uv){vec2 n=texture2D(uNoise,vec2(uv.x*uAspect,uv.y)*mix(.85,1.9,uCloud)+uFlow*uCloud).rg;return n.r+n.g/255.;}',
-    'vec2 trackAt(vec2 uv){vec2 p=(uv-vec2(uFieldDomain.x))/uFieldDomain.y;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.)return vec2(0.);return texture2D(uTracks,p).rg;}',
-    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*.65,uCloud);return base+(t.g-t.r)*mix(.38,.62,uCloud);}',
+    'vec4 materialAt(vec2 uv){vec2 p=(uv-vec2(uFieldDomain.x))/uFieldDomain.y;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.)return vec4(0.,0.,128./255.,128./255.);return texture2D(uTracks,p);}',
+    'vec2 trackAt(vec2 uv){return materialAt(uv).rg;}',
+    'float noiseAt(vec2 uv){vec2 push=vec2(0.);if(uCloud>.5)push=(materialAt(uv).ba*255.-128.)/127.*.08;vec2 n=texture2D(uNoise,(vec2(uv.x*uAspect,uv.y)-push)*mix(.85,1.9,uCloud)+uFlow*uCloud).rg;return n.r+n.g/255.;}',
+    'float heightAt(vec2 uv){float n=noiseAt(uv);vec2 t=trackAt(uv);float base=mix(.16+n*.045,.28+pow(n,1.3)*.65,uCloud);return base+(t.g-t.r)*mix(.38,.12,uCloud);}',
     'vec3 rotate(vec3 p){return p+2.*cross(uRotation.xyz,cross(uRotation.xyz,p)+uRotation.w*p);}',
     'void main(){vec3 p;vBottom=0.;vCut=0.;vNoise=.5;vLocal=aPosition;',
     'if(uObject<.5){vec2 uv=aPosition.xy;float h=heightAt(uv);float e=.0025;',
@@ -143,13 +144,15 @@
   };
   Surface.prototype.height=function(x,z,kind,field,clouds){
     var u=x/(12*this.aspect)+.5,v=z/12+.5,cloud=kind==='cloud',freq=cloud?1.9:.85;
-    var n=this.sample(u*this.aspect*freq+(cloud?clouds.flowX:0),v*freq+(cloud?clouds.flowY:0)),cut=0,rim=0;
+    var push=cloud?clouds.offset(u,v):[0,0];
+    var n=this.sample((u-push[0])*this.aspect*freq+(cloud?clouds.flowX:0),(v-push[1])*freq+(cloud?clouds.flowY:0)),cut=0,rim=0;
     if(field&&u>=field.origin&&u<=field.origin+field.span&&v>=field.origin&&v<=field.origin+field.span){
       var heights=field.renderDepth?field.renderDepth():field.depth;var tx=(u-field.origin)/field.span*field.size-.5,ty=(v-field.origin)/field.span*field.size-.5,ix=Math.floor(tx),iy=Math.floor(ty),fx=tx-ix,fy=ty-iy;
       for(var j=0;j<2;j++)for(var i=0;i<2;i++){var val=heights[Math.max(0,Math.min(field.size-1,iy+j))*field.size+Math.max(0,Math.min(field.size-1,ix+i))],weight=(i?fx:1-fx)*(j?fy:1-fy);cut+=Math.max(0,val)*weight;rim+=Math.max(0,-val)*weight;}
     }
     var base=cloud ? .28+Math.pow(n,1.3)*.65 : .16+n*.045;
-    return base+(rim-cut)*(cloud ? .62:.38);
+    // A cloud parts mainly through horizontal flow and transparency, with little indentation.
+    return base+(rim-cut)*(cloud ? .12:.38);
   };
   Surface.prototype.point=function(u,v,kind,clouds,pickBall){
     var self=this,field=kind==='snow'?this.snow:clouds.field;
@@ -187,7 +190,7 @@
     if(this.revision!==field.revision||this.kind!==kind){
       if(!this.pixels)this.pixels=new Uint8Array(field.depth.length*4);
       var heights=field.renderDepth();
-      for(var i=0;i<heights.length;i++){this.pixels[i*4]=Math.round(Math.max(0,heights[i])*255);this.pixels[i*4+1]=Math.round(Math.max(0,-heights[i])*255);this.pixels[i*4+3]=255;}
+      for(var i=0;i<heights.length;i++){this.pixels[i*4]=Math.round(Math.max(0,heights[i])*255);this.pixels[i*4+1]=Math.round(Math.max(0,-heights[i])*255);this.pixels[i*4+2]=kind==='cloud'?128+Math.round(clouds.pushX[i]/.08*127):128;this.pixels[i*4+3]=kind==='cloud'?128+Math.round(clouds.pushY[i]/.08*127):128;}
       if(this.trackSize!==field.size){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,field.size,field.size,0,gl.RGBA,gl.UNSIGNED_BYTE,this.pixels);this.trackSize=field.size;}
       else gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,field.size,field.size,gl.RGBA,gl.UNSIGNED_BYTE,this.pixels);
       this.revision=field.revision;this.kind=kind;

@@ -171,9 +171,10 @@
     for (var i = 0; i < this.depth.length; i++) if (this.depth[i] > .01) { cells++; depth += this.depth[i]; }
     return { markedCells: cells, depth: depth, raised: raised, raisedCells: raisedCells, footprints: this.foot, balls: this.balls.map(function (b) { return { u: b.u, v: b.v, radius: b.radius, rotation: b.rotation.slice() }; }) };
   };
-  function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.field.soft = true; this.transport=new Float32Array(this.field.depth.length); this.currents=new Float32Array(this.field.size); this.drift = 0; this.clear(); }
+  function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.field.soft = true; this.transport=new Float32Array(this.field.depth.length); this.currents=new Float32Array(this.field.size); this.pushX=new Float32Array(this.field.depth.length); this.pushY=new Float32Array(this.field.depth.length); this.drift = 0; this.clear(); }
   Clouds.prototype.clear = function () {
     this.items.length = 0; this.time = 0; this.field.clear(); this.drift = 0; this.driftY = 0; this.flowX = 0; this.flowY = 0;
+    this.pushX.fill(0); this.pushY.fill(0); this.pushActive=false;
     var rng = random(10426);
     for (var i = 0; i < 72; i++) {
       var u = rng(), v = .27 + rng() * .58;
@@ -181,11 +182,25 @@
     }
   };
   Clouds.prototype.touch = function (u, v, mode, dx, dy, dt, speed) {
-    if(mode!=='part')return;
-    var radius = Math.min(this.aspect, 1) * .32 / 3;
+    if(mode!=='part'||!Number.isFinite(u)||!Number.isFinite(v)||!Number.isFinite(dt)||dt<=0)return;
+    var scale=Math.min(this.aspect,1),radius=scale*.18;
     this.field.aspect = this.aspect;
     var rush=clamp((speed===undefined?Math.hypot(dx*this.aspect,dy)/Math.max(.008,dt):speed)/.65,0,1);
-    this.field.stamp(u, v, radius * .27, .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)));
+    this.field.stamp(u, v, scale*.065, .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)));
+    // Move the continuous cloud material sideways across a wider, feathered halo.
+    // Positive depth only thins it; lateral displacement never piles up a snow bank.
+    var field=this.field,n=field.size,origin=field.origin,span=field.span;
+    var x0=Math.max(0,Math.floor((u-radius/this.aspect-origin)/span*n)),x1=Math.min(n-1,Math.ceil((u+radius/this.aspect-origin)/span*n));
+    var y0=Math.max(0,Math.floor((v-radius-origin)/span*n)),y1=Math.min(n-1,Math.ceil((v+radius-origin)/span*n));
+    var rate=1-Math.exp(-Math.min(dt,.1)*(12+35*rush));
+    for(var gy=y0;gy<=y1;gy++)for(var gx=x0;gx<=x1;gx++){
+      var px=((gx+.5)/n*span+origin-u)*this.aspect,py=(gy+.5)/n*span+origin-v;
+      var r2=(px*px+py*py)/(radius*radius);if(r2>=1)continue;
+      var k=gy*n+gx,feather=Math.pow(1-r2,2),travel=scale*.055*2.6*feather/radius;
+      this.pushX[k]+=(px*travel-this.pushX[k])*rate;
+      this.pushY[k]+=(py*travel-this.pushY[k])*rate;
+    }
+    this.pushActive=true;field.revision++;
     for (var i = 0; i < this.items.length; i++) {
       var p = this.items[i], x = (p.u - u) * this.aspect, y = p.v - v, d = Math.hypot(x, y);
       if (d > radius) continue;
@@ -195,9 +210,25 @@
       p.vx = clamp(p.vx, -.32, .32); p.vy = clamp(p.vy, -.32, .32);
     }
   };
+  Clouds.prototype.offset=function(u,v){
+    var f=this.field;if(u<f.origin||v<f.origin||u>f.origin+f.span||v>f.origin+f.span)return [0,0];
+    var x=(u-f.origin)/f.span*f.size-.5,y=(v-f.origin)/f.span*f.size-.5,ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ox=0,oy=0;
+    // Match the signed eight-bit GPU channels, including bilinear texture filtering.
+    for(var j=0;j<2;j++)for(var i=0;i<2;i++){
+      var k=Math.max(0,Math.min(f.size-1,iy+j))*f.size+Math.max(0,Math.min(f.size-1,ix+i)),w=(i?fx:1-fx)*(j?fy:1-fy);
+      ox+=Math.round(this.pushX[k]/.08*127)/127*.08*w;oy+=Math.round(this.pushY[k]/.08*127)/127*.08*w;
+    }
+    return [ox/this.aspect,oy];
+  };
   Clouds.prototype.update = function (dt, breeze, reduced) {
     if (!reduced) this.time += dt;
     if(this.field.active)this.refill(dt,reduced);
+    if(this.pushActive){
+      var decay=Math.exp(-Math.max(0,dt)*.9),peak=0;
+      for(var k=0;k<this.pushX.length;k++){this.pushX[k]*=decay;this.pushY[k]*=decay;peak=Math.max(peak,Math.abs(this.pushX[k]),Math.abs(this.pushY[k]));}
+      if(peak<.0001){this.pushX.fill(0);this.pushY.fill(0);this.pushActive=false;}
+      this.field.revision++;
+    }
     this.drift *= Math.exp(-dt*.7); this.driftY *= Math.exp(-dt*.7);
     this.flowX += dt * ((reduced ? 0 : breeze ? .009 : .003) + this.drift*.035);
     this.flowY += dt * ((reduced ? 0 : .0015) + this.driftY*.035);

@@ -132,14 +132,34 @@ test('cloud gathering is unsupported and cannot create raised material', () => {
   assert.deepEqual(clouds.inspect(),before);assert(clouds.field.depth.every(v=>v===0));
 });
 
-test('cloud thinning stays inside the narrow brush and leaves its surroundings unchanged', () => {
+test('cloud thinning uses a broad feather while the wider halo pushes sideways without carving', () => {
   const cloud=new Clouds();cloud.touch(.5,.5,'part',0,0,.01);
-  const field=cloud.field,reach=.32/3*.27;
+  const field=cloud.field,reach=.065;
   for(let y=0;y<field.size;y++)for(let x=0;x<field.size;x++){
     if(field.depth[y*field.size+x]!==0)assert(Math.hypot(field.origin+x/field.size*field.span-.5,field.origin+y/field.size*field.span-.5)<=reach+1e-6);
   }
-  assert(field.depth[field.index(.5,.5)]>0);assert.equal(field.depth[field.index(.5,.54)],0);
+  const at=v=>field.depth[field.index(.5,v)];
+  assert(at(.5)>at(.53)&&at(.53)>at(.55)&&at(.55)>at(.56));
+  assert(at(.54)>0);assert.equal(at(.58),0);
+  assert(cloud.offset(.5,.59)[1]>0,'the outer cloud moves even beyond the opening');
+  assert(Math.hypot(...cloud.offset(.5,.675))<Math.hypot(...cloud.offset(.5,.65))*.1,'the outer edge feathers to rest');
+  assert.deepEqual(cloud.offset(.5,.69),[0,0]);
   assert(field.depth.every(v=>v>=0));
+});
+test('continuous cloud displacement pushes radially, is isotropic, bounded and recovers after release',()=>{
+  for(const aspect of [.46,1,2]){
+    const cloud=new Clouds();cloud.aspect=aspect;const r=Math.min(aspect,1)*.075;
+    for(let i=0;i<30;i++)cloud.touch(.5,.5,'part',.01,0,.016,.8);
+    const right=cloud.offset(.5+r/aspect,.5),left=cloud.offset(.5-r/aspect,.5),down=cloud.offset(.5,.5+r),up=cloud.offset(.5,.5-r);
+    assert(right[0]>0&&left[0]<0&&down[1]>0&&up[1]<0);
+    assert(Math.abs(right[0]*aspect-down[1])<.002,'equal world radii produce equal travel');
+    assert(cloud.pushX.every(v=>Number.isFinite(v)&&Math.abs(v)<.08));
+    assert(cloud.pushY.every(v=>Number.isFinite(v)&&Math.abs(v)<.08));
+    const start=right[0];cloud.update(.5,false,true);assert(cloud.offset(.5+r/aspect,.5)[0]<start*.7);
+    cloud.update(20,false,true);assert.equal(cloud.pushActive,false);assert(cloud.pushX.every(v=>v===0));
+    cloud.touch(.5,.5,'part',0,0,.1);cloud.clear();assert.deepEqual(cloud.offset(.55,.5),[0,0]);
+    cloud.touch(NaN,.5,'part',0,0,.1);assert.equal(cloud.pushActive,false);
+  }
 });
 test('reduced motion suppresses ambient drift while direct cloud interaction still works', () => {
   const clouds = new Clouds(), first = clouds.items[0].u;
