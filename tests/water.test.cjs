@@ -4,6 +4,60 @@ const { WaveField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = re
 const terrain = require('../src/terrain.js');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
 const {System: Weather,project:projectRain}=require('../src/weather.js');
+const {System:PaperBoats,triangles:boatTriangles,limit:boatLimit}=require('../src/paper-boats.js');
+const {Settings:BoatTuning}=require('../src/garden-tuning.js');
+const {Fling:BoatFling}=require('../src/nature-core.js');
+
+test('paper boats use folded lit 3D geometry and the same camera rays as water',()=>{
+  for(const aspect of [.462,1,2.16]){
+    const boats=new PaperBoats();boats.attach(aspect,new WaveField(90,192,aspect),()=>false);
+    const b=boats.add(.5,.49);assert(b);boats.update(.033,2);
+    const vertices=boats.geometry();assert.equal(vertices.length,boatTriangles*33);assert(vertices.every(Number.isFinite));
+    const ys=Array.from(vertices).filter((_,i)=>i%11===1);assert(Math.max(...ys)-Math.min(...ys)>.05* Math.min(1,aspect));
+    for(let i=0;i<vertices.length;i+=11)assert(Math.abs(Math.hypot(vertices[i+5],vertices[i+6],vertices[i+7])-1)<1e-6);
+    const p=boats.inspect()[0];assert.equal(boats.pick(p.screenU,p.screenV),b);assert.equal(boats.pick(.1,.1),null);
+    const water=boats.surface(b.u,.5+b.z*.4330127-b.y*.25+.005*.25);
+    assert(Math.abs(water.v-b.v)<.0001,'ray picking intersects the same displaced water');
+    assert.equal(boats.shadows().length,66);
+  }
+});
+test('released paper boats coast, lose speed, disturb water and stop at swept obstacles',()=>{
+  const values=new BoatTuning().values,boats=new PaperBoats(values),field=new WaveField(90,192,.462);
+  boats.attach(.462,field,(u,v)=>u>.65);const b=boats.add(.45,.49);assert(b);
+  boats.launch(b,3,0);assert.equal(b.vx,values.boatMaxSpeed);const start=b.u;
+  boats.update(.04,1);assert(b.u>start&&b.vx>0&&b.vx<values.boatMaxSpeed);assert(field.energy()>0);
+  for(let i=0;i<100;i++)boats.update(.04,1+i*.04);
+  assert.equal(b.vx,0);assert(boats.clearAt(b.u,b.v,b.angle,b));assert(b.u<.65);
+  const stopped=b.u;for(let i=0;i<20;i++)boats.update(.04,i);assert.equal(b.u,stopped);
+  b.held=true;boats.launch(b,.01,0);assert.equal(b.vx,0);assert.equal(b.held,false);
+  values.boatInertia=0;boats.launch(b,1,0);assert.equal(b.vx,0);
+});
+test('boat gesture velocities use world distances and ignore a held pause',()=>{
+  const fling=new BoatFling(.3,.5,1,.5,1,1/.4330127);
+  fling.sample(.35,.51,1.04);fling.sample(.4,.52,1.08);
+  const [x,z]=fling.velocity(1.09);assert(Math.abs(x-1.25)<1e-6);assert(Math.abs(z-.57735027)<1e-6);
+  assert.deepEqual(fling.velocity(1.3),[0,0]);
+});
+test('boat coast is stable across frame rates and live speed/friction tuning applies',()=>{
+  const travel=[];
+  for(const dt of [1/60,1/30,1/15]){
+    const t=new BoatTuning().values,boats=new PaperBoats(t);boats.attach(.462,null,()=>false);const b=boats.add(.4,.49);boats.launch(b,.18,0);
+    for(let i=0;i<Math.round(1/dt);i++)boats.update(dt,i*dt);travel.push(b.u-.4);
+    t.boatMaxSpeed=.02;boats.update(dt,2);assert(Math.hypot(b.vx,b.vz)<=.02);
+    t.boatFriction=5;for(let i=0;i<300;i++)boats.update(dt,2+i*dt);assert.equal(b.vx,0);
+  }
+  assert(Math.max(...travel)-Math.min(...travel)<.0001);
+});
+test('boat footprint avoids banks, other boats and rocks during dragging and resize',()=>{
+  const boats=new PaperBoats();boats.attach(.462,null,()=>false);
+  assert.equal(boats.add(.06,.49),null);const first=boats.add(.4,.49);assert(first);assert.equal(boats.add(.4,.49),null);
+  const second=boats.add(.7,.49);assert(second);
+  boats.drag(first,.8,.49);assert(first.u<second.u);assert(boats.clearAt(first.u,first.v,first.angle,first));
+  boats.launch(second,1,0);boats.attach(1,null,()=>false);assert.equal(second.vx,0);assert.equal(boats.items.length,2);
+  boats.clear();boats.attach(.462,null,()=>false);assert.equal(boats.items.length,0);
+  for(let v=.3;v<.8;v+=.1)for(let u=.2;u<.9;u+=.2)boats.add(u,v);
+  assert.equal(boats.items.length,boatLimit);assert.equal(boats.geometry().length,boatLimit*boatTriangles*33);
+});
 
 test('rain ripples stay local and disappear before a finger wave settles',()=>{
   for(const [w,h,aspect] of [[90,192,.462],[192,128,1.5],[64,192,.38]]){

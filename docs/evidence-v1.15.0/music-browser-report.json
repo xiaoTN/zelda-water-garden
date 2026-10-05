@@ -1,0 +1,141 @@
+{
+  "browser": "154.0.4258.53",
+  "reports": [
+    {
+      "scenario": "all complete recordings decode offline as audible mono audio",
+      "recordings": {
+        "water": {
+          "duration": 112.72049886621315,
+          "channels": 1,
+          "rms": 0.16171926996135594,
+          "bytes": 451413
+        },
+        "snow": {
+          "duration": 124.52997732426304,
+          "channels": 1,
+          "rms": 0.09699419330362659,
+          "bytes": 498642
+        },
+        "cloud": {
+          "duration": 61.285714285714285,
+          "channels": 1,
+          "rms": 0.09303237950400171,
+          "bytes": 245673
+        }
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "actual WebAudio PCM has gentle fades and continuous gain across rapid reversals",
+      "first": 0,
+      "atFadeIn": 0.13846556842327118,
+      "settled": 0.41999924182891846,
+      "largestJump": 0.00020994749502278864,
+      "voices": [
+        {
+          "scene": "water",
+          "offset": 2.3,
+          "duration": 9.2,
+          "loop": true,
+          "fading": true
+        },
+        {
+          "scene": "snow",
+          "offset": 2.3,
+          "duration": 9.2,
+          "loop": true,
+          "fading": true
+        },
+        {
+          "scene": "cloud",
+          "offset": 2.3,
+          "duration": 9.2,
+          "loop": true,
+          "fading": false
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "scene mapping, first-half random entry, rapid switching, hidden-page release and resume over file URL",
+      "snapshots": [
+        {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 51.57166405071778,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        {
+          "scene": "snow",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 51.57166405071778,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": true
+            },
+            {
+              "scene": "snow",
+              "offset": 32.19327501783251,
+              "duration": 123.72995833333333,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        {
+          "scene": "cloud",
+          "voices": [
+            {
+              "scene": "snow",
+              "offset": 32.19327501783251,
+              "duration": 123.72995833333333,
+              "loop": true,
+              "fading": true
+            },
+            {
+              "scene": "cloud",
+              "offset": 7.65087864545054,
+              "duration": 60.485708333333335,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 42.678333219815286,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            },
+            {
+              "scene": "cloud",
+              "offset": 7.65087864545054,
+              "duration": 60.485708333333335,
+              "loop": true,
+              "fading": true
+            }
+          ],
+          "loading": 0
+        }
+      ],
+      "networkRequests": 0,
+      "result": "passed"
+    }
+  ],
+  "errors": []
+}

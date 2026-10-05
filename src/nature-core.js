@@ -8,10 +8,10 @@
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
   function random(seed) { return function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
   function setting(values,key,fallback){return typeof values[key]==='number'?values[key]:fallback;}
-  function Fling(u,v,time,aspect){this.samples=[];this.aspect=aspect;this.sample(u,v,time);}
+  function Fling(u,v,time,aspect,scaleX,scaleZ){this.samples=[];this.aspect=aspect;this.scaleX=scaleX===undefined?12*aspect:scaleX;this.scaleZ=scaleZ===undefined?12:scaleZ;this.sample(u,v,time);}
   Fling.prototype.sample=function(u,v,time){
     if(!isFinite(u+v+time))return;
-    this.samples.push({x:u*12*this.aspect,z:v*12,time:time});
+    this.samples.push({x:u*this.scaleX,z:v*this.scaleZ,time:time});
     while(this.samples.length>2 && (this.samples.length>12 || time-this.samples[1].time>.12))this.samples.shift();
   };
   Fling.prototype.velocity=function(time){

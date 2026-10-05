@@ -147,6 +147,7 @@
       this.ground=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);this.stones=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);
       this.shadows=buffer(gl.ARRAY_BUFFER,4,gl.STATIC_DRAW);
       this.fishBuffer=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);
+      this.boatBuffer=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.boatShadows=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);
       this.dropped=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropShadows=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropRevision=-1;this.dropCount=0;this.dropShadowCount=0;
       this.buffers=buffers; this.uniforms={};
       var names=['uScene','uWave','uNoise','uNormal','uFoam','uBed','uBedTexel','uTexel','uShorePixel','uTime','uAspect','uLight','uDetail','uPass','uViewProjection'];
@@ -252,6 +253,12 @@
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.indices);gl.uniform1f(this.uniforms.uPass,1);gl.drawElements(gl.TRIANGLES,this.mesh.indices.length,gl.UNSIGNED_SHORT,0);
     if(this.dropShadowCount)this.drawSolid(this.dropShadows,this.dropShadowCount,4);
+    if(this.boatSystem && this.boatSystem.items.length){
+      var boatShadows=this.boatSystem.shadows(),boats=this.boatSystem.geometry();
+      gl.bindBuffer(gl.ARRAY_BUFFER,this.boatShadows);gl.bufferData(gl.ARRAY_BUFFER,boatShadows,gl.DYNAMIC_DRAW);this.drawSolid(this.boatShadows,boatShadows.length/11,4);
+      gl.depthMask(true);gl.disable(gl.BLEND);
+      gl.bindBuffer(gl.ARRAY_BUFFER,this.boatBuffer);gl.bufferData(gl.ARRAY_BUFFER,boats,gl.DYNAMIC_DRAW);this.drawSolid(this.boatBuffer,boats.length/11,5);
+    }
     gl.depthMask(true);gl.disable(gl.BLEND);
   };
   Renderer.prototype.destroy=function(){

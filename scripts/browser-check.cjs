@@ -24,8 +24,8 @@ async function run() {
       const inspect = () => page.evaluate(() => window.WaterGarden.inspect());
       assert.equal(await page.locator('#sound').count(),0);
       assert((await inspect()).audioEnabled);assert.equal((await inspect()).audioState,'uninitialized','audio waits for the first user gesture');
-      assert.equal(await page.locator('[data-mode]').count(),3); assert.equal(await page.getByText('落石',{exact:true}).count(),1);
-      assert.deepEqual(await page.locator('[data-mode]').evaluateAll(buttons=>buttons.map(b=>b.dataset.mode)),['touch','leaf','stone']);
+      assert.equal(await page.locator('[data-mode]').count(),4); assert.equal(await page.getByText('落石',{exact:true}).count(),1);
+      assert.deepEqual(await page.locator('[data-mode]').evaluateAll(buttons=>buttons.map(b=>b.dataset.mode)),['touch','leaf','boat','stone']);
       assert.equal(await page.locator('#ice-actions, #freeze-all, #thaw-all').count(),0);
       let state = await inspect(); assert.equal(state.renderer, 'webgl'); assert(state.bufferWidth * state.bufferHeight <= 2000000);
       if(viewport.width===390){

@@ -13,9 +13,10 @@
   var slowFrames = 0, frameSamples = 0, frameTotal = 0, quality = 'normal', resized = false;
   var audio = null, master = null, sceneAudio = null, music = null, audioLast = 0, audioNodes = [], noticeTimer = 0;
   var pageInactive = false;
-  var hints = { touch: '轻触起涟漪 · 滑动拨水 · 长按蓄波', leaf: '轻放一片叶 · 拨水送它远行', stone: '轻点落石，让涟漪慢慢散开' };
+  var hints = { touch: '轻触起涟漪 · 滑动拨水 · 长按蓄波', leaf: '轻放一片叶 · 拨水送它远行', boat: '轻放纸船 · 拖动随行 · 轻甩送它远去', stone: '轻点落石，让涟漪慢慢散开' };
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
   var tuning = new window.GardenTuning.Settings(), developer = window.GardenDeveloper.prepare(tuning);
+  var boats = new window.WaterBoats.System(tuning.values);
   var snow = new window.GardenNature.Snow(tuning.values), clouds = new window.GardenNature.Clouds(tuning.values);
   var natureRenderer = new window.NatureRenderer(natureCanvas, snow, clouds);
   var natureModes = { snow: 0 }, natureWeather = { snow: true, cloud: true };
@@ -168,10 +169,11 @@
     field = new core.WaveField(nx, ny, aspect); scene = window.WaterScene.create(aspect, fallbackMode);
     fishSchool.attach(aspect);
     if (!fallbackMode) {
-      try { renderer = new window.WaterRenderer(canvas, scene, field); renderer.dropSystem = stoneDrops; renderer.fishSystem = fishSchool; renderer.low = quality === 'low'; renderer.resize(width, height); }
+      try { renderer = new window.WaterRenderer(canvas, scene, field); renderer.dropSystem = stoneDrops; renderer.fishSystem = fishSchool; renderer.boatSystem=boats; renderer.low = quality === 'low'; renderer.resize(width, height); }
       catch (error) { fallbackOn('3D 水面初始化失败，请刷新重试。'); }
     }
     if(!field.bathymetry)prepareFallbackStones();
+    boats.attach(aspect,field,function(u,v){return stoneDrops.blocks(u,v) || !!(renderer && renderer.terrain.blocks(u,v));});
     fingers = {}; leaves.length = 0; drops.length = 0; rings.length = 0;
     if (strokeAudio) strokeAudio.stop();
     if (rippleAudio) rippleAudio.stop();
@@ -234,6 +236,14 @@
     var p = point(x, y);
     if(sceneKind==='water'&&!renderer)return;
     if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,true); if(p)beginNature(id, p, x, y, time); return; }
+    var boat=boats.pick(p.u,p.v,true),surface=boats.surface(p.u,p.v),gesture=time===undefined?inputTime():time;
+    if(boat && boat.held)return;
+    if(boat || mode==='boat'){
+      if(!boat){boat=boats.add(surface.u,surface.v);if(!boat){notice(boats.items.length>=window.WaterBoats.limit?'让这些纸船先漂一会儿吧':'在宽一些的水面，轻放纸船');return;}splash(boat.u,boat.v,.12,true,true);}
+      initAudio();garden.classList.add('touched');boat.vx=0;boat.vz=0;boat.held=true;
+      fingers[id]={boat:boat,u:boat.u,v:boat.v,offsetU:boat.u-surface.u,offsetV:boat.v-surface.v,movedAt:gesture,fling:new window.GardenNature.Fling(boat.u,boat.v,gesture,boats.aspect,2*boats.aspect,1/.4330127)};
+      return;
+    }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
     if (mode!=='stone' && renderer && renderer.terrain.blocks(p.u, p.v)) return;
     if (core.shore(p.u, p.v) >= -.025) { notice('轻触池中的青绿水面'); return; }
@@ -259,6 +269,12 @@
       p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,false);if(!p)return;
       f.screenX=x;f.screenY=y;distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height);moveNature(f,p,distance,time);return;
     }
+    if(f.boat){
+      var surface=boats.surface(p.u,p.v),gesture=time===undefined?inputTime():time,oldU=f.boat.u,oldV=f.boat.v,moved=boats.drag(f.boat,surface.u+f.offsetU,surface.v+f.offsetV);
+      f.fling.sample(f.boat.u,f.boat.v,gesture);
+      if(moved>.0001){field.stroke(oldU,oldV,f.boat.u,f.boat.v,.06);fishSchool.scare(f.boat.u,f.boat.v,.4);if(strokeAudio)strokeAudio.stroke(moved/Math.max(.016,gesture-f.movedAt));}
+      f.u=f.boat.u;f.v=f.boat.v;f.movedAt=gesture;return;
+    }
     f.travel += distance;
     if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
@@ -280,6 +296,10 @@
       delete fingers[id];
       if(rollAudio&&!Object.keys(fingers).some(function(key){return fingers[key].ball||sceneKind==='snow'&&natureModes.snow===0;}))rollAudio.release();
       return;
+    }
+    if(f.boat){
+      var velocity=cancelled?[0,0]:f.fling.velocity(time===undefined?inputTime():time);boats.launch(f.boat,velocity[0],velocity[1]);
+      delete fingers[id];if(strokeAudio&&!Object.keys(fingers).length)strokeAudio.release();return;
     }
     if (!cancelled && mode === 'touch' && f.charged) { splash(f.u, f.v, Math.min(1.1, .45 + (now - f.born) * .18), true); sound(1, true); }
     else if (!cancelled && f.travel < 15) {
@@ -384,6 +404,7 @@
   function setScene(kind) {
     if (!sceneTransition.request(kind)) return;
     snow.stopMotion();
+    boats.stopMotion();
     fingers = {}; cursor.style.display = 'none'; stopAudio();
     sceneVeil.setAttribute('data-light', String(light));
     syncSceneTransition();
@@ -482,8 +503,8 @@
   var buttons = document.querySelectorAll('[data-mode]');
   for (var b = 0; b < buttons.length; b++) buttons[b].addEventListener('click', function () {
     if (strokeAudio) strokeAudio.release();
-    fingers = {}; mode = this.getAttribute('data-mode'); hint.textContent = hints[mode];
-    canvas.setAttribute('aria-label', mode === 'stone' ? '交互水池，轻点选择落点，石头从高空落下' : '交互水池，轻点起涟漪，滑动拨水');
+    boats.stopMotion();fingers = {}; mode = this.getAttribute('data-mode'); hint.textContent = hints[mode];
+    canvas.setAttribute('aria-label', mode === 'boat' ? '交互水池，轻点放纸船，拖动纸船，快速甩动后松手滑行' : mode === 'stone' ? '交互水池，轻点选择落点，石头从高空落下' : '交互水池，轻点起涟漪，滑动拨水');
     for (var i = 0; i < buttons.length; i++) { var selected = buttons[i] === this; buttons[i].classList.toggle('selected', selected); buttons[i].setAttribute('aria-pressed', String(selected)); }
   });
   document.getElementById('light').addEventListener('click', function () {
@@ -529,6 +550,7 @@
     field.clear(); drops.length = 0; rings.length = 0; leaves.length = 0; fingers = {};
     setRainLevel(0); weather.clear();
     stoneDrops.clear();refreshStoneBed();stoneBedDirty=false;
+    boats.clear();
     fishSchool.calm();
     addLeaf(.22, .48); addLeaf(.76, .56); addLeaf(.70, .29); notice('一切，归于平静');
   });
@@ -654,7 +676,7 @@
       fishSchool.update(dt,field.bathymetry,reduced,field);
       for (var key in fingers) {
         var finger = fingers[key];
-        if (mode === 'touch' && finger.travel < 15 && now - finger.born > .55) {
+        if (!finger.boat && mode === 'touch' && finger.travel < 15 && now - finger.born > .55) {
           finger.charged = true;
           field.disturb(finger.u, finger.v, -.018, .035);
           if (now - finger.last > .28) { rings.push({u: finger.u, v: finger.v, born: now, strength: .16}); if (rings.length > 48) rings.shift(); finger.last = now; }
@@ -665,6 +687,7 @@
       field.updateRain(dt);
       while (accumulator >= 1 / 60 && steps < 5) { field.step(); accumulator -= 1 / 60; steps++; }
       if (steps === 5) accumulator = 0;
+      boats.update(dt,reduced ? 0 : now);
       renderer.draw(reduced ? 0 : now, light);
       drawLife(dt);
       }
@@ -682,6 +705,7 @@
     frameId = requestAnimationFrame(tick);
   }
   canvas.addEventListener('webglcontextlost', function (event) {
+    boats.stopMotion();
     event.preventDefault(); lostCount++; fallbackOn('3D 水面暂时中断，等待恢复'); fingers = {};
     if (sceneKind === 'water') finishSceneTransition();
   });
@@ -691,9 +715,10 @@
     fallbackMode = false; quality = 'low'; syncSurfaces(); resized = true;
   });
   window.addEventListener('resize', function () { resized = true; });
-  window.addEventListener('blur', function () { fingers = {}; snow.stopMotion(); cursor.style.display = 'none'; });
+  window.addEventListener('blur', function () { fingers = {}; snow.stopMotion();boats.stopMotion(); cursor.style.display = 'none'; });
   function pauseExperience() {
     snow.stopMotion();
+    boats.stopMotion();
     finishSceneTransition();
     cancelAnimationFrame(frameId);frameId=0;fingers={};clearTimeout(noticeTimer);document.getElementById('notice').classList.remove('show');
     stopAudio(true);if(music)music.stop();if(audio)suspendAudio(audio);
@@ -712,6 +737,7 @@
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return {
     developer: developer, tuning: Object.assign({},tuning.values),
+    boats:boats.inspect(),boatTriangles:boats.items.length*window.WaterBoats.triangles,boatLimit:window.WaterBoats.limit,
     sceneTransition: sceneTransition.inspect(),
     fishTime: fishSchool.clock, fish: fishSchool.items.map(function(f){return {u:f.u,v:f.v,y:f.y,angle:f.angle,fear:f.fear,speed:f.speed,swim:f.swim,flowX:f.flowX,flowZ:f.flowZ};}), fishTriangles: fishSchool.vertices.length/33,
     ready: !!field,

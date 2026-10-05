@@ -117,15 +117,15 @@ h1 span { color: #b9b17c; }
 
 #developer-panel { position: absolute; right: 12px; right: calc(12px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); top: 168px; top: calc(168px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); z-index: 12; max-width: calc(100% - 24px); color: #e6efea; font-size: 12px; letter-spacing: 0; text-align: left; }
 .dev-toggle { display: block; margin-left: auto; min-height: 40px; padding: 9px 14px; border: 1px solid #71928c; border-radius: 14px; background: rgba(22,43,44,.94); }
-.dev-body { width: 284px; max-width: 100%; margin-top: 6px; padding: 12px; border: 1px solid #71928c; border-radius: 14px; background: rgba(22,43,44,.97); }
+.dev-body { width: 340px; max-width: 100%; margin-top: 6px; padding: 10px; border: 1px solid #71928c; border-radius: 14px; background: rgba(22,43,44,.97); }
 .dev-note { color: #aec6bf; font-size: 10px; margin-bottom: 8px; }
 .dev-list { max-height: 45vh; overflow-y: auto; padding-right: 4px; touch-action: pan-y; }
-.dev-list h2 { font-size: 12px; font-weight: 600; margin: 12px 0 8px; color: #dfd7af; }
+.dev-list h2 { font-size: 12px; font-weight: 600; margin: 9px 0 4px; color: #dfd7af; }
 .dev-list h2:first-child { margin-top: 0; }
-.dev-row { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 9px; }
-.dev-row label { display: block; width: 100%; margin-bottom: 3px; }
-.dev-row input[type="range"] { flex: 1; width: 140px; min-width: 0; min-height: 26px; margin-right: 10px; }
-.dev-row input[type="number"] { width: 65px; min-height: 30px; background: #102b2d; color: #e6efea; border: 1px solid #71928c; border-radius: 5px; padding: 4px; font: inherit; }
+.dev-row { display: flex; flex-wrap: nowrap; align-items: center; margin-bottom: 3px; }
+.dev-row label { display: block; flex: 0 0 104px; font-size: 11px; white-space: nowrap; }
+.dev-row input[type="range"] { flex: 1; width: 60px; min-width: 28px; min-height: 28px; margin-right: 6px; }
+.dev-row input[type="number"] { flex: 0 0 54px; width: 54px; min-height: 28px; background: #102b2d; color: #e6efea; border: 1px solid #71928c; border-radius: 5px; padding: 3px; font: inherit; }
 .dev-actions { display: flex; margin-top: 10px; }
 .dev-actions button { padding: 8px 10px; border: 1px solid #71928c; border-radius: 8px; min-height: 36px; }
 .dev-actions button + button { margin-left: 8px; }

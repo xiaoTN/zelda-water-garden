@@ -1,6 +1,12 @@
 (function (root) {
   'use strict';
   var definitions = [
+    {key:'boatInertia', group:'纸船', label:'惯性强度', value:1.1, min:0, max:3, step:.05},
+    {key:'boatFriction', group:'纸船', label:'水面阻力', value:1.25, min:.3, max:5, step:.05},
+    {key:'boatThrowThreshold', group:'纸船', label:'甩动触发速度', value:.15, min:.02, max:1, step:.01},
+    {key:'boatMaxSpeed', group:'纸船', label:'最高滑行速度', value:1.5, min:.2, max:3, step:.05},
+    {key:'boatSize', group:'纸船', label:'纸船大小', value:1, min:.6, max:1.5, step:.05},
+    {key:'boatRocking', group:'纸船', label:'随波摇晃幅度', value:.7, min:0, max:1.5, step:.05},
     {key:'inertia', group:'雪球', label:'惯性强度', value:1.15, min:0, max:2.5, step:.05},
     {key:'friction', group:'雪球', label:'减速摩擦', value:1.8, min:.3, max:6, step:.1},
     {key:'throwThreshold', group:'雪球', label:'甩动触发速度', value:1.2, min:.3, max:5, step:.1},
