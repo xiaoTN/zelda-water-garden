@@ -8,11 +8,15 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-VIDEO = ROOT / 'artifacts/promo/moment-water-promo.mp4'
-QA = ROOT / 'tmp/promo-qa'
-DOCS = ROOT / 'docs/promo-video-2026-10-05'
+VIDEO = ROOT / 'artifacts/promo/moment-water-promo-v2.mp4'
+QA = ROOT / 'tmp/promo-qa-v2'
+DOCS = ROOT / 'docs/promo-video-2026-10-05/revision-2'
 QA.mkdir(parents=True, exist_ok=True)
+DOCS.mkdir(parents=True, exist_ok=True)
 shots = json.loads((HERE / 'src/timeline.json').read_text(encoding='utf-8'))
+seconds=max(s['from']+s['duration'] for s in shots)/30
+primary_durations={s['id']:(shots[i+1]['from']-s['from'])/30 for i,s in enumerate(shots[:-1])}
+assert all(4 <= primary_durations[name] <= 5 for name in ['snow','cloud'])
 
 def ff(*args):
     return subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-threads','1',*map(str,args)],check=True,stdout=subprocess.PIPE).stdout
@@ -21,7 +25,7 @@ probe = json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format
 v = next(s for s in probe['streams'] if s['codec_type']=='video')
 a = next(s for s in probe['streams'] if s['codec_type']=='audio')
 assert (v['width'],v['height'],v['r_frame_rate']) == (1080,1440,'30/1')
-assert abs(float(probe['format']['duration'])-45)<.1
+assert abs(float(probe['format']['duration'])-seconds)<.1
 assert v['codec_name']=='h264' and a['codec_name']=='aac'
 font = ImageFont.truetype('C:/Windows/Fonts/msyh.ttc',20)
 sheet = Image.new('RGB',(990,1440),'#102923')
@@ -45,11 +49,21 @@ for i,s in enumerate(shots):
     draw.text((x+8,y+7),f"{s['label']} · {f/30:.1f}s",font=font,fill='#e6ead6')
 sheet.save(DOCS/'contact-sheet.jpg',quality=93)
 
+hold=[]
+for sec in [47,49]:
+    pixels=ff('-ss',sec,'-i',VIDEO,'-frames:v',1,'-vf','crop=920:465:80:420','-f','rawvideo','-pix_fmt','gray','pipe:1')
+    hold.append(np.frombuffer(pixels,dtype=np.uint8).astype(float))
+ending_difference=float(np.mean(abs(hold[0]-hold[1])))
+assert ending_difference<1.2, 'Ending screenshots should hold without water interaction'
+
 raw=ff('-i',VIDEO,'-vf','crop=850:600:115:405,scale=170:120,fps=2','-f','rawvideo','-pix_fmt','gray','pipe:1')
 imgs=np.frombuffer(raw,dtype=np.uint8).reshape(-1,120,170).astype(float)
 delta=np.mean(abs(np.diff(imgs,axis=0)),axis=(1,2))
 motion={}
 for s in shots:
+    if s['id']=='end':
+        motion[s['id']]={'intent':'Three real screenshots hold after a gentle entrance; no water-interaction video.'}
+        continue
     start=int(s['from']/30*2)+2;end=int((s['from']+s['duration'])/30*2)-2
     d=delta[start:max(start+1,end)]
     motion[s['id']]={'mean_half_second_pixel_change':round(float(d.mean()),3),'min':round(float(d.min()),3)}
@@ -59,13 +73,13 @@ pcm=np.frombuffer(ff('-i',VIDEO,'-vn','-ar',48000,'-ac',2,'-f','f32le','pipe:1')
 peak=float(np.max(abs(pcm)))
 assert peak<.98, 'Audio clipping'
 # Compare final AAC against the exact scheduled PCM mix; a local lag scan detects container offset.
-expected=np.zeros((45*48000,2),dtype=np.float32)
+expected=np.zeros((round(seconds*48000),2),dtype=np.float32)
 for s in shots:
     signal=np.frombuffer(ff('-i',HERE/'public/audio'/f"{s['id']}.wav",'-f','f32le','pipe:1'),dtype='<f4').reshape(-1,2)
     start=round(s['from']/30*48000);n=min(len(signal),len(expected)-start)
     expected[start:start+n]+=signal[:n]
 lags=[]
-for sec in [10,19,30]:
+for sec in [10,19,30,37,42,47]:
     start=sec*48000; reference=expected[start:start+24000,0]
     scores=[]
     for lag in range(-2400,2401,8):
@@ -75,6 +89,7 @@ for sec in [10,19,30]:
     lags.append({'at_seconds':sec,'lag_samples':lag,'lag_frames':round(lag/1600,3),'correlation':round(scores[j],5)})
     assert abs(lag)<=800, f'Audio offset exceeds half frame: {lag}'
 report={'duration_seconds':float(probe['format']['duration']),'dimensions':[1080,1440],'fps':30,'bytes':VIDEO.stat().st_size,
+        'primary_durations_seconds':primary_durations,'ending_hold_pixel_difference':round(ending_difference,4),
         'video_codec':v['codec_name'],'audio_codec':a['codec_name'],'sample_rate':a['sample_rate'],
         'checked_frames':checked,'motion':motion,'peak_dbfs':round(20*np.log10(peak+1e-12),2),
         'rms_dbfs':round(float(20*np.log10(np.sqrt(np.mean(pcm**2))+1e-12)),2),'audio_sync_probes':lags,

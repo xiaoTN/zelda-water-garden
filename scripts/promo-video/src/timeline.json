@@ -5,7 +5,7 @@
   {"id":"stone","label":"落石入水","from":480,"duration":198,"source":"water","start":18,"text":"落下的，\n是一圈圈涟漪。","kicker":"一石一漪"},
   {"id":"leaf","label":"浮叶漂流","from":660,"duration":168,"source":"water","start":25,"text":"看一片叶，\n慢慢漂远。","kicker":"让时间慢下来"},
   {"id":"rain","label":"听雨落下","from":810,"duration":258,"source":"water","start":43.2,"text":"听雨落下，\n让思绪慢一点。","kicker":"听一场雨"},
-  {"id":"snow","label":"雪地掠影","from":1050,"duration":78,"source":"nature","start":17.5,"text":"也有雪落，","kicker":"片刻 · 雪落"},
-  {"id":"cloud","label":"云海掠影","from":1110,"duration":78,"source":"nature","start":29,"text":"有云经过。","kicker":"片刻 · 云间"},
-  {"id":"end","label":"月夜余韵","from":1170,"duration":180,"source":"water","start":64.5,"text":"把片刻，\n留给自己。","kicker":"片刻 · 水光"}
+  {"id":"snow","label":"雪落留痕","from":1050,"duration":153,"source":"nature","start":17.5,"text":"在柔软的雪里，\n留下片刻欢喜。","kicker":"片刻 · 雪落"},
+  {"id":"cloud","label":"云间漫游","from":1185,"duration":153,"source":"nature","start":28,"text":"拨开一缕云，\n让心事轻一点。","kicker":"片刻 · 云间"},
+  {"id":"end","label":"三景未完","from":1320,"duration":240,"source":"nature","start":29,"text":"还有些风景，\n正向你走来。","kicker":"片刻 · 不止于此"}
 ]
