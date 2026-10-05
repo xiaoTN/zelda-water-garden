@@ -11,8 +11,8 @@ test('a fling uses recent world-space travel, stops after a held pause and rejec
   assert.deepEqual(f.velocity(.16),[0,0]);assert.deepEqual(f.velocity(.01),[0,0]);
   f.sample(NaN,0,.17);assert.deepEqual(f.velocity(.17),[0,0]);
   const settings=new Settings();settings.load('{"friction":99,"inertia":0,"growth":"bad","unknown":8}');
-  assert.equal(settings.values.friction,6);assert.equal(settings.values.inertia,0);assert.equal(settings.values.growth,.075);assert.equal(settings.values.unknown,undefined);
-  settings.load('invalid');settings.reset();assert.equal(settings.values.friction,1.8);
+  assert.equal(settings.values.friction,6);assert.equal(settings.values.inertia,0);assert.equal(settings.values.growth,.035);assert.equal(settings.values.unknown,undefined);
+  settings.load('invalid');settings.reset();assert.equal(settings.values.friction,4.6);
   for(const host of ['localhost','127.0.0.1','[::1]'])assert(local({hostname:host,protocol:'http:'},false));
   assert(!local({hostname:'example.com',protocol:'https:'},false));assert(!local({hostname:'localhost.example.com',protocol:'http:'},false));
   assert(!local({hostname:'',protocol:'file:'},false));assert(!local({hostname:'localhost',protocol:'http:'},true));
@@ -171,7 +171,7 @@ test('multiple snowballs stay in the shared geometry budget and reset clears the
 test('fresh snowballs start from zero and grow only with finite rolling travel',()=>{
   const snow=new Snow(),ball=snow.ball(.3,.5,0);assert.equal(ball.radius,0);
   snow.roll(ball,.3,.5);assert.equal(ball.radius,0);assert.deepEqual(ball.rotation,[0,0,0,1]);
-  snow.roll(ball,.6,.5);assert(Math.abs(ball.radius-.0225)<1e-12);assert(ball.rotation.every(Number.isFinite));
+  snow.roll(ball,.6,.5);assert(Math.abs(ball.radius-.0105)<1e-12);assert(ball.rotation.every(Number.isFinite));
   assert(Math.abs(Math.hypot(...ball.rotation)-1)<1e-12);assert(snow.inspect().markedCells>0);
   const before=snow.inspect();snow.roll(ball,NaN,0);assert.deepEqual(snow.inspect(),before);
 });

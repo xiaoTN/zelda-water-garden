@@ -40,7 +40,7 @@
     this.hullA=new Float32Array(12);this.hullB=new Float32Array(12);
   }
   System.prototype.attach = function (aspect, field, obstacle) { this.aspect=aspect; this.field=field; this.obstacle=obstacle; this.stopMotion(); };
-  System.prototype.size = function () { return .105 * Math.min(1,this.aspect) * value(this.tuning,'boatSize',1); };
+  System.prototype.size = function () { return .105 * Math.min(1,this.aspect) * value(this.tuning,'boatSize',.6); };
   System.prototype.height = function (u,v) {
     var x=(u-.5)*2*this.aspect,z=(v-.5)/slope,wet=core.clamp((-core.shore(u,v)-.005)/.125,0,1);wet=wet*wet*(3-2*wet);
     return (Math.sin(x*5.5+z*7-this.clock*1.2)*.014+Math.sin(x*-8+z*3.5-this.clock*.9)*.009+Math.sin(x*11+z*9+this.clock*1.6)*.004+(this.field?this.field.sample(u,v)*.065:0))*wet;

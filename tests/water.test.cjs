@@ -56,7 +56,8 @@ test('paper boat turning takes the short arc and cannot sweep through a nearby r
   const tested=[],clear=boats.clearAt.bind(boats);boats.clearAt=function(u,v,a,ignore){tested.push(a);return clear(u,v,a,ignore);};
   assert(boats.turn(b,-Math.PI+.03));assert(tested.every(a=>Math.abs(a-Math.PI)<.04),'angle wrap avoids a full turn');
   boats.clearAt=clear;b.angle=0;
-  boats.obstacle=(u,v)=>Math.hypot((u-.5)*2,(v-.49)/.4330127+.10)<.015;
+  const rockOffset=boats.size()*.95;
+  boats.obstacle=(u,v)=>Math.hypot((u-.5)*2,(v-.49)/.4330127+rockOffset)<.015;
   assert(boats.clearAt(b.u,b.v,b.angle,b));assert.equal(boats.turn(b,Math.PI/2),false);
   assert(boats.clearAt(b.u,b.v,b.angle,b));assert(b.angle<Math.PI/2);
   boats.launch(b,0,-1);assert.equal(Math.hypot(b.vx,b.vz),0,'blocked rotation cannot launch an intersecting boat');

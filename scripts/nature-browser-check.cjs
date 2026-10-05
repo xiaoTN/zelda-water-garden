@@ -112,13 +112,24 @@ async function run() {
         reports.push({scenario:'first ten seconds render across two seamless loop boundaries; real PCM fades to silence and resumes its saved phase',...pcm,result:'passed'});
       }
       const merging=await page.evaluate(()=>{
-        const surface=testSurface3D,balls=surface.snow.balls,a=balls[0],b=balls[1],screen=surface.camera.project(surface.ballPosition(a));
+        // Roll the smaller sphere toward the larger one. A large sphere can bridge
+        // a tiny sphere's snow hollow without physically touching it from above.
+        const surface=testSurface3D,balls=surface.snow.balls,a=balls[0].radius<=balls[1].radius?balls[0]:balls[1],b=a===balls[0]?balls[1]:balls[0],screen=surface.camera.project(surface.ballPosition(a));
         const pick=surface.point(screen.u,screen.v,'snow',surface.clouds,true),u=b.u-(pick.u-pick.groundU),v=b.v-(pick.v-pick.groundV);
         const wx=(u-.5)*12*surface.aspect,wz=(v-.5)*12,target=surface.camera.project([wx,surface.height(wx,wz,'snow',surface.snow,surface.clouds),wz]);
-        return {from:{x:screen.u*innerWidth,y:screen.v*innerHeight},to:{x:target.u*innerWidth,y:target.v*innerHeight},volume:a.radius**3+b.radius**3,max:Math.max(a.radius,b.radius)};
+        return {from:{x:screen.u*innerWidth,y:screen.v*innerHeight},to:{x:target.u*innerWidth,y:target.v*innerHeight},goalU:u,goalV:v,picked:pick.ball===a,volume:a.radius**3+b.radius**3,max:Math.max(a.radius,b.radius)};
       });
+      assert(merging.picked,'merge gesture starts on the actual sphere mesh');
       await page.mouse.move(merging.from.x,merging.from.y);await page.mouse.down();
-      await page.mouse.move(merging.to.x,merging.to.y,{steps:24});await releaseStationary();s=await state();
+      await page.mouse.move(merging.to.x,merging.to.y,{steps:24});
+      // Dragging deforms the snow under the target. Reproject the same world goal
+      // against its current height; small balls must not rely on a stale endpoint.
+      for(let correction=0;correction<3&&(await state()).snow.balls.length>1;correction++){
+        const point=await page.evaluate(({goalU,goalV})=>{const surface=testSurface3D,x=(goalU-.5)*12*surface.aspect,z=(goalV-.5)*12,p=surface.camera.project([x,surface.height(x,z,'snow',surface.snow,surface.clouds),z]);return {x:p.u*innerWidth,y:p.v*innerHeight};},merging);
+        await page.mouse.move(point.x,point.y,{steps:3});
+      }
+      await releaseStationary();s=await state();
+      if(s.snow.balls.length!==1)console.log('Merge fixture diagnostic',JSON.stringify(await page.evaluate(goal=>({viewport:[innerWidth,innerHeight],goal,balls:testSurface3D.snow.balls.map(b=>({u:b.u,v:b.v,radius:b.radius,center:testSurface3D.ballPosition(b)}))}),merging)));
       assert.equal(s.snow.balls.length,1,'touching balls merge through actual 3D picking');
       assert(s.snow.balls[0].radius>merging.max&&s.snow.balls[0].radius**3>=merging.volume);
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snow-merged.png')});

@@ -154,7 +154,7 @@
     for(var i=1;i<=steps;i++){
       var x=clamp(startU+(u-startU)*i/steps,this.origin+ball.radius/this.aspect,this.origin+this.span-ball.radius/this.aspect);
       var y=clamp(startV+(v-startV)*i/steps,this.origin+ball.radius,this.origin+this.span-ball.radius);
-      var dx=(x-ball.u)*this.aspect,dz=y-ball.v,travel=Math.hypot(dx,dz),nextRadius=Math.max(ball.radius,Math.min(maxRadius,ball.radius+travel*setting(this.tuning,'growth',.075))),near=false;
+      var dx=(x-ball.u)*this.aspect,dz=y-ball.v,travel=Math.hypot(dx,dz),nextRadius=Math.max(ball.radius,Math.min(maxRadius,ball.radius+travel*setting(this.tuning,'growth',.035))),near=false;
       // Distant spheres cannot touch. Avoid recomputing the filtered terrain
       // between brush steps unless a world-space contact is actually possible.
       for(var j=0;j<this.balls.length;j++){
@@ -179,7 +179,7 @@
     if(this.balls.indexOf(ball)<0 || ball.radius<=0 || !isFinite(vx+vz))return false;
     this.stopBall(ball);
     var speed=Math.hypot(vx,vz),gain=setting(this.tuning,'inertia',1.15);
-    if(speed<setting(this.tuning,'throwThreshold',1.2)||gain<=0)return false;
+    if(speed<setting(this.tuning,'throwThreshold',3.8)||gain<=0)return false;
     var level=Math.min(speed*gain,setting(this.tuning,'maxSpeed',10))/Math.max(speed,1e-8);
     ball.vx=vx*level;ball.vz=vz*level;return true;
   };
@@ -197,7 +197,7 @@
         if(speed>limit){ball.vx*=limit/speed;ball.vz*=limit/speed;speed=limit;}
         if(speed<.08){this.stopBall(ball);break;}
         // Exact constant-friction plus drag integration keeps throw distance stable across frame rates.
-        var drag=.85,friction=setting(this.tuning,'friction',1.8),stop=Math.log(1+speed*drag/friction)/drag,t=Math.min(h,stop);
+        var drag=.85,friction=setting(this.tuning,'friction',4.6),stop=Math.log(1+speed*drag/friction)/drag,t=Math.min(h,stop);
         var decay=Math.exp(-drag*t),distance=(speed+friction/drag)*(1-decay)/drag-friction/drag*t;
         var x=ball.u+ball.vx/speed*distance/(12*this.aspect),z=ball.v+ball.vz/speed*distance/12;
         var oldU=ball.u,oldV=ball.v;

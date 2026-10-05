@@ -48,10 +48,12 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
       await page.evaluate(()=>document.getElementById('nature').dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,pointerId:883})));
       await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);
       const stopped=await page.evaluate(()=>NatureGarden.inspect().snow.balls[0]);await page.waitForTimeout(120);assert.deepEqual(await page.evaluate(()=>NatureGarden.inspect().snow.balls[0]),stopped);
-      await page.locator('.dev-toggle').click();await page.screenshot({path:path.join(out,'developer-panel-'+(low?'wide':'portrait')+'.png')});
+      await page.locator('.dev-toggle').click();
       await page.getByRole('button',{name:'查看参数',exact:true}).click();assert(/"inertia"/.test(await page.locator('.dev-json').inputValue()));
-      await page.getByRole('button',{name:'恢复默认',exact:true}).click();assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.friction),1.8);
-      reports.push({quality:await page.evaluate(()=>WaterGarden.inspect().quality),released:release.ball,coast,distance,grabSpeed:grab.snow.balls[0].speed,persistentPanel:true});
+      await page.getByRole('button',{name:'恢复默认',exact:true}).click();assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.friction),4.6);
+      const defaults=await page.evaluate(()=>WaterGarden.inspect().tuning);assert.equal(defaults.boatSize,.6);assert.equal(defaults.throwThreshold,3.8);assert.equal(defaults.growth,.035);
+      await page.screenshot({path:path.join(out,'developer-panel-'+(low?'wide':'portrait')+'.png')});
+      reports.push({quality:await page.evaluate(()=>WaterGarden.inspect().quality),released:release.ball,coast,distance,grabSpeed:grab.snow.balls[0].speed,persistentPanel:true,defaults});
       await context.close();
     }
     const legacy=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
