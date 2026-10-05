@@ -35,15 +35,18 @@ export const SurfaceShot: React.FC<{src?:string;duration?:number;frameCount?:num
   const f = useCurrentFrame();
   const opacity = fade(f,0,first?30:18) * (last?1-fade(f,duration-42,duration-1):1);
   return <div style={{position:'absolute',left:72,top:360,width:936,height:721,opacity,
-    overflow:'hidden',borderRadius:24,
-    maskImage:'linear-gradient(to bottom, transparent, black 7%, black 92%, transparent)',
-    WebkitMaskImage:'linear-gradient(to bottom, transparent, black 7%, black 92%, transparent)'}}>
+    overflow:'hidden',borderRadius:24}}>
     {getRemotionEnvironment().isRendering
       ? <Img src={staticFile(`frames/${src.split('/').pop()!.replace('.mp4','')}/${String(Math.min(frameCount-1,Math.max(0,Math.floor(f)))).padStart(4,'0')}.jpg`)} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
       : <OffthreadVideo src={staticFile(src)} muted style={{width:'100%',height:'100%',objectFit:'cover'}}/>}
-    <div style={{position:'absolute',inset:0,background:'linear-gradient(90deg,#102923 0%,transparent 4%,transparent 96%,#102923 100%)'}}/>
   </div>;
 };
+
+// Apply the feather once, after incoming/outgoing pictures have composited.
+// Per-shot masks brighten the overlap and snap dark when the old shot unmounts.
+export const SurfaceMatte:React.FC=()=> <div style={{position:'absolute',left:72,top:360,width:936,height:721,
+  borderRadius:24,pointerEvents:'none',background:
+  `linear-gradient(to bottom,${BACKGROUND},transparent 7%,transparent 92%,${BACKGROUND}),linear-gradient(to right,${BACKGROUND},transparent 4%,transparent 96%,${BACKGROUND})`}}/>;
 
 export const Poem: React.FC<{text?:string;kicker?:string;duration?:number;first?:boolean;last?:boolean;color?:string;fontSize?:number}> = ({text='给自己，\n留一点安静。',kicker='片刻 · 水光',duration=138,first=false,last=false,color='#e6ead6',fontSize=88}) => {
   const f = useCurrentFrame();
@@ -62,8 +65,12 @@ export const Poem: React.FC<{text?:string;kicker?:string;duration?:number;first?
 };
 
 export const WaterPromo: React.FC<{sound?:boolean}> = ({sound=true}) => <AbsoluteFill style={{background:BACKGROUND}}>
-  {SHOTS.map(s=><Sequence key={s.id} from={s.from} durationInFrames={s.duration}>
-    {s.id==='end'?<EndTriptych duration={s.duration}/>:<SurfaceShot src={`media/${s.id}.mp4`} duration={s.duration} frameCount={s.duration} first={s.id==='calm'}/>}
+  {SHOTS.filter(s=>s.id!=='end').map(s=><Sequence key={s.id} from={s.from} durationInFrames={s.duration}>
+    <SurfaceShot src={`media/${s.id}.mp4`} duration={s.duration} frameCount={s.duration} first={s.id==='calm'}/>
+  </Sequence>)}
+  <SurfaceMatte/>
+  {SHOTS.filter(s=>s.id==='end').map(s=><Sequence key={s.id} from={s.from} durationInFrames={s.duration}>
+    <EndTriptych duration={s.duration}/>
   </Sequence>)}
   {SHOTS.map(s=><Sequence key={s.id} from={s.from} durationInFrames={s.duration}>
     <Poem text={s.text} kicker={s.kicker} duration={s.duration} first={s.id==='calm'} last={s.id==='end'}/>

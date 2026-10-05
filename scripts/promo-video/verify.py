@@ -8,9 +8,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-VIDEO = ROOT / 'artifacts/promo/moment-water-promo-v3.mp4'
-QA = ROOT / 'tmp/promo-qa-v3'
-DOCS = ROOT / 'docs/promo-video-2026-10-05/revision-3'
+VIDEO = ROOT / 'artifacts/promo/moment-water-promo-v4.mp4'
+QA = ROOT / 'tmp/promo-qa-v4'
+DOCS = ROOT / 'docs/promo-video-2026-10-05/revision-4'
 QA.mkdir(parents=True, exist_ok=True)
 DOCS.mkdir(parents=True, exist_ok=True)
 shots = json.loads((HERE / 'src/timeline.json').read_text(encoding='utf-8'))

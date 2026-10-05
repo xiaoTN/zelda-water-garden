@@ -2,7 +2,7 @@
 
 此页为第一版记录。第二版说明和验收位于 [revision-2/](revision-2/spec.md)，输出文件为 `artifacts/promo/moment-water-promo-v2.mp4`。
 
-最新第三版仅调整结尾水面 BGM，见 [revision-3/](revision-3/README.md)，成片为 `artifacts/promo/moment-water-promo-v3.mp4`。
+第三版仅调整结尾水面 BGM，见 [revision-3/](revision-3/README.md)。最新第四版修复转场柔边突变，见 [revision-4/](revision-4/README.md)，成片为 `artifacts/promo/moment-water-promo-v4.mp4`。
 
 成片：`artifacts/promo/moment-water-promo.mp4`，45.000 秒，1080×1440，30 fps，H.264/AAC 48 kHz，16,564,958 字节。
 

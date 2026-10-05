@@ -1,0 +1,41 @@
+{
+  "note": "Actual encoded film, includes natural source motion and compression; these measurements alone do not isolate matte changes.",
+  "pairs": [
+    {
+      "from_frame": 135,
+      "to_frame": 137,
+      "edge_rgb_mean_absolute_change": 0.9144,
+      "edge_rgb_max_change": 26.0
+    },
+    {
+      "from_frame": 137,
+      "to_frame": 138,
+      "edge_rgb_mean_absolute_change": 0.4816,
+      "edge_rgb_max_change": 24.0
+    },
+    {
+      "from_frame": 138,
+      "to_frame": 140,
+      "edge_rgb_mean_absolute_change": 0.7947,
+      "edge_rgb_max_change": 37.0
+    },
+    {
+      "from_frame": 255,
+      "to_frame": 257,
+      "edge_rgb_mean_absolute_change": 3.5091,
+      "edge_rgb_max_change": 70.0
+    },
+    {
+      "from_frame": 257,
+      "to_frame": 258,
+      "edge_rgb_mean_absolute_change": 2.5977,
+      "edge_rgb_max_change": 56.0
+    },
+    {
+      "from_frame": 258,
+      "to_frame": 260,
+      "edge_rgb_mean_absolute_change": 4.5648,
+      "edge_rgb_max_change": 68.0
+    }
+  ]
+}

@@ -5,7 +5,7 @@ import path from 'node:path';
 const here=path.dirname(fileURLToPath(import.meta.url));
 const root=path.resolve(here,'../..');
 const raw=path.join(root,'tmp/promo-raw.mp4');
-const output=path.join(root,'artifacts/promo/moment-water-promo-v3.mp4');
+const output=path.join(root,'artifacts/promo/moment-water-promo-v4.mp4');
 const shots=JSON.parse(readFileSync(path.join(here,'src/timeline.json'),'utf8'));
 const seconds=Math.max(...shots.map(s=>s.from+s.duration))/30;
 mkdirSync(path.dirname(output),{recursive:true});
