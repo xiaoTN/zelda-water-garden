@@ -1,0 +1,94 @@
+{
+  "browser": "154.0.4258.53",
+  "reports": [
+    {
+      "scenario": "only the complete water recording ships and decodes offline as audible mono audio",
+      "recordings": {
+        "water": {
+          "duration": 112.72049886621315,
+          "channels": 1,
+          "rms": 0.16171926996135594,
+          "bytes": 451413
+        }
+      },
+      "result": "passed"
+    },
+    {
+      "scenario": "actual WebAudio PCM has a gentle entry and scene requests do not change its gain",
+      "first": 0,
+      "atFadeIn": 0.13846556842327118,
+      "settled": 0.41999998688697815,
+      "largestJump": 0.00020994749502278864,
+      "voices": [
+        {
+          "scene": "water",
+          "offset": 2.3,
+          "duration": 9.2,
+          "loop": true,
+          "fading": false
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "scenario": "one continuous water loop across water/snow/cloud and rapid switches; hidden-page release and resume over file URL",
+      "snapshots": [
+        {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 3.072703219040126,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 3.072703219040126,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 3.072703219040126,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        },
+        {
+          "scene": "water",
+          "voices": [
+            {
+              "scene": "water",
+              "offset": 3.072703219040126,
+              "duration": 111.92047916666667,
+              "loop": true,
+              "fading": false
+            }
+          ],
+          "loading": 0
+        }
+      ],
+      "networkRequests": 0,
+      "result": "passed"
+    }
+  ],
+  "errors": []
+}

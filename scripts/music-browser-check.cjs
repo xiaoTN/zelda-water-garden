@@ -12,15 +12,16 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
     assert.equal((await page.evaluate(()=>WaterGarden.inspect())).music.voices.length,0);
     const recordings=await page.evaluate(async()=>{
       const result={};
-      for(const scene of ['water','snow','cloud']){
+      for(const scene of ['water']){
         const bytes=Uint8Array.from(atob(GardenMusicAssets[scene].base64),c=>c.charCodeAt(0));
         const byteLength=bytes.length,c=new OfflineAudioContext(1,22050,22050),buffer=await c.decodeAudioData(bytes.buffer);
         const data=buffer.getChannelData(0);let energy=0;for(const sample of data)energy+=sample*sample;
         result[scene]={duration:buffer.duration,channels:buffer.numberOfChannels,rms:Math.sqrt(energy/data.length),bytes:byteLength};
       }return result;
     });
-    for(const scene of ['water','snow','cloud']){assert(recordings[scene].duration>60);assert.equal(recordings[scene].channels,1);assert(recordings[scene].rms>.001);}
-    reports.push({scenario:'all complete recordings decode offline as audible mono audio',recordings,result:'passed'});
+    assert.deepEqual(await page.evaluate(()=>Object.keys(GardenMusicAssets)),['water']);
+    assert(recordings.water.duration>60);assert.equal(recordings.water.channels,1);assert(recordings.water.rms>.001);
+    reports.push({scenario:'only the complete water recording ships and decodes offline as audible mono audio',recordings,result:'passed'});
     const pcm=await page.evaluate(async()=>{
       const c=new OfflineAudioContext(1,8000*4,8000);let time=0;
       const buffer=c.createBuffer(1,8000*10,8000);buffer.getChannelData(0).fill(1);
@@ -32,24 +33,30 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
       return {first:rendered[0],atFadeIn:rendered[800],settled:rendered[30000],largestJump,voices:music.inspect().voices};
     });
     assert.equal(pcm.first,0);assert(pcm.atFadeIn>0&&pcm.atFadeIn<.2);assert(Math.abs(pcm.settled-.42)<.0001);assert(pcm.largestJump<.0003);
-    reports.push({scenario:'actual WebAudio PCM has gentle fades and continuous gain across rapid reversals',...pcm,result:'passed'});
+    reports.push({scenario:'actual WebAudio PCM has a gentle entry and scene requests do not change its gain',...pcm,result:'passed'});
+    await page.evaluate(()=>{const update=WaterSound.Music.prototype.update;WaterSound.Music.prototype.update=function(){window.sharedMusic=this;return update.apply(this,arguments);};});
     await page.mouse.click(195,410);
+    await page.waitForFunction(()=>WaterGarden.inspect().music.voices.length===1);
+    await page.evaluate(()=>{window.firstWaterVoice=sharedMusic.tracks.water.node;window.firstMusicTime=sharedMusic.context.currentTime;});
     const snapshots=[];
     for(const scene of ['water','snow','cloud','water']){
       await page.locator('button[data-scene="'+scene+'"]').click();
-      await page.waitForFunction(scene=>WaterGarden.inspect().music.voices.some(v=>v.scene===scene&&!v.fading),scene);
+      await page.waitForFunction(scene=>NatureGarden.inspect().scene===scene&&WaterGarden.inspect().sceneTransition.phase==='idle',scene);
+      await page.waitForFunction(()=>WaterGarden.inspect().music.voices.some(v=>v.scene==='water'&&!v.fading));
       const state=await page.evaluate(()=>WaterGarden.inspect().music);snapshots.push(state);
-      const current=state.voices.find(v=>v.scene===scene);assert(current.loop&&current.offset>0&&current.offset<current.duration/2);
-      await page.waitForTimeout(1700);assert.equal((await page.evaluate(()=>WaterGarden.inspect().music)).voices.length,1);
+      const current=state.voices[0];assert(current.loop&&current.offset>0&&current.offset<current.duration/2);
+      assert(await page.evaluate(()=>sharedMusic.tracks.water.node===firstWaterVoice),'scene changes must retain the same playback source');
+      assert.equal(state.scene,'water');assert.equal(state.voices.length,1);
     }
     for(let i=0;i<12;i++)await page.locator('button[data-scene="'+['snow','cloud','water'][i%3]+'"]').click();
     await page.waitForTimeout(1800);assert.equal((await page.evaluate(()=>WaterGarden.inspect().music)).voices.length,1);
+    assert(await page.evaluate(()=>sharedMusic.tracks.water.node===firstWaterVoice&&sharedMusic.context.currentTime>firstMusicTime+2),'rapid switching neither restarts nor pauses shared music');
     const paused=await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));return WaterGarden.inspect().music;});
     assert.equal(paused.voices.length,0);
     await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});document.dispatchEvent(new Event('visibilitychange'));});
     await page.waitForFunction(()=>WaterGarden.inspect().music.voices.length===1);
     assert.equal((await page.evaluate(()=>WaterGarden.inspect().music)).scene,'water');assert.equal(networkRequests,0);
-    reports.push({scenario:'scene mapping, first-half random entry, rapid switching, hidden-page release and resume over file URL',snapshots,networkRequests,result:'passed'});
+    reports.push({scenario:'one continuous water loop across water/snow/cloud and rapid switches; hidden-page release and resume over file URL',snapshots,networkRequests,result:'passed'});
     assert.deepEqual(errors,[]);
     fs.writeFileSync(path.join(out,'music-browser-report.json'),JSON.stringify({browser:await browser.version(),reports,errors},null,2)+'\n');
     console.log('Music browser checks passed: '+reports.length+' scenarios');

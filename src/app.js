@@ -47,7 +47,7 @@
     try {
       audio = new Constructor(); master = audio.createGain(); master.gain.value = .38; master.connect(audio.destination);
       sceneAudio = new window.WaterSound.SceneMixer(audio, master); sceneAudio.select(sceneKind);
-      music = new window.WaterSound.Music(audio, master, window.GardenMusicAssets); music.select(sceneKind);
+      music = new window.WaterSound.Music(audio, master, window.GardenMusicAssets); music.select('water');
       var waterOutput = sceneAudio.output('water');
       weatherAudio = new window.WaterWeather.Audio(audio, waterOutput);
       strokeAudio = new window.WaterSound.Stroke(audio, waterOutput, window.WaterSwipeAsset);
@@ -71,7 +71,7 @@
     if(!audioActive()||!audio||audio.state!=='running')return;
     if(sceneAudio)sceneAudio.select(sceneKind);
     if(weatherAudio)weatherAudio.setLevel(sceneKind==='water'?weather.level:0);
-    if(music)music.select(sceneKind);
+    if(music)music.select('water');
   }
   function resumeAudio(context) {
     if(!audioActive()||context!==audio||context.state==='closed')return;
@@ -381,7 +381,7 @@
     if (kind === sceneKind) return;
     fingers = {}; cursor.style.display = 'none'; accumulator = 0; slowFrames = 0; frameSamples = 0; frameTotal = 0; stopAudio(); sceneKind = kind;
     if(sceneAudio)sceneAudio.select(kind);
-    if(music)music.select(kind);
+    if(music)music.select('water');
     garden.setAttribute('data-scene', kind); garden.classList.remove('touched');
     var titles = { water: '水光', snow: '雪落', cloud: '云间' };
     document.getElementById('scene-title').textContent = titles[kind]; document.title = '片刻 · ' + titles[kind];

@@ -53,7 +53,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
       await page.waitForFunction(()=>WaterGarden.inspect().audioState==='suspended');
       assert.equal((await audible()).voices,0,'hidden scenes release all music voices');
       await page.evaluate(()=>{window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});await waitAudible();
-      assert.equal(await page.evaluate(()=>WaterGarden.inspect().music.voices[0].scene),scene);
+      assert.equal(await page.evaluate(()=>WaterGarden.inspect().music.voices[0].scene),'water');
       reports.push({scenario:scene+' scene music becomes audible again after re-entry',...await audible()});
     }
     await page.locator('#rain').click();await page.waitForFunction(()=>WaterGarden.inspect().rainAudio);
