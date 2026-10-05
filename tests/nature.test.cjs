@@ -2,6 +2,55 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Snow, Clouds } = require('../src/nature-core.js');
 const SceneTransition = require('../src/scene-transition.js');
+const { Fling } = require('../src/nature-core.js');
+const { Settings, local } = require('../src/garden-tuning.js');
+
+test('a fling uses recent world-space travel, stops after a held pause and rejects stale or invalid tuning', () => {
+  const f=new Fling(.2,.5,0,.5);f.sample(.24,.5,.02);f.sample(.28,.5,.04);
+  const v=f.velocity(.05);assert(Math.abs(v[0]-12)<1e-8);assert.equal(v[1],0);
+  assert.deepEqual(f.velocity(.16),[0,0]);assert.deepEqual(f.velocity(.01),[0,0]);
+  f.sample(NaN,0,.17);assert.deepEqual(f.velocity(.17),[0,0]);
+  const settings=new Settings();settings.load('{"friction":99,"inertia":0,"growth":"bad","unknown":8}');
+  assert.equal(settings.values.friction,6);assert.equal(settings.values.inertia,0);assert.equal(settings.values.growth,.075);assert.equal(settings.values.unknown,undefined);
+  settings.load('invalid');settings.reset();assert.equal(settings.values.friction,1.8);
+  for(const host of ['localhost','127.0.0.1','[::1]'])assert(local({hostname:host,protocol:'http:'},false));
+  assert(!local({hostname:'example.com',protocol:'https:'},false));assert(!local({hostname:'localhost.example.com',protocol:'http:'},false));
+  assert(!local({hostname:'',protocol:'file:'},false));assert(!local({hostname:'localhost',protocol:'http:'},true));
+});
+test('a thrown sphere rolls, grows, rotates, leaves snow tracks and comes to a finite stop', () => {
+  const snow=new Snow(),ball=snow.ball(.3,.5,.02),start=ball.u;
+  assert(snow.launch(ball,6,0));const first=ball.vx;
+  for(let i=0;i<20;i++)snow.advance(.02);
+  assert(ball.u>start+.08);assert(ball.radius>.02);assert(ball.vx>0&&ball.vx<first);assert.notDeepEqual(ball.rotation,[0,0,0,1]);assert(snow.inspect().markedCells>0);
+  for(let i=0;i<250;i++)snow.advance(.02);
+  assert.equal(ball.vx,0);assert.equal(ball.vz,0);const stopped=snow.inspect();snow.advance(.08);assert.deepEqual(snow.inspect(),stopped);
+});
+test('inertia tuning changes travel live; slow releases do not launch and grabbing a ball stops it', () => {
+  const values=new Settings().values,snow=new Snow(values),ball=snow.ball(.3,.5,.02);
+  assert.equal(snow.launch(ball,.2,0),false);assert.equal(ball.vx,0);
+  values.inertia=0;assert.equal(snow.launch(ball,10,0),false);
+  values.inertia=2;values.maxSpeed=4;snow.launch(ball,12,0);assert.equal(ball.vx,4);
+  snow.advance(.02,null,b=>b===ball);assert.equal(ball.u,.3);snow.stopBall(ball);assert.equal(ball.vx,0);
+  const distances=[];
+  for(const friction of [.3,6]){values.friction=friction;snow.clear();const b=snow.ball(.3,.5,.02);snow.launch(b,4,0);for(let i=0;i<40;i++)snow.advance(.02);distances.push(b.u-.3);}
+  assert(distances[0]>distances[1]*1.8);
+});
+test('inertial spheres merge with volume and momentum conservation, stay inside the field and stop on reset', () => {
+  const snow=new Snow({growth:0,inertia:1}),a=snow.ball(.3,.5,.04),b=snow.ball(.4,.5,.04),volume=a.radius**3+b.radius**3;
+  snow.launch(a,6,0);for(let i=0;i<40;i++)snow.advance(.02);
+  assert.equal(snow.balls.length,1);assert.equal(b.mergedInto,a);assert(Math.abs(a.radius**3-volume)<1e-12);assert(a.vx<3);
+  snow.clear();const edge=snow.ball(snow.origin+snow.span-.03,.5,.02);snow.launch(edge,10,0);for(let i=0;i<20;i++)snow.advance(.02);
+  assert(edge.u<=snow.origin+snow.span-edge.radius/snow.aspect+1e-8);assert.equal(edge.vx,0);
+  snow.launch(edge,-8,0);snow.stopMotion();assert.equal(edge.vx,0);snow.clear();assert.equal(snow.advance(.02),0);assert.equal(snow.launch(edge,5,0),false);
+});
+test('inertial travel agrees across frame rates and shares world-space contact with the rendered sphere', () => {
+  const positions=[];let supportChecks=0;
+  for(const dt of [1/30,1/60]){const snow=new Snow({growth:0}),ball=snow.ball(.3,.5,.025);snow.launch(ball,5,0);for(let i=0;i<Math.round(.8/dt);i++)snow.advance(dt,b=>{supportChecks++;return snow.ballCenter(b);});positions.push(ball.u);}
+  assert(Math.abs(positions[0]-positions[1])<1e-8);assert.equal(supportChecks,0,'distant spheres avoid unnecessary full terrain contact sampling');
+  const snow=new Snow({growth:0}),a=snow.ball(.3,.5,.04),b=snow.ball(.4,.5,.04);
+  snow.launch(a,6,0);for(let i=0;i<30;i++)snow.advance(.02,ball=>[(ball.u-.5)*12,ball===a?2:.48,(ball.v-.5)*12,ball.radius*12]);
+  assert.equal(snow.balls.length,2,'world-space elevation separates a nearby but lower sphere');
+});
 
 test('scene swaps happen only under an opaque veil and reveal the live destination', () => {
   const t = new SceneTransition('water', false);

@@ -1,0 +1,70 @@
+{
+  "browser": "154.0.4258.53",
+  "reports": [
+    {
+      "scenario": "cached-page re-entry resumes actual music PCM without visibilitychange",
+      "state": "running",
+      "rms": 0.0006517316716251624,
+      "voices": 1,
+      "contexts": 1
+    },
+    {
+      "scenario": "interrupted audio retries on the next gesture after a rejected resume",
+      "state": "running",
+      "rms": 0.0006496221916088342,
+      "voices": 1,
+      "contexts": 1
+    },
+    {
+      "scenario": "rapid exits and returns do not leave a late suspension behind",
+      "state": "running",
+      "rms": 0.002424411479743611,
+      "voices": 1,
+      "contexts": 1
+    },
+    {
+      "scenario": "snow scene music becomes audible again after re-entry",
+      "state": "running",
+      "rms": 0.00017529776861439572,
+      "voices": 1,
+      "contexts": 1
+    },
+    {
+      "scenario": "cloud scene music becomes audible again after re-entry",
+      "state": "running",
+      "rms": 0.0000738612807000939,
+      "voices": 1,
+      "contexts": 1
+    },
+    {
+      "scenario": "water scene music becomes audible again after re-entry",
+      "state": "running",
+      "rms": 0.00024222791484822172,
+      "voices": 1,
+      "contexts": 1
+    },
+    {
+      "scenario": "rain ambience also restores at its selected level",
+      "rainLevel": 1,
+      "state": "running",
+      "rms": 0.0005153373514757007,
+      "voices": 1,
+      "contexts": 1
+    },
+    {
+      "scenario": "a closed native context is rebuilt on the next gesture",
+      "state": "running",
+      "rms": 0.0014304922938556284,
+      "voices": 1,
+      "contexts": 2
+    },
+    {
+      "scenario": "short recorded effects play after rebuilding the audio graph",
+      "state": "running",
+      "rms": 0.0014304922938556284,
+      "voices": 1,
+      "contexts": 2
+    }
+  ],
+  "errors": []
+}

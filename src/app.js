@@ -15,12 +15,25 @@
   var pageInactive = false;
   var hints = { touch: '轻触起涟漪 · 滑动拨水 · 长按蓄波', leaf: '轻放一片叶 · 拨水送它远行', stone: '轻点落石，让涟漪慢慢散开' };
   var sceneKind = 'water', natureCanvas = document.getElementById('nature');
-  var snow = new window.GardenNature.Snow(), clouds = new window.GardenNature.Clouds();
+  var tuning = new window.GardenTuning.Settings(), developer = window.GardenDeveloper.prepare(tuning);
+  var snow = new window.GardenNature.Snow(tuning.values), clouds = new window.GardenNature.Clouds(tuning.values);
   var natureRenderer = new window.NatureRenderer(natureCanvas, snow, clouds);
   var natureModes = { snow: 0 }, natureWeather = { snow: true, cloud: true };
-  var snowHints = ['滑动留痕 · 长按轻压新雪', '轻点留下脚印 · 拖动串起足迹', '滑动雪面，从小滚大 · 松手留下雪球 · 相碰合并'];
+  var snowHints = ['滑动留痕 · 长按轻压新雪', '轻点留下脚印 · 拖动串起足迹', '滑动雪面，从小滚大 · 快速甩动，让雪球滚远'];
   if (window.matchMedia) reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var sceneTransition = new window.SceneTransition(sceneKind, reduced), sceneVeil = document.getElementById('scene-veil');
+  function applyTuning() {
+    sceneTransition.cover = tuning.values.sceneDuration * (reduced ? .10/.84 : 1/3);
+    sceneTransition.reveal = tuning.values.sceneDuration * (reduced ? .16/.84 : 2/3);
+  }
+  applyTuning();
+  if (developer) window.GardenDeveloper.mount(tuning, applyTuning);
+  function inputTime() { return window.performance && window.performance.now ? window.performance.now()/1000 : Date.now()/1000; }
+  function gestureTime(event) {
+    var stamp=event && event.timeStamp;
+    if(typeof stamp!=='number' || !isFinite(stamp) || stamp<=0)return inputTime();
+    return stamp>1e10 ? inputTime()+(stamp-Date.now())/1000 : stamp/1000;
+  }
   function notice(text) {
     var element = document.getElementById('notice'); element.textContent = text; element.classList.add('show');
     clearTimeout(noticeTimer); noticeTimer = setTimeout(function () { element.classList.remove('show'); }, 2400);
@@ -216,11 +229,11 @@
       splash(p.u,p.v,.15,true,true); f.rippleDistance %= 10; f.last = now;
     }
   }
-  function begin(id, x, y) {
+  function begin(id, x, y, time) {
     if (sceneTransition.phase !== 'idle') return;
     var p = point(x, y);
     if(sceneKind==='water'&&!renderer)return;
-    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,true); if(p)beginNature(id, p, x, y); return; }
+    if (sceneKind !== 'water') { if(!natureRenderer.available())return; p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,true); if(p)beginNature(id, p, x, y, time); return; }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
     if (mode!=='stone' && renderer && renderer.terrain.blocks(p.u, p.v)) return;
     if (core.shore(p.u, p.v) >= -.025) { notice('轻触池中的青绿水面'); return; }
@@ -236,7 +249,7 @@
     if (mode === 'leaf') { addLeaf(p.u, p.v); splash(p.u, p.v, .10, true, true); }
     else { splash(p.u, p.v, .32, true, true); }
   }
-  function move(id, x, y) {
+  function move(id, x, y, time) {
     var f = fingers[id]; if (!f) return;
     var p = point(x, y), dx = (p.u - f.u) * width, dy = (p.v - f.v) * height, distance = Math.sqrt(dx * dx + dy * dy);
     if (sceneKind !== 'water') {
@@ -244,22 +257,26 @@
       // Camera picking can move with an animated cloud surface; require actual pointer movement.
       if(Math.hypot(x-f.screenX,y-f.screenY)<1)return;
       p=natureRenderer.surface.point(p.u,p.v,sceneKind,clouds,false);if(!p)return;
-      f.screenX=x;f.screenY=y;distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height);moveNature(f,p,distance);return;
+      f.screenX=x;f.screenY=y;distance=Math.hypot((p.u-f.u)*width,(p.v-f.v)*height);moveNature(f,p,distance,time);return;
     }
     f.travel += distance;
     if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
       fishSchool.scare(p.u,p.v,Math.min(1,.35+distance/65),f.u,f.v);
-      field.stroke(f.u, f.v, p.u, p.v, Math.min(.17, .035 + distance * .002));
+      field.stroke(f.u, f.v, p.u, p.v, Math.min(.17, .035 + distance * .002) * tuning.values.waterStroke);
       if (strokeAudio && distance > .5) strokeAudio.stroke(distance / Math.min(width, height) / Math.max(.016, now - f.movedAt));
       pushLeaves(p.u, p.v, dx / width, dy / height);
       swipeRipple(f, p, distance);
     } else { f.rippleDistance = 0; }
     f.u = p.u; f.v = p.v; f.movedAt = now;
   }
-  function end(id, cancelled) {
+  function end(id, cancelled, time) {
     var f = fingers[id]; if (!f) return;
     if (sceneKind !== 'water') {
+      if (sceneKind === 'snow' && f.ball) {
+        if (!cancelled && f.fling) { var velocity = f.fling.velocity(time===undefined?inputTime():time); snow.launch(f.ball,velocity[0],velocity[1]); }
+        else snow.stopBall(f.ball);
+      }
       delete fingers[id];
       if(rollAudio&&!Object.keys(fingers).some(function(key){return fingers[key].ball||sceneKind==='snow'&&natureModes.snow===0;}))rollAudio.release();
       return;
@@ -283,29 +300,29 @@
     if (window.PointerEvent) {
       surface.addEventListener('pointerdown', function (event) {
         if (event.button !== 0) return;
-        event.preventDefault(); begin(event.pointerId, event.clientX, event.clientY);
+        event.preventDefault(); begin(event.pointerId, event.clientX, event.clientY, gestureTime(event));
         if (surface.setPointerCapture && fingers[event.pointerId]) { try { surface.setPointerCapture(event.pointerId); } catch (error) {} }
       });
       surface.addEventListener('pointermove', function (event) {
-        move(event.pointerId, event.clientX, event.clientY);
+        move(event.pointerId, event.clientX, event.clientY, gestureTime(event));
         if (event.pointerType === 'mouse' && (sceneKind !== 'water' || core.shore(event.clientX / width, event.clientY / height) < -.02)) { cursor.style.display = 'block'; cursor.style.left = event.clientX + 'px'; cursor.style.top = event.clientY + 'px'; } else cursor.style.display = 'none';
       });
-      surface.addEventListener('pointerup', function (event) { end(event.pointerId, false); });
-      surface.addEventListener('pointercancel', function (event) { end(event.pointerId, true); });
+      surface.addEventListener('pointerup', function (event) { end(event.pointerId, false, gestureTime(event)); });
+      surface.addEventListener('pointercancel', function (event) { end(event.pointerId, true, gestureTime(event)); });
       surface.addEventListener('lostpointercapture', function (event) { end(event.pointerId, true); });
       surface.addEventListener('pointerleave', function () { cursor.style.display = 'none'; });
     } else {
-      surface.addEventListener('touchstart', function (event) { event.preventDefault(); for (var i = 0; i < event.changedTouches.length; i++) { var t = event.changedTouches[i]; begin(t.identifier, t.clientX, t.clientY); } }, { passive: false });
-      surface.addEventListener('touchmove', function (event) { event.preventDefault(); for (var i = 0; i < event.changedTouches.length; i++) { var t = event.changedTouches[i]; move(t.identifier, t.clientX, t.clientY); } }, { passive: false });
-      surface.addEventListener('touchend', function (event) { for (var i = 0; i < event.changedTouches.length; i++) end(event.changedTouches[i].identifier, false); });
-      surface.addEventListener('touchcancel', function (event) { for (var i = 0; i < event.changedTouches.length; i++) end(event.changedTouches[i].identifier, true); });
-      surface.addEventListener('mousedown', function (event) { if (event.button === 0) begin('mouse', event.clientX, event.clientY); });
+      surface.addEventListener('touchstart', function (event) { event.preventDefault(); for (var i = 0; i < event.changedTouches.length; i++) { var t = event.changedTouches[i]; begin(t.identifier, t.clientX, t.clientY, gestureTime(event)); } }, { passive: false });
+      surface.addEventListener('touchmove', function (event) { event.preventDefault(); for (var i = 0; i < event.changedTouches.length; i++) { var t = event.changedTouches[i]; move(t.identifier, t.clientX, t.clientY, gestureTime(event)); } }, { passive: false });
+      surface.addEventListener('touchend', function (event) { for (var i = 0; i < event.changedTouches.length; i++) end(event.changedTouches[i].identifier, false, gestureTime(event)); });
+      surface.addEventListener('touchcancel', function (event) { for (var i = 0; i < event.changedTouches.length; i++) end(event.changedTouches[i].identifier, true, gestureTime(event)); });
+      surface.addEventListener('mousedown', function (event) { if (event.button === 0) begin('mouse', event.clientX, event.clientY, gestureTime(event)); });
     }
   }
   bindInteractions(canvas); bindInteractions(fallback); bindInteractions(natureCanvas);
   if (!window.PointerEvent) {
-    window.addEventListener('mousemove', function (event) { move('mouse', event.clientX, event.clientY); });
-    window.addEventListener('mouseup', function () { end('mouse', false); });
+    window.addEventListener('mousemove', function (event) { move('mouse', event.clientX, event.clientY, gestureTime(event)); });
+    window.addEventListener('mouseup', function (event) { end('mouse', false, gestureTime(event)); });
   }
   function keyRipple(event) { if (sceneKind !== 'cloud' && (event.key === ' ' || event.key === 'Enter')) { event.preventDefault(); begin('key', width * .5, height * .49); end('key', false); } }
   canvas.addEventListener('keydown', keyRipple); fallback.addEventListener('keydown', keyRipple);
@@ -366,6 +383,7 @@
   }
   function setScene(kind) {
     if (!sceneTransition.request(kind)) return;
+    snow.stopMotion();
     fingers = {}; cursor.style.display = 'none'; stopAudio();
     sceneVeil.setAttribute('data-light', String(light));
     syncSceneTransition();
@@ -386,7 +404,7 @@
     syncNatureControls();
   });
   function natureRadius() { return Math.min(width, height) / height; }
-  function beginNature(id, p, x, y) {
+  function beginNature(id, p, x, y, time) {
     if (!isFinite(p.u+p.v)) return;
     if(sceneKind==='snow')garden.classList.add('touched');initAudio();
     var f = { u: p.u, v: p.v, born: now, last: now, movedAt: now, travel: 0, spacing: 0, angle: 0 }, selected = natureModes[sceneKind];
@@ -396,13 +414,14 @@
     if(sceneKind==='cloud')f.last=now-.17;
     if (sceneKind === 'snow') {
       var r = natureRadius();
-      if(p.ball)f.ball=p.ball;
-      else if (selected === 0) snow.stamp(p.u, p.v, r * .04, .65);
+      f.fling=new window.GardenNature.Fling(p.u,p.v,time===undefined?inputTime():time,snow.aspect);
+      if(p.ball){f.ball=p.ball;snow.stopBall(f.ball);}
+      else if (selected === 0) snow.stamp(p.u, p.v, r * tuning.values.snowBrush, .65);
       else if (selected === 1) snow.footprint(p.u, p.v, 0, r * .07);
       if(!f.ball&&selected===1)sound(.22, false);
     }
   }
-  function moveNature(f, p, distance) {
+  function moveNature(f, p, distance, time) {
     p.u += f.offsetU; p.v += f.offsetV;
     var selected = natureModes[sceneKind], r = natureRadius();
     if (sceneKind === 'snow') {
@@ -421,7 +440,7 @@
         else {f.rollFinished=true;notice('雪球已经很多了，滚到一起合并后还能继续');}
       }
       else if (selected === 0) {
-        snow.stroke(f.u, f.v, p.u, p.v, r * .04, .65);
+        snow.stroke(f.u, f.v, p.u, p.v, r * tuning.values.snowBrush, .65);
         snowMove=Math.hypot((p.u-f.u)*snow.aspect,p.v-f.v);
       }
       else if (selected === 1 && distance > 0) {
@@ -431,6 +450,7 @@
         for (; next <= actual; next += step) snow.footprint(f.u + (p.u - f.u) * next / actual, f.v + (p.v - f.v) * next / actual, f.angle, r * .07);
         f.spacing = (f.spacing + actual) % step;
       }
+      if(f.ball && snowMove>.00001){snow.stopBall(f.ball);f.fling.sample(f.ball.u,f.ball.v,time===undefined?inputTime():time);}
       if(rollAudio&&snowMove>.00001)rollAudio.stroke(snowMove*12/Math.max(.016,now-f.movedAt));
       f.movedAt=now;
     } else {
@@ -444,13 +464,18 @@
     f.travel += distance; f.u = p.u; f.v = p.v;
   }
   function snowBallPosition(ball){return natureRenderer.surface.ballPosition(ball);}
+  function ballHeld(ball){for(var id in fingers)if(fingers[id].ball===ball)return true;return false;}
   function updateNature(dt) {
-    if(!natureRenderer.available()){fingers={};if(rollAudio)rollAudio.stop();natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
+    if(!natureRenderer.available()){fingers={};snow.stopMotion();if(rollAudio)rollAudio.stop();natureRenderer.draw(sceneKind,light,now,false,reduced);return;}
     for (var id in fingers) {
       var f = fingers[id], selected = natureModes[sceneKind];
-      if (sceneKind === 'snow' && !f.ball && selected === 0 && f.travel < 15 && now - f.born > .3) snow.stamp(f.u, f.v, natureRadius() * .04, Math.min(1, .65 + (now - f.born) * .2));
+      if (sceneKind === 'snow' && !f.ball && selected === 0 && f.travel < 15 && now - f.born > .3) snow.stamp(f.u, f.v, natureRadius() * tuning.values.snowBrush, Math.min(1, .65 + (now - f.born) * .2));
     }
-    if (sceneKind === 'snow') snow.update(dt, natureWeather.snow);
+    if (sceneKind === 'snow') {
+      var rollingSpeed=sceneTransition.phase==='idle'?snow.advance(dt,snowBallPosition,ballHeld):0;
+      if(rollAudio && rollingSpeed>.08)rollAudio.stroke(rollingSpeed);
+      snow.update(dt, natureWeather.snow);
+    }
     else clouds.update(dt, natureWeather.cloud, reduced);
     natureRenderer.draw(sceneKind, light, now, natureWeather[sceneKind], reduced);
   }
@@ -660,14 +685,15 @@
     event.preventDefault(); lostCount++; fallbackOn('3D 水面暂时中断，等待恢复'); fingers = {};
     if (sceneKind === 'water') finishSceneTransition();
   });
-  natureCanvas.addEventListener('webglcontextlost', function () { if (sceneKind !== 'water') { finishSceneTransition(); syncSurfaces(); } });
+  natureCanvas.addEventListener('webglcontextlost', function () { snow.stopMotion(); if (sceneKind !== 'water') { finishSceneTransition(); syncSurfaces(); } });
   canvas.addEventListener('webglcontextrestored', function () {
     if (lostCount > 1) return;
     fallbackMode = false; quality = 'low'; syncSurfaces(); resized = true;
   });
   window.addEventListener('resize', function () { resized = true; });
-  window.addEventListener('blur', function () { fingers = {}; cursor.style.display = 'none'; });
+  window.addEventListener('blur', function () { fingers = {}; snow.stopMotion(); cursor.style.display = 'none'; });
   function pauseExperience() {
+    snow.stopMotion();
     finishSceneTransition();
     cancelAnimationFrame(frameId);frameId=0;fingers={};clearTimeout(noticeTimer);document.getElementById('notice').classList.remove('show');
     stopAudio(true);if(music)music.stop();if(audio)suspendAudio(audio);
@@ -685,6 +711,7 @@
   window.addEventListener('focus',function(){if(!document.hidden){pageInactive=false;returnExperience();}});
   // Read-only diagnostics keep browser verification independent from the rendering implementation.
   window.WaterGarden = { inspect: function () { return {
+    developer: developer, tuning: Object.assign({},tuning.values),
     sceneTransition: sceneTransition.inspect(),
     fishTime: fishSchool.clock, fish: fishSchool.items.map(function(f){return {u:f.u,v:f.v,y:f.y,angle:f.angle,fear:f.fear,speed:f.speed,swim:f.swim,flowX:f.flowX,flowZ:f.flowZ};}), fishTriangles: fishSchool.vertices.length/33,
     ready: !!field,

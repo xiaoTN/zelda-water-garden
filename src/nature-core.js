@@ -7,7 +7,22 @@
   'use strict';
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
   function random(seed) { return function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
-  function Snow() {
+  function setting(values,key,fallback){return typeof values[key]==='number'?values[key]:fallback;}
+  function Fling(u,v,time,aspect){this.samples=[];this.aspect=aspect;this.sample(u,v,time);}
+  Fling.prototype.sample=function(u,v,time){
+    if(!isFinite(u+v+time))return;
+    this.samples.push({x:u*12*this.aspect,z:v*12,time:time});
+    while(this.samples.length>2 && (this.samples.length>12 || time-this.samples[1].time>.12))this.samples.shift();
+  };
+  Fling.prototype.velocity=function(time){
+    var samples=this.samples;if(samples.length<2)return [0,0];
+    var last=samples[samples.length-1],first=samples[0];
+    if(time-last.time>.10 || time<last.time)return [0,0];
+    var dt=Math.max(.008,Math.min(.12,last.time-first.time));
+    return [(last.x-first.x)/dt,(last.z-first.z)/dt];
+  };
+  function Snow(tuning) {
+    this.tuning=tuning||{};this.motionOrder=new Array(12);
     this.size = 640; this.origin = -.6; this.span = 2; this.depth = new Float32Array(this.size * this.size);
     this.filtered=new Float32Array(this.depth.length);this.filterWork=new Float32Array(this.depth.length);this.filterRevision=-1;this.active=false;
     this.balls = []; this.ballLimit = 12; this.revision = 0; this.foot = 0; this.aspect = 1;
@@ -105,7 +120,7 @@
   Snow.prototype.ball = function (u, v, radius) {
     if(!isFinite(u+v+radius)||radius<0)return null;
     if (this.balls.length >= this.ballLimit) return null;
-    var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1] }; this.balls.push(item); return item;
+    var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1], vx:0, vz:0 }; this.balls.push(item); return item;
   };
   Snow.prototype.ballCenter = function (ball, position) {
     return position ? position(ball) : [(ball.u-.5)*12*this.aspect,ball.radius*12,(ball.v-.5)*12,ball.radius*12];
@@ -123,7 +138,9 @@
         var at=this.ballCenter(other,position),t=length>1e-16?clamp(((at[0]-start[0])*dx+(at[1]-start[1])*dy+(at[2]-start[2])*dz)/length,0,1):0;
         var separation=Math.hypot(start[0]+dx*t-at[0],start[1]+dy*t-at[1],start[2]+dz*t-at[2]);
         if(separation>center[3]+at[3]+1e-8)continue;
-        ball.radius=Math.cbrt(ball.radius*ball.radius*ball.radius+other.radius*other.radius*other.radius);
+        var mass=ball.radius*ball.radius*ball.radius,otherMass=other.radius*other.radius*other.radius,total=mass+otherMass;
+        if(total>0){ball.vx=(ball.vx*mass+other.vx*otherMass)/total;ball.vz=(ball.vz*mass+other.vz*otherMass)/total;}
+        ball.radius=Math.cbrt(total);
         other.mergedInto=ball;this.balls.splice(i,1);merged=true;break;
       }
     }
@@ -137,7 +154,7 @@
     for(var i=1;i<=steps;i++){
       var x=clamp(startU+(u-startU)*i/steps,this.origin+ball.radius/this.aspect,this.origin+this.span-ball.radius/this.aspect);
       var y=clamp(startV+(v-startV)*i/steps,this.origin+ball.radius,this.origin+this.span-ball.radius);
-      var dx=(x-ball.u)*this.aspect,dz=y-ball.v,travel=Math.hypot(dx,dz),nextRadius=Math.max(ball.radius,Math.min(maxRadius,ball.radius+travel*.075)),near=false;
+      var dx=(x-ball.u)*this.aspect,dz=y-ball.v,travel=Math.hypot(dx,dz),nextRadius=Math.max(ball.radius,Math.min(maxRadius,ball.radius+travel*setting(this.tuning,'growth',.075))),near=false;
       // Distant spheres cannot touch. Avoid recomputing the filtered terrain
       // between brush steps unless a world-space contact is actually possible.
       for(var j=0;j<this.balls.length;j++){
@@ -156,9 +173,48 @@
     }
     return ball;
   };
+  Snow.prototype.stopBall=function(ball){if(ball){ball.vx=0;ball.vz=0;}};
+  Snow.prototype.stopMotion=function(){for(var i=0;i<this.balls.length;i++)this.stopBall(this.balls[i]);};
+  Snow.prototype.launch=function(ball,vx,vz){
+    if(this.balls.indexOf(ball)<0 || ball.radius<=0 || !isFinite(vx+vz))return false;
+    this.stopBall(ball);
+    var speed=Math.hypot(vx,vz),gain=setting(this.tuning,'inertia',1.15);
+    if(speed<setting(this.tuning,'throwThreshold',1.2)||gain<=0)return false;
+    var level=Math.min(speed*gain,setting(this.tuning,'maxSpeed',10))/Math.max(speed,1e-8);
+    ball.vx=vx*level;ball.vz=vz*level;return true;
+  };
+  Snow.prototype.advance=function(dt,position,held){
+    if(!isFinite(dt)||dt<=0)return 0;
+    var duration=Math.min(dt,.08),steps=Math.ceil(duration/.02),h=duration/steps,peak=0;
+    var count=this.balls.length;
+    for(var n=0;n<count;n++)this.motionOrder[n]=this.balls[n];
+    for(n=0;n<count;n++){
+      var ball=this.motionOrder[n];this.motionOrder[n]=null;
+      if(this.balls.indexOf(ball)<0 || held && held(ball))continue;
+      var travelled=0;
+      for(var i=0;i<steps;i++){
+        var speed=Math.hypot(ball.vx,ball.vz),limit=setting(this.tuning,'maxSpeed',10);
+        if(speed>limit){ball.vx*=limit/speed;ball.vz*=limit/speed;speed=limit;}
+        if(speed<.08){this.stopBall(ball);break;}
+        // Exact constant-friction plus drag integration keeps throw distance stable across frame rates.
+        var drag=.85,friction=setting(this.tuning,'friction',1.8),stop=Math.log(1+speed*drag/friction)/drag,t=Math.min(h,stop);
+        var decay=Math.exp(-drag*t),distance=(speed+friction/drag)*(1-decay)/drag-friction/drag*t;
+        var x=ball.u+ball.vx/speed*distance/(12*this.aspect),z=ball.v+ball.vz/speed*distance/12;
+        var oldU=ball.u,oldV=ball.v;
+        var endSpeed=Math.max(0,(speed+friction/drag)*decay-friction/drag);
+        ball.vx*=endSpeed/speed;ball.vz*=endSpeed/speed;
+        this.roll(ball,x,z,position);
+        travelled+=Math.hypot((ball.u-oldU)*12*this.aspect,(ball.v-oldV)*12);
+        if(Math.abs(ball.u-x)>1e-7)ball.vx=0;
+        if(Math.abs(ball.v-z)>1e-7)ball.vz=0;
+      }
+      peak=Math.max(peak,travelled/duration);
+    }
+    return peak;
+  };
   Snow.prototype.update = function (dt, falling) {
     if (!falling) return;
-    var changed = false, amount = dt * .044;
+    var changed = false, amount = dt * .044 * setting(this.tuning,'snowfall',1);
     for (var i = 0; i < this.depth.length; i++) {
       var d = this.depth[i];
       if (d !== 0) { this.depth[i] = d > 0 ? Math.max(0, d - amount) : Math.min(0, d + amount); changed = true; }
@@ -169,9 +225,9 @@
     var cells = 0, depth = 0, raised = 0, raisedCells = 0;
     for(var j=0;j<this.depth.length;j++)if(this.depth[j]<0){raised-=this.depth[j];if(this.depth[j]<-.01)raisedCells++;}
     for (var i = 0; i < this.depth.length; i++) if (this.depth[i] > .01) { cells++; depth += this.depth[i]; }
-    return { markedCells: cells, depth: depth, raised: raised, raisedCells: raisedCells, footprints: this.foot, balls: this.balls.map(function (b) { return { u: b.u, v: b.v, radius: b.radius, rotation: b.rotation.slice() }; }) };
+    return { markedCells: cells, depth: depth, raised: raised, raisedCells: raisedCells, footprints: this.foot, balls: this.balls.map(function (b) { return { u: b.u, v: b.v, radius: b.radius, rotation: b.rotation.slice(), vx:b.vx, vz:b.vz, speed:Math.hypot(b.vx,b.vz) }; }) };
   };
-  function Clouds() { this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.field.soft = true; this.transport=new Float32Array(this.field.depth.length); this.currents=new Float32Array(this.field.size); this.pushX=new Float32Array(this.field.depth.length); this.pushY=new Float32Array(this.field.depth.length); this.drift = 0; this.clear(); }
+  function Clouds(tuning) { this.tuning=tuning||{};this.aspect = 1; this.items = []; this.time = 0; this.field = new Snow(); this.field.soft = true; this.transport=new Float32Array(this.field.depth.length); this.currents=new Float32Array(this.field.size); this.pushX=new Float32Array(this.field.depth.length); this.pushY=new Float32Array(this.field.depth.length); this.drift = 0; this.clear(); }
   Clouds.prototype.clear = function () {
     this.items.length = 0; this.time = 0; this.field.clear(); this.drift = 0; this.driftY = 0; this.flowX = 0; this.flowY = 0;
     this.pushX.fill(0); this.pushY.fill(0); this.pushActive=false;
@@ -183,10 +239,10 @@
   };
   Clouds.prototype.touch = function (u, v, mode, dx, dy, dt, speed) {
     if(mode!=='part'||!Number.isFinite(u)||!Number.isFinite(v)||!Number.isFinite(dt)||dt<=0)return;
-    var scale=Math.min(this.aspect,1),radius=scale*.18;
+    var scale=Math.min(this.aspect,1),radius=scale*setting(this.tuning,'cloudHalo',.18);
     this.field.aspect = this.aspect;
     var rush=clamp((speed===undefined?Math.hypot(dx*this.aspect,dy)/Math.max(.008,dt):speed)/.65,0,1);
-    this.field.stamp(u, v, scale*.065, .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)));
+    this.field.stamp(u, v, scale*setting(this.tuning,'cloudBrush',.065), .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)));
     // Move the continuous cloud material sideways across a wider, feathered halo.
     // Positive depth only thins it; lateral displacement never piles up a snow bank.
     var field=this.field,n=field.size,origin=field.origin,span=field.span;
@@ -196,7 +252,7 @@
     for(var gy=y0;gy<=y1;gy++)for(var gx=x0;gx<=x1;gx++){
       var px=((gx+.5)/n*span+origin-u)*this.aspect,py=(gy+.5)/n*span+origin-v;
       var r2=(px*px+py*py)/(radius*radius);if(r2>=1)continue;
-      var k=gy*n+gx,feather=Math.pow(1-r2,2),travel=scale*.055*2.6*feather/radius;
+      var k=gy*n+gx,feather=Math.pow(1-r2,2),travel=scale*.055*setting(this.tuning,'cloudPush',2.6)*feather/radius;
       this.pushX[k]+=(px*travel-this.pushX[k])*rate;
       this.pushY[k]+=(py*travel-this.pushY[k])*rate;
     }
@@ -258,7 +314,7 @@
       if(y<n-1){b=d[k+n];if(a!==0||b!==0){velocity=-turn*this.currents[x];flux=(a-b)*diffusion+velocity*(velocity>0?a:b);out[k]-=flux;out[k+n]+=flux;}}
     }
     // Deep fresh gaps close quickly; the remaining wisps settle more slowly.
-    var decay=Math.exp(-dt*(.30+1.7*peak));
+    var decay=Math.exp(-dt*(.30+1.7*peak)*setting(this.tuning,'cloudRecovery',1));
     for(k=0;k<d.length;k++)d[k]=clamp(out[k],0,1)*decay;
     if(peak*decay<1e-5){d.fill(0);field.active=false;}
     field.revision++;
@@ -268,5 +324,5 @@
     for (var i = 0; i < this.items.length; i++) { var p = this.items[i]; speed += Math.hypot(p.vx, p.vy); opacity += p.opacity; spread += Math.hypot((p.u - .5) * this.aspect, p.v - .5); }
     return { count: this.items.length, opacity: opacity, motion: speed, spread: spread, time: this.time };
   };
-  return { Snow: Snow, Clouds: Clouds, random: random };
+  return { Snow: Snow, Clouds: Clouds, Fling:Fling, random: random };
 }));

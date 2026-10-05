@@ -16,6 +16,8 @@ async function run() {
       await page.evaluate(()=>{const original=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.testSurface3D=this;return original.apply(this,arguments);};});
       const state = () => page.evaluate(() => NatureGarden.inspect());
       const select = async kind => { await page.locator('button[data-scene="' + kind + '"]').click(); await page.waitForFunction(kind => NatureGarden.inspect().scene === kind && WaterGarden.inspect().sceneTransition.phase === 'idle', kind); };
+      // These geometry fixtures need stationary spheres; fling behavior has its own browser check.
+      const releaseStationary = async () => { await page.waitForTimeout(140); await page.mouse.up(); };
       assert.equal(await page.locator('#view-3d').count(),0,'the camera toggle is removed from the page');
       const copyChecks = [];
       const checkCopy = async kind => {
@@ -55,10 +57,10 @@ async function run() {
       await page.touchscreen.tap(x,y);assert.equal((await state()).snow.balls.length,0,'ground taps never create balls');
       await page.mouse.move(x-viewport.width*.14,y-viewport.height*.10);await page.mouse.down();
       assert.equal((await state()).snow.balls.length,0,'pointer down waits for travel');
-      await page.mouse.move(x+viewport.width*.07,y-viewport.height*.10,{steps:18});await page.mouse.up();
+      await page.mouse.move(x+viewport.width*.07,y-viewport.height*.10,{steps:18});await releaseStationary();
       assert.equal((await state()).snow.balls.length,1);assert((await state()).snow.balls[0].radius>0);
       await page.mouse.move(x-viewport.width*.16,y+viewport.height*.12);await page.mouse.down();
-      await page.mouse.move(x+viewport.width*.10,y+viewport.height*.12,{steps:18});await page.mouse.up();
+      await page.mouse.move(x+viewport.width*.10,y+viewport.height*.12,{steps:18});await releaseStationary();
       assert.equal((await state()).snow.balls.length,2,'a fresh stroke leaves a second ball');
       await ballButton.click();assert.equal((await state()).snow.balls.length,2,'reselecting the mode keeps every ball');
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snow-multiple.png')});
@@ -69,7 +71,7 @@ async function run() {
       await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollAudio),false,'holding a stationary snowball stays silent');
       await page.mouse.move(ballPoint.x+60,ballPoint.y+30,{steps:12});
       const rolling=await page.evaluate(()=>WaterGarden.inspect());assert(rolling.rollAudio&&rolling.rollSpeed>0);
-      await page.mouse.up();s=await state();assert.equal(s.snow.balls.length,2);assert(s.snow.balls[0].radius>radius);
+      await releaseStationary();s=await state();assert.equal(s.snow.balls.length,2);assert(s.snow.balls[0].radius>radius);
       await page.waitForFunction(()=>!WaterGarden.inspect().rollAudio);
       const paused=await page.evaluate(()=>WaterGarden.inspect().rollPosition);assert(paused>0);
       await page.waitForTimeout(120);assert.equal(await page.evaluate(()=>WaterGarden.inspect().rollPosition),paused,'silence keeps the saved phase');
@@ -116,7 +118,7 @@ async function run() {
         return {from:{x:screen.u*innerWidth,y:screen.v*innerHeight},to:{x:target.u*innerWidth,y:target.v*innerHeight},volume:a.radius**3+b.radius**3,max:Math.max(a.radius,b.radius)};
       });
       await page.mouse.move(merging.from.x,merging.from.y);await page.mouse.down();
-      await page.mouse.move(merging.to.x,merging.to.y,{steps:24});await page.mouse.up();s=await state();
+      await page.mouse.move(merging.to.x,merging.to.y,{steps:24});await releaseStationary();s=await state();
       assert.equal(s.snow.balls.length,1,'touching balls merge through actual 3D picking');
       assert(s.snow.balls[0].radius>merging.max&&s.snow.balls[0].radius**3>=merging.volume);
       if(viewport.width===390)await page.screenshot({path:path.join(out,'snow-merged.png')});
