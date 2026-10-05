@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-05",
+  "tool": "Built-in image_gen",
+  "input": "01-water-snow-interactive.png",
+  "output": "01-interactive-space.png",
+  "original": "C:/Users/1/.codex/generated_images/01a105ba-e5b2-7cc0-8bcf-20506c93ce0a/exec-a03e2262-7e91-4dd1-98f3-ea48284d8766.png",
+  "text": [
+    "片刻",
+    "可自由交互",
+    "的空间"
+  ],
+  "prompt": "Use case: text-localization. Edit the supplied existing approved portrait cover, ONLY change its lettering. Preserve the image background, composition, 3:4 proportions, ripples, leaves, fish, shoreline stones, lower snow/balls/trails, feathered transition and all lighting exactly. Keep top small brand 「— 片刻 —」. User now explicitly requests the copy simply mean \"a freely interactive space\", with no mentions of water or snow. Replace old headline 自由拨动 / 这片水面 with the EXACT new headline in two balanced lines: first line 「可自由交互」, second line 「的空间」. Together these lines read 「可自由交互的空间」. The first line has FIVE characters 可 自 由 交 互; second line THREE characters 的 空 间. Use the same conspicuous large warm-ivory Kai calligraphic lettering with full confident strokes. Fit first line neatly in the existing center-right typography area, second line equally visually balanced and centered below it. Keep bright ripple center at left unobscured. Completely REMOVE the old subtitle 「轻点起涟漪 · 滑动拨水」 and restore the underlying plain water image. Do not replace the subtitle with any other copy. The ONLY text in final image is the top brand and this headline. No 水, 雪, 涟漪, 拨水, 水面模拟器 or 一池 text, no stickers or extra labels, no people, hands or logos. Maintain elegant tranquil poetic mood, premium legible cover at thumbnail size. All typography generated integrally in the image. One complete edited cover, no before/after collage.",
+  "validation": "Visually checked exact headline 可自由交互的空间; removed previous subtitle and all water/snow wording; kept conspicuous ivory calligraphy and existing water/snow cover composition. No programmatic typography. Promotional asset only; runtime and ZIP unchanged.",
+  "dimensions": [
+    1086,
+    1448
+  ],
+  "bytes": 1840267,
+  "sha256": "92aa9fac387932ec93ff92d6271d49db7ac68da6aaf612ccba3ed7adffd4a287"
+}
