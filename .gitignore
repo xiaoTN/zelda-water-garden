@@ -1,7 +1,13 @@
+# Dependencies and generated release bundles keep their required locations.
 node_modules/
 dist/
 artifacts/
+# Put disposable scripts, logs, extracted frames and experiment outputs here.
 tmp/
+# Interpreter caches are generated beside Python source when it is imported.
+__pycache__/
+*.pyc
+*.pyo
 .env
 .env.*
 *.log

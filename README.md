@@ -51,6 +51,8 @@ npm run build
 
 默认预览地址为 `http://127.0.0.1:8772`。`PORT` 环境变量可更改端口。
 
+临时脚本、一次性产物和完整日志统一放在已忽略的 `tmp/`；素材、正式脚本及关键验证记录继续提交。具体分类见 [仓库文件归档](docs/git-file-policy.md)。
+
 交付代码为 Chrome 61 / ES2017 基线的经典脚本，运行时不请求网络。开发构建依赖固定版本的 Cannon-es 与 esbuild，`npm run build` 自动重新打包物理引擎，也可单独运行 `npm run physics`。浏览器验证使用环境已有的 Playwright 与 Edge；可用 `CODEX_NODE_MODULES`、`BROWSER_CHANNEL` 指定验证运行时。
 
 上传包：`artifacts/zelda-water-garden-minitool-v1.12.0.zip`。`src/` 的 30 个静态文件进入 ZIP，入口位于包根。v1.12.0 合并从零滚出多个雪球、碰撞合并和水声阈值 0.01 的调整，保留场景背景音乐、雪声录音与落石固定修复。踩碎雪球及碎雪堆积已回退。见 [合并验证说明](docs/merge-main-2026-10-05/validation.md) 与 [滚雪球改版说明](docs/release-v1.12.0.md)。水声分支同版本的发布记录归档在 `docs/water-ripple-history/`。v1.11.24 将落稳的石头固定为静态碰撞体，全部落稳后跳过物理步进，见 [落石固定说明](docs/release-v1.11.24.md)。v1.11.23 为划雪和滚雪球接入前 10 秒录音，处理循环接缝、淡入淡出并保留暂停进度，见 [循环雪声说明](docs/release-v1.11.23.md)。v1.11.22 移除视角按钮和切换逻辑，固定雪地、云海的相机角度，见 [固定视角说明](docs/release-v1.11.22.md)。v1.11.21 将界面统一为「片刻」的唯美自然文案，见 [文案改版说明](docs/release-v1.11.21.md)。v1.11.20 修复云层滑动时的堆高边缘，见 `docs/release-v1.11.20.md`。v1.11.19 移除云海工具栏，仅保留滑动交互，见 `docs/release-v1.11.19.md`。v1.11.18 为场景切换增加双向声音淡入淡出，见 `docs/release-v1.11.18.md`。v1.11.17 移除雪地树木，见 `docs/release-v1.11.17.md`。v1.11.16 移除声音开关，首次操作自动播放默认开启的声音，见 `docs/release-v1.11.16.md`。v1.11.15 增加随实际水波强弱变化、松手后持续的荡漾录音，见 `docs/release-v1.11.15.md`。v1.11.14 接入用户指定的石头入水录音，见 `docs/release-v1.11.14.md`。v1.11.13 合并雪地、云层场景与本地雨势连续过渡、录音和长声音淡入淡出，保留冰霜移除，见 `docs/release-v1.11.13.md`。降雨与音频改动见 `docs/release-v1.9.6.md` 至 `docs/release-v1.9.13.md`；雪地、云层改动见 `docs/release-v1.10.0.md` 至 `docs/release-v1.11.12.md`。锦鲤发布记录与证据保存在 `docs/fish-history/`，Blender 制作源文件在 `assets-source/fish/`。

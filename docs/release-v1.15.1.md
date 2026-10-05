@@ -13,6 +13,6 @@
 
 报告在 `evidence-v1.15.1/`，构建与浏览器日志在本地 `tmp/shared-music-*.log`。验证使用 Edge 154 软件 WebGL，未在小红书真机容器实测；本次没有改变几何或渲染。
 
-离线包：`artifacts/zelda-water-garden-minitool-v1.15.1.zip`，1,239,681 字节、32 项。SHA-256：`bfc9f0655ae81d1f08449f5dd08828c443da5ef428530eda87ec1c3e4372691e`。
+离线包：`artifacts/zelda-water-garden-minitool-v1.15.1.zip`，1,239,681 字节、32 项。2026-10-05 仓库归档复核时重新构建，SHA-256：`dd8a67705e4c9756d6f271a0b680e9ad885ef88493d1ad518bbc914a94d26aeb`。
 
-已有手机标题间距和宣传资源保留在工作区，未纳入本次提交；离线包使用工作区样式。
+本版本音乐提交未包含已有手机标题间距和宣传资源，离线包使用工作区样式；后续仓库归档将这些长期素材、源码修改及验证记录一并纳入 Git，见 [仓库文件归档](git-file-policy.md)。

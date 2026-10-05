@@ -1,0 +1,34 @@
+[
+  {
+    "file": "icon-water-clay.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "valid": true
+  },
+  {
+    "file": "icon-water-glass.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "valid": true
+  },
+  {
+    "file": "icon-water-minimal.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "valid": true
+  },
+  {
+    "file": "icon-water-watercolor.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "valid": true
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "file": "icon-water-leaf.png",
+    "width": 1254,
+    "height": 1254,
+    "title": "片刻·水光",
+    "description": "拨水听雨，在雪落与云间放松。",
+    "characters_including_punctuation": 14
+  },
+  {
+    "file": "icon-snow-rest.png",
+    "width": 1254,
+    "height": 1254,
+    "title": "留一点宁静",
+    "description": "拨水、划雪、拨云，留一点宁静。",
+    "characters_including_punctuation": 15
+  },
+  {
+    "file": "icon-cloud-water.png",
+    "width": 1254,
+    "height": 1254,
+    "title": "云水之间",
+    "description": "指尖掠过水光，让心事随云散去。",
+    "characters_including_punctuation": 15
+  }
+]

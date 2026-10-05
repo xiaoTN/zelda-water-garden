@@ -76,7 +76,7 @@ h1 span { color: #b9b17c; }
 @media (hover: hover) { .toolbar button:hover { background: rgba(181,211,172,.15); } .toolbar .selected:hover { background: #ded9ad; } .light-button:hover { background: rgba(73,101,71,.5); } }
 @media (min-width: 1000px) { .topbar { padding: 36px 54px 0; padding-top: calc(36px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); } .bottom { padding-bottom: 29px; padding-bottom: calc(29px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); } .toolbar button { width: 73px; } }
 @media (max-width: 600px) {
-  .topbar { padding: 25px 21px 0; padding-top: calc(25px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); padding-left: calc(21px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); padding-right: calc(21px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); }
+  .topbar { padding: 37px 21px 0; padding-top: calc(37px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); padding-left: calc(21px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); padding-right: calc(21px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); }
   h1 { font-size: 19px; letter-spacing: 2px; }
   .emblem { width: 29px; height: 37px; margin-right: 9px; }
   .brand p { font-size: 6px; letter-spacing: 2.5px; }
