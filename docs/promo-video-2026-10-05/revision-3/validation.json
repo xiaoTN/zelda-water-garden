@@ -1,0 +1,131 @@
+{
+  "duration_seconds": 52.0,
+  "dimensions": [
+    1080,
+    1440
+  ],
+  "fps": 30,
+  "bytes": 17063907,
+  "primary_durations_seconds": {
+    "calm": 4.0,
+    "touch": 4.0,
+    "swipe": 8.0,
+    "stone": 6.0,
+    "leaf": 5.0,
+    "rain": 8.0,
+    "snow": 4.5,
+    "cloud": 4.5
+  },
+  "ending_hold_pixel_difference": 0.0,
+  "video_codec": "h264",
+  "audio_codec": "aac",
+  "sample_rate": "48000",
+  "checked_frames": [
+    10,
+    69,
+    114,
+    130,
+    189,
+    234,
+    250,
+    369,
+    474,
+    490,
+    579,
+    654,
+    670,
+    744,
+    804,
+    820,
+    939,
+    1044,
+    1060,
+    1126,
+    1179,
+    1195,
+    1261,
+    1314,
+    1330,
+    1440,
+    1536
+  ],
+  "motion": {
+    "calm": {
+      "mean_half_second_pixel_change": 2.559,
+      "min": 1.608
+    },
+    "touch": {
+      "mean_half_second_pixel_change": 2.916,
+      "min": 2.16
+    },
+    "swipe": {
+      "mean_half_second_pixel_change": 7.444,
+      "min": 2.782
+    },
+    "stone": {
+      "mean_half_second_pixel_change": 10.37,
+      "min": 5.658
+    },
+    "leaf": {
+      "mean_half_second_pixel_change": 2.573,
+      "min": 2.132
+    },
+    "rain": {
+      "mean_half_second_pixel_change": 7.856,
+      "min": 3.103
+    },
+    "snow": {
+      "mean_half_second_pixel_change": 4.131,
+      "min": 1.737
+    },
+    "cloud": {
+      "mean_half_second_pixel_change": 5.938,
+      "min": 3.422
+    },
+    "end": {
+      "intent": "Three real screenshots hold after a gentle entrance; no water-interaction video."
+    }
+  },
+  "peak_dbfs": -6.31,
+  "rms_dbfs": -24.99,
+  "audio_sync_probes": [
+    {
+      "at_seconds": 10,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.99997
+    },
+    {
+      "at_seconds": 19,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.99996
+    },
+    {
+      "at_seconds": 30,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.99997
+    },
+    {
+      "at_seconds": 37,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.99998
+    },
+    {
+      "at_seconds": 42,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.99999
+    },
+    {
+      "at_seconds": 47,
+      "lag_samples": 0,
+      "lag_frames": 0.0,
+      "correlation": 0.99999
+    }
+  ],
+  "bottom_safe_area": "y >= 1090 remains flat; no essential content below y=1081",
+  "all_checks_passed": true
+}

@@ -1,0 +1,53 @@
+{
+  "source": "assets-source/audio/water-music.mp3, 44-52 seconds, -12 dB, 0.6-second fade-in, 2.4-second fade-out",
+  "independent_source_vs_final_probes": [
+    {
+      "seconds": 44.8,
+      "lag_samples": 0,
+      "correlation": 0.999966561794281
+    },
+    {
+      "seconds": 47,
+      "lag_samples": 0,
+      "correlation": 0.9999856948852539
+    },
+    {
+      "seconds": 49.8,
+      "lag_samples": 0,
+      "correlation": 0.9999759197235107
+    },
+    {
+      "seconds": 51.5,
+      "lag_samples": 0,
+      "correlation": 0.999905526638031
+    }
+  ],
+  "final_tail_levels": [
+    {
+      "range_seconds": [
+        49.5,
+        49.6
+      ],
+      "rms_dbfs": -28.422855377197266,
+      "peak_dbfs": -19.582847595214844
+    },
+    {
+      "range_seconds": [
+        51,
+        51.1
+      ],
+      "rms_dbfs": -30.52672576904297,
+      "peak_dbfs": -21.37040138244629
+    },
+    {
+      "range_seconds": [
+        51.9,
+        52
+      ],
+      "rms_dbfs": -63.320396423339844,
+      "peak_dbfs": -50.14825439453125
+    }
+  ],
+  "last_sample_absolute": 3.6247156458557583e-06,
+  "final_samples_per_channel": 2496000
+}
