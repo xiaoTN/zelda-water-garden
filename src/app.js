@@ -459,7 +459,7 @@
         else {f.ball=null;f.rollFinished=true;}
       }
       else if(selected===2&&!f.rollFinished&&f.travel+distance>=3){
-        f.ball=snow.ball(f.u,f.v,0);
+        f.ball=snow.startBall(f.u,f.v);
         if(f.ball){
           if(snow.roll(f.ball,p.u,p.v,snowBallPosition))snowMove=Math.hypot((f.ball.u-f.u)*snow.aspect,f.ball.v-f.v);
           else {f.ball=null;f.rollFinished=true;}

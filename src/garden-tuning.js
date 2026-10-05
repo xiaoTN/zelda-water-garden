@@ -13,6 +13,7 @@
     {key:'throwThreshold', group:'雪球', label:'甩动触发速度', value:3.8, min:.3, max:5, step:.1},
     {key:'maxSpeed', group:'雪球', label:'最高滚动速度', value:10, min:2, max:16, step:.5},
     {key:'growth', group:'雪球', label:'雪球生长速度', value:.035, min:0, max:.15, step:.005},
+    {key:'initialRadius', group:'雪球', label:'初始半径', value:.025, min:.01, max:.05, step:.001},
     {key:'snowBrush', group:'雪地', label:'划雪范围', value:.04, min:.02, max:.09, step:.005},
     {key:'snowfall', group:'雪地', label:'飘雪回填速度', value:1, min:0, max:3, step:.1},
     {key:'waterStroke', group:'水与云', label:'拨水力度', value:1, min:.25, max:2, step:.05},

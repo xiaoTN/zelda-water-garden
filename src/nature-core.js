@@ -122,6 +122,10 @@
     if (this.balls.length >= this.ballLimit) return null;
     var item = { u: u, v: v, radius: radius, turn: 0, rotation: [0,0,0,1], vx:0, vz:0 }; this.balls.push(item); return item;
   };
+  Snow.prototype.startBall = function(u,v){
+    var radius=clamp(setting(this.tuning,'initialRadius',.025),.01,.05)*Math.min(this.aspect,1);
+    return this.ball(u,v,radius);
+  };
   Snow.prototype.ballCenter = function (ball, position) {
     return position ? position(ball) : [(ball.u-.5)*12*this.aspect,ball.radius*12,(ball.v-.5)*12,ball.radius*12];
   };
@@ -163,7 +167,7 @@
         if(Math.hypot(bx-dx*t,bz-dz*t)<=nextRadius+other.radius+1e-8){near=true;break;}
       }
       var from=near?this.ballCenter(ball,position):null;
-      // A fresh gesture starts at radius zero; actual travel gathers its first snow.
+      // Actual rolling travel gathers more snow onto the visible starting sphere.
       ball.radius=nextRadius;
       if(ball.radius>0){
         this.stroke(ball.u,ball.v,x,y,Math.max(.002,ball.radius*.65),.65);

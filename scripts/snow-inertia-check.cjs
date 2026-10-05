@@ -13,9 +13,11 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
       assert(await page.locator('#developer-panel').isVisible());assert.equal(await page.locator('.dev-toggle').getAttribute('aria-expanded'),'false');
       await page.locator('.dev-toggle').click();
       await page.locator('#tuning-friction').fill('3');await page.locator('#tuning-friction').dispatchEvent('input');await page.locator('#tuning-friction').dispatchEvent('change');
+      await page.locator('#tuning-initialRadius').fill('0.03');await page.locator('#tuning-initialRadius').dispatchEvent('input');await page.locator('#tuning-initialRadius').dispatchEvent('change');
       assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.friction),3);
       await page.locator('.dev-toggle').click();await page.reload();await page.waitForFunction(()=>window.WaterGarden);
       assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.friction),3,'local settings survive reload');
+      assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.initialRadius),.03,'initial size survives reload');
       await page.evaluate(()=>{const draw=NatureSurface.prototype.draw;NatureSurface.prototype.draw=function(){window.inertiaSurface=this;return draw.apply(this,arguments);};});
       await page.locator('button[data-scene="snow"]').click();await page.waitForFunction(()=>WaterGarden.inspect().sceneTransition.phase==='idle');
       await page.waitForFunction(()=>WaterGarden.inspect().rollReady&&window.inertiaSurface);
@@ -28,6 +30,7 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
         send('pointerdown',x);for(let i=1;i<=6;i++){await new Promise(resolve=>setTimeout(resolve,25));send('pointermove',x+i*8);}await new Promise(resolve=>setTimeout(resolve,140));send('pointerup',x+48);
       });
       let state=await page.evaluate(()=>NatureGarden.inspect());assert.equal(state.snow.balls.length,1);assert.equal(state.snow.balls[0].speed,0);
+      assert(state.snow.balls[0].radius>=.03*Math.min(inertiaAspect(page.viewportSize()),1),'new rolling gestures use the live initial radius');
       const release=await page.evaluate(async()=>{
         const c=document.getElementById('nature'),b=inertiaSurface.snow.balls[0],p=inertiaSurface.camera.project(inertiaSurface.ballPosition(b)),x=p.u*innerWidth,y=p.v*innerHeight;
         function send(type,dx){c.dispatchEvent(new PointerEvent(type,{bubbles:true,button:0,buttons:type==='pointerup'?0:1,pointerId:882,clientX:x+dx,clientY:y}));}
@@ -51,7 +54,7 @@ const out=path.join(__dirname,'../docs/evidence-v'+require('../package.json').ve
       await page.locator('.dev-toggle').click();
       await page.getByRole('button',{name:'查看参数',exact:true}).click();assert(/"inertia"/.test(await page.locator('.dev-json').inputValue()));
       await page.getByRole('button',{name:'恢复默认',exact:true}).click();assert.equal(await page.evaluate(()=>WaterGarden.inspect().tuning.friction),4.6);
-      const defaults=await page.evaluate(()=>WaterGarden.inspect().tuning);assert.equal(defaults.boatSize,.6);assert.equal(defaults.throwThreshold,3.8);assert.equal(defaults.growth,.035);
+      const defaults=await page.evaluate(()=>WaterGarden.inspect().tuning);assert.equal(defaults.boatSize,.6);assert.equal(defaults.throwThreshold,3.8);assert.equal(defaults.growth,.035);assert.equal(defaults.initialRadius,.025);
       await page.screenshot({path:path.join(out,'developer-panel-'+(low?'wide':'portrait')+'.png')});
       reports.push({quality:await page.evaluate(()=>WaterGarden.inspect().quality),released:release.ball,coast,distance,grabSpeed:grab.snow.balls[0].speed,persistentPanel:true,defaults});
       await context.close();

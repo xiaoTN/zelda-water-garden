@@ -168,12 +168,22 @@ test('multiple snowballs stay in the shared geometry budget and reset clears the
   snow.footprint(.5, .5, 0, .04); assert.equal(snow.inspect().footprints, 1);
   snow.clear(); assert.equal(snow.inspect().footprints, 0);assert.equal(snow.balls.length,0);
 });
-test('fresh snowballs start from zero and grow only with finite rolling travel',()=>{
-  const snow=new Snow(),ball=snow.ball(.3,.5,0);assert.equal(ball.radius,0);
-  snow.roll(ball,.3,.5);assert.equal(ball.radius,0);assert.deepEqual(ball.rotation,[0,0,0,1]);
-  snow.roll(ball,.6,.5);assert(Math.abs(ball.radius-.0105)<1e-12);assert(ball.rotation.every(Number.isFinite));
+test('fresh snowballs have a visible seed radius and grow only with finite rolling travel',()=>{
+  const snow=new Snow(),ball=snow.startBall(.3,.5);assert.equal(ball.radius,.025);
+  snow.roll(ball,.3,.5);assert.equal(ball.radius,.025);assert.deepEqual(ball.rotation,[0,0,0,1]);
+  snow.roll(ball,.6,.5);assert(Math.abs(ball.radius-.0355)<1e-12);assert(ball.rotation.every(Number.isFinite));
   assert(Math.abs(Math.hypot(...ball.rotation)-1)<1e-12);assert(snow.inspect().markedCells>0);
   const before=snow.inspect();snow.roll(ball,NaN,0);assert.deepEqual(snow.inspect(),before);
+});
+test('initial snowball size scales with the viewport and tuning affects only future balls',()=>{
+  const settings=new Settings();settings.values.growth=0;
+  for(const aspect of [.462,1,2.16]){
+    const snow=new Snow(settings.values);snow.aspect=aspect;settings.set('initialRadius',.025);
+    const first=snow.startBall(.3,.5);assert.equal(first.radius,.025*Math.min(aspect,1));
+    settings.set('initialRadius',.04);const second=snow.startBall(.7,.5);assert.equal(second.radius,.04*Math.min(aspect,1));
+    snow.roll(first,.35,.5);assert.equal(first.radius,.025*Math.min(aspect,1),'zero growth preserves a visible existing ball');
+    assert.equal(settings.values.growth,0);settings.set('initialRadius',0);assert.equal(snow.startBall(.5,.8).radius,.01*Math.min(aspect,1));
+  }
 });
 test('touching sphere meshes merge by summed volume, including chain collisions',()=>{
   const snow=new Snow(),a=snow.ball(.3,.5,.02),b=snow.ball(.345,.5,.03),c=snow.ball(.385,.5,.02);
