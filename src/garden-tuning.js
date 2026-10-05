@@ -17,11 +17,11 @@
     {key:'snowBrush', group:'雪地', label:'划雪范围', value:.04, min:.02, max:.09, step:.005},
     {key:'snowfall', group:'雪地', label:'飘雪回填速度', value:1, min:0, max:3, step:.1},
     {key:'waterStroke', group:'水与云', label:'拨水力度', value:1, min:.25, max:2, step:.05},
-    {key:'cloudBrush', group:'水与云', label:'拨云范围', value:.065, min:.03, max:.10, step:.005},
-    {key:'cloudHalo', group:'水与云', label:'云层羽化范围', value:.18, min:.12, max:.30, step:.01},
-    {key:'cloudPush', group:'水与云', label:'推云力度', value:2.6, min:0, max:5, step:.1},
-    {key:'cloudRecovery', group:'水与云', label:'云隙恢复速度', value:1, min:.3, max:3, step:.1},
-    {key:'sceneDuration', group:'场景', label:'切换时长（秒）', value:.84, min:.3, max:1.8, step:.06}
+    {key:'cloudBrush', group:'水与云', label:'拨云范围', value:.045, min:.03, max:.10, step:.005},
+    {key:'cloudHalo', group:'水与云', label:'云层羽化范围', value:.12, min:.12, max:.30, step:.01},
+    {key:'cloudPush', group:'水与云', label:'推云力度', value:1.7, min:0, max:5, step:.1},
+    {key:'cloudRecovery', group:'水与云', label:'云隙恢复速度', value:1.4, min:.3, max:3, step:.1},
+    {key:'sceneDuration', group:'场景', label:'切换时长（秒）', value:.66, min:.3, max:1.8, step:.06}
   ];
   function Settings() { this.values = {}; this.reset(); }
   Settings.prototype.set = function (key, value) {

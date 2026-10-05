@@ -1,0 +1,172 @@
+{
+  "browser": "154.0.4258.53",
+  "errors": [],
+  "reports": [
+    {
+      "quality": "normal",
+      "scenario": "selected defaults and panel reset",
+      "tuning": {
+        "boatInertia": 1.1,
+        "boatFriction": 1.25,
+        "boatThrowThreshold": 0.15,
+        "boatMaxSpeed": 1.5,
+        "boatSize": 0.6,
+        "boatRocking": 0.7,
+        "boatFlow": 1,
+        "inertia": 1.15,
+        "friction": 4.6,
+        "throwThreshold": 3.8,
+        "maxSpeed": 10,
+        "growth": 0.035,
+        "initialRadius": 0.01,
+        "snowBrush": 0.04,
+        "snowfall": 1,
+        "waterStroke": 1,
+        "cloudBrush": 0.045,
+        "cloudHalo": 0.12,
+        "cloudPush": 1.7,
+        "cloudRecovery": 1.4,
+        "sceneDuration": 0.66
+      },
+      "result": "passed"
+    },
+    {
+      "quality": "normal",
+      "from": "water",
+      "to": "snow",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "normal",
+      "from": "snow",
+      "to": "cloud",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "normal",
+      "from": "cloud",
+      "to": "water",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "normal",
+      "from": "water",
+      "to": "cloud",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "normal",
+      "from": "cloud",
+      "to": "snow",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "normal",
+      "from": "snow",
+      "to": "water",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "normal",
+      "scenario": "retarget, page return, resize, real context loss/recovery and picking",
+      "result": "passed"
+    },
+    {
+      "quality": "low",
+      "scenario": "selected defaults and panel reset",
+      "tuning": {
+        "boatInertia": 1.1,
+        "boatFriction": 1.25,
+        "boatThrowThreshold": 0.15,
+        "boatMaxSpeed": 1.5,
+        "boatSize": 0.6,
+        "boatRocking": 0.7,
+        "boatFlow": 1,
+        "inertia": 1.15,
+        "friction": 4.6,
+        "throwThreshold": 3.8,
+        "maxSpeed": 10,
+        "growth": 0.035,
+        "initialRadius": 0.01,
+        "snowBrush": 0.04,
+        "snowfall": 1,
+        "waterStroke": 1,
+        "cloudBrush": 0.045,
+        "cloudHalo": 0.12,
+        "cloudPush": 1.7,
+        "cloudRecovery": 1.4,
+        "sceneDuration": 0.66
+      },
+      "result": "passed"
+    },
+    {
+      "quality": "low",
+      "from": "water",
+      "to": "snow",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "low",
+      "from": "snow",
+      "to": "cloud",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "low",
+      "from": "cloud",
+      "to": "water",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "low",
+      "from": "water",
+      "to": "cloud",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "low",
+      "from": "cloud",
+      "to": "snow",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "low",
+      "from": "snow",
+      "to": "water",
+      "cover": 0.43200601728024046,
+      "midpoint": 1,
+      "reveal": 0.4999999965909092
+    },
+    {
+      "quality": "low",
+      "scenario": "retarget, page return, resize, real context loss/recovery and picking",
+      "result": "passed"
+    },
+    {
+      "scenario": "reduced motion uses a shorter opacity-only transition",
+      "result": "passed"
+    }
+  ]
+}

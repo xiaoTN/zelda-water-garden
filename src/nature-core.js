@@ -243,10 +243,10 @@
   };
   Clouds.prototype.touch = function (u, v, mode, dx, dy, dt, speed) {
     if(mode!=='part'||!Number.isFinite(u)||!Number.isFinite(v)||!Number.isFinite(dt)||dt<=0)return;
-    var scale=Math.min(this.aspect,1),radius=scale*setting(this.tuning,'cloudHalo',.18);
+    var scale=Math.min(this.aspect,1),radius=scale*setting(this.tuning,'cloudHalo',.12);
     this.field.aspect = this.aspect;
     var rush=clamp((speed===undefined?Math.hypot(dx*this.aspect,dy)/Math.max(.008,dt):speed)/.65,0,1);
-    this.field.stamp(u, v, scale*setting(this.tuning,'cloudBrush',.065), .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)));
+    this.field.stamp(u, v, scale*setting(this.tuning,'cloudBrush',.045), .9+.1*rush,0,1,false,1-Math.exp(-dt*(9+65*rush)));
     // Move the continuous cloud material sideways across a wider, feathered halo.
     // Positive depth only thins it; lateral displacement never piles up a snow bank.
     var field=this.field,n=field.size,origin=field.origin,span=field.span;
@@ -256,7 +256,7 @@
     for(var gy=y0;gy<=y1;gy++)for(var gx=x0;gx<=x1;gx++){
       var px=((gx+.5)/n*span+origin-u)*this.aspect,py=(gy+.5)/n*span+origin-v;
       var r2=(px*px+py*py)/(radius*radius);if(r2>=1)continue;
-      var k=gy*n+gx,feather=Math.pow(1-r2,2),travel=scale*.055*setting(this.tuning,'cloudPush',2.6)*feather/radius;
+      var k=gy*n+gx,feather=Math.pow(1-r2,2),travel=scale*.055*setting(this.tuning,'cloudPush',1.7)*feather/radius;
       this.pushX[k]+=(px*travel-this.pushX[k])*rate;
       this.pushY[k]+=(py*travel-this.pushY[k])*rate;
     }
@@ -318,7 +318,7 @@
       if(y<n-1){b=d[k+n];if(a!==0||b!==0){velocity=-turn*this.currents[x];flux=(a-b)*diffusion+velocity*(velocity>0?a:b);out[k]-=flux;out[k+n]+=flux;}}
     }
     // Deep fresh gaps close quickly; the remaining wisps settle more slowly.
-    var decay=Math.exp(-dt*(.30+1.7*peak)*setting(this.tuning,'cloudRecovery',1));
+    var decay=Math.exp(-dt*(.30+1.7*peak)*setting(this.tuning,'cloudRecovery',1.4));
     for(k=0;k<d.length;k++)d[k]=clamp(out[k],0,1)*decay;
     if(peak*decay<1e-5){d.fill(0);field.active=false;}
     field.revision++;

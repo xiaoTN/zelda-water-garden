@@ -228,16 +228,16 @@ test('cloud gathering is unsupported and cannot create raised material', () => {
 
 test('cloud thinning uses a broad feather while the wider halo pushes sideways without carving', () => {
   const cloud=new Clouds();cloud.touch(.5,.5,'part',0,0,.01);
-  const field=cloud.field,reach=.065;
+  const field=cloud.field,reach=.045;
   for(let y=0;y<field.size;y++)for(let x=0;x<field.size;x++){
     if(field.depth[y*field.size+x]!==0)assert(Math.hypot(field.origin+x/field.size*field.span-.5,field.origin+y/field.size*field.span-.5)<=reach+1e-6);
   }
   const at=v=>field.depth[field.index(.5,v)];
-  assert(at(.5)>at(.53)&&at(.53)>at(.55)&&at(.55)>at(.56));
-  assert(at(.54)>0);assert.equal(at(.58),0);
+  assert(at(.5)>at(.51)&&at(.51)>at(.52)&&at(.52)>at(.53));
+  assert(at(.53)>0);assert.equal(at(.55),0);
   assert(cloud.offset(.5,.59)[1]>0,'the outer cloud moves even beyond the opening');
-  assert(Math.hypot(...cloud.offset(.5,.675))<Math.hypot(...cloud.offset(.5,.65))*.1,'the outer edge feathers to rest');
-  assert.deepEqual(cloud.offset(.5,.69),[0,0]);
+  assert(Math.hypot(...cloud.offset(.5,.615))<Math.hypot(...cloud.offset(.5,.59))*.1,'the outer edge feathers to rest');
+  assert.deepEqual(cloud.offset(.5,.64),[0,0]);
   assert(field.depth.every(v=>v>=0));
 });
 test('continuous cloud displacement pushes radially, is isotropic, bounded and recovers after release',()=>{

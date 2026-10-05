@@ -52,7 +52,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'docs/evidence-v'+req
         const s=displacementSurface,c=s.clouds;c.clear();s.resize(s.canvas.width,s.canvas.height,lowTier);
         const center=s.point(.5,.5,'cloud',c,false),scale=Math.min(c.aspect,1),samples=[];
         for(let i=0;i<12;i++){
-          const angle=i*Math.PI/6,u=center.u+Math.cos(angle)*scale*.10/c.aspect,v=center.v+Math.sin(angle)*scale*.10;
+          const radius=(c.tuning.cloudBrush+c.tuning.cloudHalo)/2;
+          const angle=i*Math.PI/6,u=center.u+Math.cos(angle)*scale*radius/c.aspect,v=center.v+Math.sin(angle)*scale*radius;
           const x=(u-.5)*12*s.aspect,z=(v-.5)*12;samples.push({u,v,x,z,before:s.height(x,z,'cloud',c.field,c)});
         }
         for(let i=0;i<16;i++)c.touch(center.u,center.v,'part',.01,0,.016,.8);
