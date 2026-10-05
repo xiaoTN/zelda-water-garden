@@ -22,5 +22,21 @@
       1448
     ],
     "sha256": "5d1f3b88eaf84051aba45d0e2c4d2b5050c2bb698584ac7da978f969cc86472f"
+  },
+  {
+    "file": "01-water-ripples-serene.png",
+    "size": [
+      1086,
+      1448
+    ],
+    "sha256": "39b218521792aeaf0ee1954a4c6e136994b4bb78d67b5af83a967dd70aa865de"
+  },
+  {
+    "file": "01-water-snow-serene.png",
+    "size": [
+      1086,
+      1448
+    ],
+    "sha256": "0fd9e8716ad7b95e8c1634226c7687fa07832a6c3adc8b1d8a8149e6d2840001"
   }
 ]

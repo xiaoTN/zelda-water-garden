@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-05",
+  "tool": "Built-in image_gen",
+  "sources": [
+    "01-water-ripples-serene.png",
+    "scripts/promo-video/public/stills/snow.jpg"
+  ],
+  "output": "01-water-snow-serene.png",
+  "text": [
+    "片刻",
+    "水光轻漾",
+    "心归宁静"
+  ],
+  "prompt": "Use case: precise compositing edit for a Xiaohongshu game video cover. Input1 is the approved existing cover and the edit target. Input2 is an authentic snow gameplay screenshot to composite into it. User now asks: show SNOW in the BOTTOM ONE THIRD of the cover, smoothly blending with water, WATER still clearly the primary scene. Keep approved cover headline exactly unchanged: 「水光轻漾」 and 「心归宁静」 in the same warm-cream Kai calligraphy, same size, position and spacing; keep small top 「— 片刻 —」. Do not add or change any text. Maintain portrait 3:4 dimensions. Keep the top roughly 2/3 of input1: turquoise pond, bright circular stone ripple at upper-left, leaves, fish, shoreline, existing soft light and composition. Transition around 63%-73% of image height using a very soft natural feathered atmospheric blend from turquoise water into the pale blue-white snow of image2. The bottom third is recognizably the actual snow game: soft snow surface with tracks and one or two small round snowballs matching input2. Crop snow screenshot appropriately, no tree, no new objects; keep important snow features above the lowest 8% edge. Remove all cursor marks, controls, button text and instructions from the snow screenshot. The blend must look refined and calm, NOT a hard horizontal split, not a framed picture, not three cards, no decorative divider, no excessive fog hiding the scenes. Preserve the original cover's exact water ripple as hero; don't turn all water to ice or change top pond layout. Water majority, snow supporting lower region. Snow lightness should naturally grade into the pond's teal shadows around the transition. No clouds, no new branding, no subtitle, no 水面模拟器, no 一池. Final output ONE complete edited cover.",
+  "generation": "Generated images are saved to C:\\Users\\1\\.codex\\generated_images\\01a105ba-e5b2-7cc0-8bcf-20506c93ce0a as C:\\Users\\1\\.codex\\generated_images\\01a105ba-e5b2-7cc0-8bcf-20506c93ce0a\\exec-4e36ea74-82d3-40da-9b6e-d97f0d694091.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "validation": "Visually checked unchanged headline, prominent water and rings in upper two thirds, snowballs/trails in bottom third, feathered transition, no toolbar/cursor. User's new snow placement supersedes earlier bottom empty-space preference for this cover."
+}

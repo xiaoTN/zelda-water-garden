@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-05",
+  "tool": "Built-in image_gen",
+  "source": "01-water-ripples.png",
+  "output": "01-water-ripples-serene.png",
+  "text": [
+    "片刻",
+    "水光轻漾",
+    "心归宁静"
+  ],
+  "removed": [
+    "一池",
+    "水面模拟器"
+  ],
+  "prompt": "Use case: text-localization / minimal typography edit. Edit this approved water-game video cover ONLY in its lettering. The latest user explicitly wants the copy to feel poetic, beautiful and TRANQUIL. Final exact text must be: small brand at top 「— 片刻 —」, first main line 「水光轻漾」, second main line 「心归宁静」. The two headline lines are exactly four Chinese characters each. Use the same warm cream, elegant soft Kai calligraphy, similar font size, existing right-side main headline placement. Completely remove the original subtitle 「水面模拟器」 and restore plain water underneath. Completely replace 「指尖落下」 and 「一池温柔」 with the two new lines. No extra words, punctuation, badges or subtitle. Invariants: preserve image aspect ratio and composition exactly: full-bleed turquoise pond, original large concentric ripple circles at upper-left around the same stone, low-poly green stone shoreline, fish and floating leaves and vegetation in their original positions, same shading and water colors, generous calm empty bottom. The circular ripples must stay clear and beautiful. Do not repaint, relocate, invent or remove any scene object. Do not add snow, clouds, people, hands, logos, devices or new effects. It is a subtle copy update to the user's approved first cover.",
+  "generation": "Generated images are saved to C:\\Users\\1\\.codex\\generated_images\\01a105ba-e5b2-7cc0-8bcf-20506c93ce0a as C:\\Users\\1\\.codex\\generated_images\\01a105ba-e5b2-7cc0-8bcf-20506c93ce0a\\exec-9824d721-c09f-416f-91a1-b09dfe72ee20.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "validation": "Visually checked exact Chinese copy, removed subtitle, retained prominent rings, portrait composition and clear lower area. Promotional asset only; game runtime unchanged."
+}
