@@ -2,84 +2,24 @@
   'use strict';
   var core = root.WaterCore;
   function elevation(u,v) {
-    var d=core.shore(u,v);
-    return d<0 ? Math.max(-.22,d*.85) : Math.min(.075,d*.30);
+    // A level submerged bed has no rim and lets resting stones stay at rest.
+    return -.22;
   }
   function create(aspect,low) {
-    var ground=[],stones=[],shadows=[],rocks=[],random=core.seededRandom(92841),unit=Math.min(aspect,1);
-    function triangle(out,a,b,c,color) {
+    var ground=[],cells=low?48:80;
+    function point(u,v){return [(u-.5)*aspect*2,elevation(u,v),(v-.5)*2/.8660254,u,v];}
+    function triangle(a,b,c){
       var ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
       var nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,len=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
-      if(ny<0&&out===ground){nx=-nx;ny=-ny;nz=-nz;}
-      [a,b,c].forEach(function(p){out.push(p[0],p[1],p[2],p[3],p[4],nx/len,ny/len,nz/len,color[0],color[1],color[2]);});
+      [a,b,c].forEach(function(p){ground.push(p[0],p[1],p[2],p[3],p[4],nx/len,ny/len,nz/len,1,1,1);});
     }
-    function groundPoint(u,v){return [(u-.5)*aspect*2,elevation(u,v),(v-.5)*2/.8660254,u,v];}
-    var cells=low?48:80;
-    for(var y=0;y<cells;y++)for(var x=0;x<cells;x++) {
-      // Extend beyond the viewport so the elevated bank cannot expose the background.
-      var u=x/cells*1.12-.06,v=y/cells*1.12-.06,s=1.12/cells;
-      var a=groundPoint(u,v),b=groundPoint(u+s,v),c=groundPoint(u,v+s),d=groundPoint(u+s,v+s);
-      triangle(ground,a,c,b,[1,1,1]);triangle(ground,b,c,d,[1,1,1]);
+    for(var y=0;y<cells;y++)for(var x=0;x<cells;x++){
+      // The tilted camera projects the bed downward; cover that offset off screen.
+      var u=x/cells*1.16-.08,v=y/cells*1.16-.08,step=1.16/cells;
+      var a=point(u,v),b=point(u+step,v),c=point(u,v+step),d=point(u+step,v+step);
+      triangle(a,c,b);triangle(b,c,d);
     }
-    function rock(u,v,radius,tall,submerged) {
-      var start=stones.length/11,cx=(u-.5)*aspect*2,cz=(v-.5)*2/.8660254;
-      var base=elevation(u,v)-radius*.35,h=radius*tall,rotation=random()*6.28,n=7,lower=[],upper=[];
-      var tint=.84+random()*.2,color=[.46*tint,.52*tint,.40*tint];
-      for(var k=0;k<n;k++) {
-        var a=rotation+k/n*Math.PI*2,r=radius*(.85+random()*.28),px=Math.cos(a)*r,pz=Math.sin(a)*r*.85;
-        lower.push([cx+px,base,cz+pz,u,v]);
-        upper.push([cx+px*.72,base+h*(.68+random()*.18),cz+pz*.72,u,v]);
-      }
-      var top=[cx-radius*.12,base+h,cz-radius*.08,u,v];
-      for(k=0;k<n;k++) {
-        var next=(k+1)%n;
-        triangle(stones,lower[k],upper[k],lower[next],color);
-        triangle(stones,lower[next],upper[k],upper[next],color);
-        triangle(stones,upper[k],top,upper[next],color);
-      }
-      rocks.push({u:u,v:v,radius:radius,base:base,top:base+h,start:start,count:stones.length/11-start,submerged:submerged});
-      for(k=0;k<12;k++) {
-        var disk=[];
-        for(var j=0;j<3;j++) {
-          var angle=(k+j-1)/12*Math.PI*2,ox=j?Math.cos(angle)*radius*1.45:0,oz=j?Math.sin(angle)*radius*1.25:0;
-          disk.push([cx+ox,elevation(u+ox/(aspect*2),v+oz*.4330127)+.004,cz+oz,j ? .5+Math.cos(angle)*.5 : .5,j ? .5+Math.sin(angle)*.5 : .5]);
-        }
-        triangle(shadows,disk[0],disk[1],disk[2],[1,1,1]);
-      }
-    }
-    for(var i=0;i<112;i++) {
-      var a=i/112*Math.PI*2+(random()-.5)*.065;
-      var edge=1+.048*Math.sin(a*5+.7)+.024*Math.sin(a*9-.5)+.04*Math.cos(a*3);
-      var r=edge+.008+random()*.12;
-      rock(.5+Math.cos(a)*.465*r,.49+Math.sin(a)*.35*r,(.016+random()*.045)*unit,1.15+random()*.65,false);
-    }
-    // Larger shoreline stones deliberately cross the water plane, exposing wet feet and dry tops.
-    for(i=0;i<8;i++) {
-      a=i/8*Math.PI*2+.36;edge=1+.048*Math.sin(a*5+.7)+.024*Math.sin(a*9-.5)+.04*Math.cos(a*3);
-      rock(.5+Math.cos(a)*.465*(edge-.025),.49+Math.sin(a)*.35*(edge-.025),(.055+random()*.02)*unit,1.65/Math.sqrt(unit),false);
-    }
-    for(i=0;i<24;i++) {
-      a=random()*6.28;r=.74+random()*.11;
-      rock(.5+Math.cos(a)*.465*r,.49+Math.sin(a)*.35*r,(.014+random()*.016)*unit,.85,true);
-    }
-    var stoneData=new Float32Array(stones);
-    // Projected triangles let pointer interaction respect visible dry rock surfaces.
-    function blocks(u,v) {
-      for(var i=0;i<rocks.length;i++) {
-        var rock=rocks[i];if(rock.top<=0)continue;
-        if(Math.abs(u-rock.u)>rock.radius/aspect||Math.abs(v-rock.v)>rock.radius+rock.top*.25)continue;
-        for(var at=rock.start*11;at<(rock.start+rock.count)*11;at+=33) {
-          var ax=stoneData[at]/(2*aspect)+.5,ay=.5+stoneData[at+2]*.4330127-stoneData[at+1]*.25;
-          var bx=stoneData[at+11]/(2*aspect)+.5,by=.5+stoneData[at+13]*.4330127-stoneData[at+12]*.25;
-          var cx=stoneData[at+22]/(2*aspect)+.5,cy=.5+stoneData[at+24]*.4330127-stoneData[at+23]*.25;
-          var det=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);if(Math.abs(det)<1e-10)continue;
-          var wa=((by-cy)*(u-cx)+(cx-bx)*(v-cy))/det,wb=((cy-ay)*(u-cx)+(ax-cx)*(v-cy))/det,wc=1-wa-wb;
-          if(wa>=0&&wb>=0&&wc>=0&&wa*stoneData[at+1]+wb*stoneData[at+12]+wc*stoneData[at+23]>.004)return true;
-        }
-      }
-      return false;
-    }
-    return {ground:new Float32Array(ground),stones:stoneData,shadows:new Float32Array(shadows),rocks:rocks,blocks:blocks};
+    return {ground:new Float32Array(ground),stones:new Float32Array(0),shadows:new Float32Array(0),rocks:[],blocks:function(){return false;}};
   }
   // Rasterize the same 3D triangles from above. Heights describe real geometry, not a shore-color proxy.
   function bathymetry(mesh,aspect,low) {

@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { WaveField, shore, bufferSize, waterMesh, updateMesh, seededRandom } = require('../src/water-core.js');
 const terrain = require('../src/terrain.js');
+const obstacleFixture = require('./helpers/water-obstacles.cjs');
 const {System: FallingStones,limit:stoneLimit}=require('../src/falling-stones.js');
 const {System: Weather,project:projectRain}=require('../src/weather.js');
 const {System:PaperBoats,triangles:boatTriangles,limit:boatLimit}=require('../src/paper-boats.js');
@@ -127,9 +128,9 @@ test('wave-driven paper boat drift is consistent across frame rates and real rip
   for(let i=0;i<100;i++){field.step();boats.update(1/60,i/60,true);moved=Math.max(moved,Math.hypot(b.u-.54,b.v-.49));}
   assert(moved>.0001,'actual wave propagation displaces a resting boat without any finger impulse');
 });
-test('boat footprint avoids banks, other boats and rocks during dragging and resize',()=>{
+test('boat footprint stays on screen and avoids other boats and rocks during dragging and resize',()=>{
   const boats=new PaperBoats();boats.attach(.462,null,()=>false);
-  assert.equal(boats.add(.06,.49),null);const first=boats.add(.4,.49);assert(first);assert.equal(boats.add(.4,.49),null);
+  assert.equal(boats.add(0,.49),null);const first=boats.add(.4,.49);assert(first);assert.equal(boats.add(.4,.49),null);
   const second=boats.add(.7,.49);assert(second);
   boats.drag(first,.8,.49);assert(first.u<second.u);assert(boats.clearAt(first.u,first.v,first.angle,first));
   boats.launch(second,1,0);boats.attach(1,null,()=>false);assert.equal(second.vx,0);assert.equal(boats.items.length,2);
@@ -825,12 +826,12 @@ test('same-point moving stones collide and roll apart, then stay fixed under lat
 test('random stone sizes, capacity and cancellation are bounded',()=>{
   const stones=new FallingStones();stones.attach(1,{heightAt:()=>-.22});
   const small=stones.add(.35,.45,()=>0),large=stones.add(.7,.55,()=>.99);assert(large.radius>small.radius*2);
-  assert(stones.add(.35,.45));assert.equal(stones.add(0,0),false);
+  assert(stones.add(.35,.45));assert.equal(stones.add(-.001,0),false);
   stones.clear();let events=0;stones.add(.5,.49);stones.update(.08);stones.clear();for(let i=0;i<100;i++)stones.update(.04,()=>events++);assert.equal(events,0);
   for(const v of [.28,.48,.68])for(const u of [.2,.4,.6,.8])stones.add(u,v,()=>0);
   assert.equal(stones.items.length,stoneLimit);
   const existing=stones.items.slice(),bodyCount=stones.world.bodies.length;
-  assert.equal(stones.add(0,0),false);assert.deepEqual(stones.items,existing,'invalid targets must not remove a stone');
+  assert.equal(stones.add(-.001,0),false);assert.deepEqual(stones.items,existing,'invalid targets must not remove a stone');
   for(let i=0;i<stoneLimit+2;i++){
     const oldest=stones.items[0],next=stones.items[1],added=stones.add(.5,.49,()=>.3);
     assert(added);assert.equal(stones.items.length,stoneLimit);assert.equal(stones.items[0],next);
@@ -875,8 +876,8 @@ test('fixed physics steps agree across frame rates and ten overlapping drops sta
   const bodyCount=s.world.bodies.length;s.clear();assert.equal(s.world.bodies.length,bodyCount-stoneLimit);
 });
 
-test('small rocks and shore contacts dissipate rolling motion and become fixed',()=>{
-  for(const [aspect,seed] of [[.462,11],[1.5,7]]){
+test('small rocks dissipate rolling motion on the open bed in portrait and wide viewports',()=>{
+  for(const [aspect,seed] of [[.462,11],[1.5,7],[844/390,1]]){
     const s=new FallingStones(),scene=terrain.create(aspect,true),random=seededRandom(seed*713);
     s.attach(aspect,terrain.bathymetry(scene,aspect,true),scene);s.add(.5,.49,random);
     for(let i=0;i<1200;i++)s.update(1/120);
@@ -932,7 +933,8 @@ test('displayed underwater depth reconstructs diagonal edges without large stair
 });
 
 test('bathymetry comes from stone triangles and blocks waves at dry footprints', () => {
-  const mesh=terrain.create(.8,false),bed=terrain.bathymetry(mesh,.8,false),field=new WaveField(128,160,.8);
+  const mesh=terrain.create(.8,false);mesh.stones=obstacleFixture(.8);
+  const bed=terrain.bathymetry(mesh,.8,false),field=new WaveField(128,160,.8);
   field.setBathymetry(bed);
   let raisedWet=0,blocked=0;
   for(let y=0;y<bed.height;y++)for(let x=0;x<bed.width;x++) {
@@ -978,24 +980,20 @@ test('shallower water propagates waves more slowly', () => {
   assert(arrival(.025)>arrival(.16)*1.4);
 });
 
-test('3D terrain has submerged bed, dry bank and faceted shoreline rocks', () => {
-  assert(terrain.elevation(.5,.49)<-.1);assert(terrain.elevation(.05,.1)>0);
-  for(const aspect of [.38,1,2.2]) {
-    const mesh=terrain.create(aspect,false),low=terrain.create(aspect,true);
-    assert(low.ground.length<mesh.ground.length);
-    assert((mesh.ground.length+mesh.stones.length+mesh.shadows.length)/33+32768<100000);
-    assert(mesh.rocks.filter(r=>r.base<0&&r.top>.025).length>=8,'shore stones cross the water plane');
-    assert(mesh.rocks.filter(r=>r.submerged&&r.top<0).length>=20);
-    for(const data of [mesh.ground,mesh.stones,mesh.shadows]) {
-      assert.equal(data.length%33,0);
-      for(let i=0;i<data.length;i+=11) {
-        assert(Array.from(data.subarray(i,i+11)).every(Number.isFinite));
-        assert(Math.abs(Math.hypot(data[i+5],data[i+6],data[i+7])-1)<1e-5);
-      }
+test('open-water terrain stays submerged across the viewport with bounded geometry', () => {
+  for(const aspect of [.38,1,2.2])for(const low of [false,true]){
+    const mesh=terrain.create(aspect,low),bed=terrain.bathymetry(mesh,aspect,low);
+    assert.equal(mesh.rocks.length,0);assert.equal(mesh.stones.length,0);assert.equal(mesh.shadows.length,0);
+    assert(mesh.ground.length/33+(low?8192:32768)<(low?50000:100000));
+    for(let i=0;i<mesh.ground.length;i+=11){
+      assert(Array.from(mesh.ground.subarray(i,i+11)).every(Number.isFinite));
+      assert(mesh.ground[i+1]<-.20);
+      assert(Math.abs(Math.hypot(mesh.ground[i+5],mesh.ground[i+6],mesh.ground[i+7])-1)<1e-5);
     }
-    const rock=mesh.rocks[112];
-    assert(mesh.blocks(rock.u-rock.radius*.12/(2*aspect),rock.v-rock.radius*.08*.4330127-rock.top*.25),'dry rock top blocks water input');
-    assert.equal(mesh.blocks(.5,.49),false);
+    for(const u of [0,.001,.5,.999,1])for(const v of [0,.001,.5,.999,1]){
+      assert(bed.heightAt(u,v)<-.20);assert.equal(mesh.blocks(u,v),false);
+      assert.equal(bed.distanceAt(u,v),.25);
+    }
   }
 });
 
@@ -1022,11 +1020,16 @@ test('mesh receives touch and rain heights, and reset clears displacement', () =
   field.clear();updateMesh(mesh,field);assert(mesh.dynamics.every(value=>value===0));
 });
 
-test('a calm pool remains calm; shoreline rejects land touches', () => {
+test('all screen edges accept waves and rain while invalid coordinates are rejected', () => {
   const field = new WaveField(96, 128, .75);
   assert(shore(.5, .49) < 0);
-  assert(shore(0, 0) > 0);
-  assert.equal(field.disturb(0, 0, 1), false);
+  for(const [u,v] of [[0,0],[0,1],[1,0],[1,1],[.5,0],[0,.5],[1,.5],[.5,1]]){
+    assert(shore(u,v)<0);assert.equal(field.disturb(u,v,.5),true);assert(field.energy()>0);
+    field.clear();assert.equal(field.rainImpact(u,v,.1,false),true);field.updateRain(.08);assert(field.energy()>0);field.clear();
+  }
+  for(const [u,v] of [[-.001,.5],[1.001,.5],[.5,-.001],[.5,1.001],[NaN,.5],[.5,Infinity]]){
+    assert.equal(field.disturb(u,v,1),false);assert.equal(field.rainImpact(u,v,.1),false);
+  }
   assert.equal(field.disturb(NaN, .5, 1), false);
   for (let i = 0; i < 90; i++) field.step();
   assert.equal(field.energy(), 0);
@@ -1054,7 +1057,7 @@ test('swiping disturbs a continuous path and clear removes history', () => {
   field.step(); assert.equal(field.energy(), 0);
 });
 
-test('many overlapping strokes stay finite and dry bank stays dry', () => {
+test('many overlapping strokes stay finite and solid obstacles remain dry', () => {
   for (const aspect of [.4, 1, 2.5]) {
     const field = new WaveField(96, 128, aspect);
     for (let n = 0; n < 200; n++) { field.disturb(.5 + Math.sin(n) * .25, .49 + Math.cos(n) * .16, .8); field.step(); }

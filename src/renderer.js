@@ -6,12 +6,11 @@
     'uniform mat4 uViewProjection; uniform mediump float uTime; uniform mediump float uPass;',
     'varying mediump vec2 vUV; varying mediump vec3 vNormal;',
     'varying mediump vec3 vColor; varying mediump float vHeight;',
-    'float shore(vec2 uv){vec2 p=(uv-vec2(.5,.49))/vec2(.465,.35);float a=atan(p.y,p.x);return length(p)-(1.+.048*sin(a*5.+.7)+.024*sin(a*9.-.5)+.04*cos(a*3.));}',
     'void main(){',
     ' vUV=aUV;vNormal=vec3(0.,1.,0.);vColor=aColor;vHeight=aPosition.y;',
     ' if(uPass<.5){gl_Position=vec4(aPosition.xy,.7,1.);return;}',
     ' if(uPass>1.5){vNormal=aNormal;gl_Position=uViewProjection*vec4(aPosition,1.);return;}',
-    ' vec3 p=aPosition;float wet=smoothstep(.005,.13,-shore(aUV));',
+    ' vec3 p=aPosition;float wet=1.;',
     ' float a=p.x*5.5+p.z*7.-uTime*1.2;',
     ' float b=p.x*-8.+p.z*3.5-uTime*.9;',
     ' float c=p.x*11.+p.z*9.+uTime*1.6;',
@@ -22,15 +21,14 @@
     ' gl_Position=uViewProjection*vec4(p,1.);',
     '}'
   ].join('\n');
-  // Toon color bands, shoreline foam.
+  // Lit open water; geometry-derived foam appears only around added obstacles.
   var fragment = [
     'precision mediump float;',
     'varying mediump vec2 vUV; varying mediump vec3 vNormal;',
     'varying mediump vec3 vColor; varying mediump float vHeight;',
     'uniform sampler2D uScene; uniform sampler2D uWave; uniform sampler2D uNoise; uniform sampler2D uNormal; uniform sampler2D uFoam; uniform sampler2D uBed;',
     'uniform vec2 uBedTexel;',
-    'uniform vec2 uTexel; uniform float uShorePixel; uniform mediump float uTime; uniform float uAspect; uniform float uLight; uniform float uDetail; uniform mediump float uPass;',
-    'float shore(vec2 uv){vec2 p=(uv-vec2(.5,.49))/vec2(.465,.35);float a=atan(p.y,p.x);return length(p)-(1.+.048*sin(a*5.+.7)+.024*sin(a*9.-.5)+.04*cos(a*3.));}',
+    'uniform vec2 uTexel; uniform mediump float uTime; uniform float uAspect; uniform float uLight; uniform float uDetail; uniform mediump float uPass;',
     'float waveAt(vec2 uv){vec4 s=texture2D(uWave,uv);return (s.r*(256./257.)+s.g*(1./257.))*2.-1.;}',
     // Four bilinear taps reconstruct a smooth cubic B-spline without enlarging the simulation.
     'float heightAt(vec2 uv){',
@@ -56,7 +54,7 @@
     '  gl_FragColor=vec4(fish,1.);return;',
     ' }',
     ' if(uPass>3.5){float opacity=(1.-smoothstep(.08,.5,length(vUV-.5)))*.30*vColor.r;gl_FragColor=vec4(.025,.055,.035,opacity);return;}',
-    ' vec2 uv=vUV;float d=shore(uv);vec3 land=texture2D(uScene,uv).rgb;vec3 col=land;float alpha=1.;',
+    ' vec2 uv=vUV;vec3 land=texture2D(uScene,uv).rgb;vec3 col=land;float alpha=1.;',
     ' if(uPass>1.5){',
     '  float sun=max(0.,dot(normalize(vNormal),normalize(vec3(-.55,1.,-.4))));',
     '  col=uPass>2.5?vColor*(.55+sun*.65):land*(.86+sun*.16);',
@@ -65,12 +63,7 @@
     '  if(uLight>1.5)col*=vec3(.43,.63,.83);',
     '  gl_FragColor=vec4(col,1.);return;',
     ' }',
-    ' float shorePixel=uShorePixel;',
-    '#ifdef SHORE_DERIVATIVES',
-    ' shorePixel=max(fwidth(d),uShorePixel*.5);',
-    '#endif',
-    ' float edgeStart=-.004-shorePixel;float edgeEnd=.012+shorePixel;',
-    ' if(uPass>.5){ if(d>=edgeEnd)discard;',
+    ' if(uPass>.5){',
     '  vec2 p=vec2(uv.x*uAspect,uv.y);',
     '  float dx=heightAt(uv+vec2(uTexel.x,0.))-heightAt(uv-vec2(uTexel.x,0.));',
     '  float dy=heightAt(uv+vec2(0.,uTexel.y))-heightAt(uv-vec2(0.,uTexel.y));',
@@ -118,10 +111,9 @@
     '  float wetRim=(1.-smoothstep(.005,.033,distanceToShore))*(.18+.55*breakup);',
     '  col=mix(col,vec3(.91,1.,.96),clamp(advancing*.82+lace*.6+wetRim,0.,.90));',
     '  alpha=mix(.62,.94,smoothstep(.008,.18,depth));',
-    '  alpha*=1.-smoothstep(edgeStart,edgeEnd,d);',
     ' }',
     ' if(uLight>.5&&uLight<1.5){col=col*vec3(1.1,.86,.75)+vec3(.035,.009,0.);}',
-    ' if(uLight>1.5){col=col*vec3(.43,.63,.83);if(d<0.)col+=vec3(.015,.055,.09);}',
+    ' if(uLight>1.5){col=col*vec3(.43,.63,.83);col+=vec3(.015,.055,.09);}',
     ' gl_FragColor=vec4(col,alpha);',
     '}'
   ].join('\n');
@@ -142,8 +134,6 @@
       // Keep interpolated shoreline coordinates precise too, not only fragment arithmetic.
       var vertexSource = highPrecision ? vertex.replace('varying mediump vec2 vUV','varying highp vec2 vUV').replace(/uniform mediump float/g,'uniform highp float') : vertex;
       var fragmentSource = highPrecision ? fragment.replace('precision mediump float;','precision highp float;').replace('varying mediump vec2 vUV','varying highp vec2 vUV').replace(/uniform mediump float/g,'uniform highp float') : fragment;
-      this.shoreDerivatives = !!gl.getExtension('OES_standard_derivatives');
-      if (this.shoreDerivatives) fragmentSource = '#extension GL_OES_standard_derivatives : enable\n#define SHORE_DERIVATIVES\n' + fragmentSource;
       program=gl.createProgram(); gl.attachShader(program,compile(gl.VERTEX_SHADER,vertexSource)); gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragmentSource)); gl.linkProgram(program);
       if (!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
       gl.useProgram(program); this.program=program;
@@ -157,7 +147,7 @@
       this.boatBuffer=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.boatShadows=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);
       this.dropped=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropShadows=buffer(gl.ARRAY_BUFFER,4,gl.DYNAMIC_DRAW);this.dropRevision=-1;this.dropCount=0;this.dropShadowCount=0;
       this.buffers=buffers; this.uniforms={};
-      var names=['uScene','uWave','uNoise','uNormal','uFoam','uBed','uBedTexel','uTexel','uShorePixel','uTime','uAspect','uLight','uDetail','uPass','uViewProjection'];
+      var names=['uScene','uWave','uNoise','uNormal','uFoam','uBed','uBedTexel','uTexel','uTime','uAspect','uLight','uDetail','uPass','uViewProjection'];
       for(var i=0;i<names.length;i++)this.uniforms[names[i]]=gl.getUniformLocation(program,names[i]);
       function texture(unit,source,repeat) {
         var value=gl.createTexture();textures.push(value);gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,value);
@@ -190,7 +180,6 @@
   Renderer.prototype.resize=function(width,height){
     var gl=this.gl,size=root.WaterCore.bufferSize(width,height,root.devicePixelRatio,this.low),aspect=width/height;
     this.canvas.width=size.width;this.canvas.height=size.height;gl.viewport(0,0,size.width,size.height);gl.uniform1f(this.uniforms.uAspect,aspect);
-    gl.uniform1f(this.uniforms.uShorePixel,Math.max(1/(size.width*.465),1/(size.height*.35)));
     // Orthographic camera tilted 30 degrees from overhead; ground UVs still match touch coordinates.
     gl.uniformMatrix4fv(this.uniforms.uViewProjection,false,new Float32Array([1/aspect,0,0,0, 0,.5,-.17320508,0, 0,-.8660254,-.1,0, 0,0,0,1]));
     this.mesh=root.WaterCore.waterMesh(aspect,this.low);

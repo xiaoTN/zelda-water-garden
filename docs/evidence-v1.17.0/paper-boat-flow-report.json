@@ -1,0 +1,26 @@
+{
+  "browser": "155.0.4283.62",
+  "errors": [],
+  "reports": [
+    {
+      "quality": "normal",
+      "waveTravel": 0.00037242485722865926,
+      "wavePeakSpeed": 0.007022819404493064,
+      "swipeFlowX": 0.09239341720010298,
+      "swipeTravel": 0.020488044189331478,
+      "heldStationary": true,
+      "tuningDisabled": true,
+      "pageExitStopped": true
+    },
+    {
+      "quality": "low",
+      "waveTravel": 0.00018191551448215604,
+      "wavePeakSpeed": 0.0016718261656267581,
+      "swipeFlowX": 0.19993595642546588,
+      "swipeTravel": 0.010017612088906502,
+      "heldStationary": true,
+      "tuningDisabled": true,
+      "pageExitStopped": true
+    }
+  ]
+}

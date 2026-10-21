@@ -18,6 +18,7 @@ async function run() {
     for (const viewport of [{ width:390, height:844 }, { width:1440, height:960 }, { width:320, height:568 }, { width:844, height:390 }]) {
       const context = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true });
       const page = await context.newPage();
+      await page.addInitScript({path:path.join(root,'tests/helpers/water-obstacles.cjs')});
       page.on('pageerror', e => errors.push(e.message));
       page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
       const before = Date.now(); await page.goto(url); await page.waitForFunction(() => window.WaterGarden && window.WaterGarden.inspect().steps > 10); await page.waitForTimeout(700);
@@ -289,16 +290,16 @@ async function run() {
             };
             renderer = new WaterRenderer(surface,WaterScene.create(.8),field);
             proto.shaderSource = shaderSource;
-            renderer.resize(256,320); WaterCore.updateMesh = function() {};
+            renderer.resize(256,320); installWaterObstacleFixture(renderer); WaterCore.updateMesh = function() {};
             const gl=renderer.gl;
-            gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D,renderer.textures[5]);
+            gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D,renderer.textures[4]);
             gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,WaterMaps.canvas('foam'));
             const read=()=>{renderer.draw(4,0);const p=new Uint8Array(surface.width*surface.height*4);gl.readPixels(0,0,surface.width,surface.height,gl.RGBA,gl.UNSIGNED_BYTE,p);return p;};
-            const before=read(); field.stroke(.11,.39,.12,.58,.25); const after=read();
+            const before=read(); field.stroke(.22,.39,.22,.58,.25); const after=read();
             let changed=0, remote=0;
             for(let y=0;y<surface.height;y++)for(let x=0;x<surface.width;x++) {
-              const u=x/surface.width,v=1-y/surface.height,d=WaterCore.shore(u,v),i=(y*surface.width+x)*4;
-              if(d<-.02&&d>-.24&&Math.abs(after[i]-before[i])>5) { if(u<.25)changed++;if(u>.75)remote++; }
+              const u=x/surface.width,i=(y*surface.width+x)*4;
+              if(Math.abs(after[i]-before[i])>5) { if(u<.35)changed++;if(u>.75)remote++; }
             }
             field.clear();const reset=read();let resetDifference=0;
             for(let i=0;i<before.length;i++)resetDifference=Math.max(resetDifference,Math.abs(before[i]-reset[i]));
@@ -320,7 +321,7 @@ async function run() {
               text=text.replace('gl_FragColor=vec4(col,1.);return;','if(uPass>2.5)col=vHeight>.025?vec3(1.,0.,0.):(vHeight<-.01?vec3(0.,0.,1.):vec3(0.,1.,0.));gl_FragColor=vec4(col,1.);return;');
               return source.call(this,shader,text);
             };
-            renderer=new WaterRenderer(canvas,WaterScene.create(.8),field);proto.shaderSource=source;renderer.resize(320,400);
+            renderer=new WaterRenderer(canvas,WaterScene.create(.8),field);proto.shaderSource=source;renderer.resize(320,400); installWaterObstacleFixture(renderer);
             const gl=renderer.gl,read=()=>{renderer.draw(4,0);const pixels=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;};
             proto.drawElements=function(){};const solid=read();proto.drawElements=drawElements;
             const water=read();
@@ -346,7 +347,7 @@ async function run() {
           try {
             // Inspect the depth actually consumed by the water material, without lighting/foam hiding the result.
             proto.shaderSource=function(shader,text){return source.call(this,shader,text.replace('alpha=mix(.62,.94,smoothstep(.008,.18,depth));','col=vec3(clamp(depth/.22,0.,1.));alpha=1.;'));};
-            renderer=new WaterRenderer(canvas,WaterScene.create(.8),field);proto.shaderSource=source;renderer.resize(320,400);
+            renderer=new WaterRenderer(canvas,WaterScene.create(.8),field);proto.shaderSource=source;renderer.resize(320,400);installWaterObstacleFixture(renderer);
             const gl=renderer.gl,bed=renderer.bed;
             const read=()=>{renderer.draw(4,0);const p=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,p);return p;};
             const real=read(),flat=new Uint8Array(bed.pixels);
@@ -355,7 +356,7 @@ async function run() {
               const bottom=WaterTerrain.elevation((x+.5)/bed.width,(y+.5)/bed.height),code=Math.round((bottom+.3)/.6*65535);
               flat[i*4]=code>>8;flat[i*4+1]=code&255;
             }
-            gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,renderer.bedTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,bed.width,bed.height,0,gl.RGBA,gl.UNSIGNED_BYTE,flat);
+            gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,renderer.bedTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,bed.width,bed.height,0,gl.RGBA,gl.UNSIGNED_BYTE,flat);
             const withoutStoneDepth=read();let shallower=0;
             for(let i=0;i<real.length;i+=4)if(withoutStoneDepth[i]-real[i]>8)shallower++;
             return {shallowerPixels:shallower,error:gl.getError()};
@@ -363,11 +364,7 @@ async function run() {
         });
         assert(colorDepth.shallowerPixels>40,'water material must read shallower depth above the actual submerged stone surfaces');
         assert.equal(colorDepth.error,0);reports.push({scenario:'geometry-derived water material depth',...colorDepth,result:'passed'});
-        const clip={x:16,y:345,width:54,height:85};
-        const foamBefore=await page.screenshot({clip,path:path.join(out,'shoreline-phase-a.png')});
-        await page.waitForTimeout(1000);
-        const foamAfter=await page.screenshot({clip,path:path.join(out,'shoreline-phase-b.png')});
-        assert(!foamBefore.equals(foamAfter),'shoreline foam must evolve while untouched');
+
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight), true);
       const readyAndSettleMs = Date.now() - before;
@@ -578,10 +575,16 @@ async function run() {
       await page.locator('#reset').click();await page.locator('[data-mode="stone"]').click();
       if(viewport.width===390){
         const target=(await inspect()).fish[0];
-        await page.mouse.click(target.u*viewport.width,target.v*viewport.height);
+        // Open-water fish can swim beneath fixed interface controls. Dispatch to
+        // the scene itself so this checks anticipation rather than toolbar hits.
+        await page.evaluate(target=>{
+          const canvas=document.getElementById('water'),point={bubbles:true,button:0,pointerId:914,clientX:target.u*innerWidth,clientY:target.v*innerHeight};
+          canvas.dispatchEvent(new PointerEvent('pointerdown',Object.assign({buttons:1},point)));
+          canvas.dispatchEvent(new PointerEvent('pointerup',Object.assign({buttons:0},point)));
+        },target);
         await page.waitForTimeout(300);const fleeing=await inspect(),fish=fleeing.fish[0];
         assert.equal(fleeing.stoneImpacts,0,'fish must react while the stone is still airborne');
-        assert(fish.fear>.7&&fish.speed>.15,'nearby fish accelerate before impact');
+        assert(fish.fear>.7&&fish.speed>.15,'nearby fish accelerate before impact: '+JSON.stringify({target,fish}));
         assert(Math.hypot(fish.u-target.u,fish.v-target.v)>.012,'fish leave the target position');
         assert(fleeing.energy>.001,'escaping fish disturb the water before stone impact');
         assert.equal(fleeing.rings,0);
@@ -672,8 +675,8 @@ async function run() {
     await edgePage.goto(url); await edgePage.waitForFunction(() => window.WaterGarden && WaterGarden.inspect().steps > 5);
     assert.equal(await edgePage.evaluate(() => WaterGarden.inspect().renderer),'webgl');
     await edgePage.mouse.click(380,440); assert(await edgePage.evaluate(() => WaterGarden.inspect().energy > .001));
-    await edgePage.screenshot({path:path.join(out,'shoreline-compatibility.png')});
-    reports.push({scenario:'shoreline without derivatives or fragment highp',result:'passed'}); await edgeContext.close();
+    await edgePage.screenshot({path:path.join(out,'water-compatibility.png')});
+    reports.push({scenario:'open water without derivatives or fragment highp',result:'passed'}); await edgeContext.close();
     // Missing WebGL must explain unavailability and stop the game, never paint a 2D substitute.
     const fallbackContext=await browser.newContext({viewport:{width:390,height:844}}),fallbackPage=await fallbackContext.newPage();fallbackPage.on('pageerror',e=>errors.push(e.message));
     await fallbackPage.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type){return type==='webgl'?null:original.apply(this,arguments);};});

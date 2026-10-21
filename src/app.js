@@ -225,6 +225,11 @@
     return true;
   }
   function point(x, y) { return { u: x / width, v: y / height }; }
+  function waterPoint(p) {
+    var hit=boats.surface(p.u,p.v);
+    // Edge rays may meet the overscan; the simulation samples its nearest cell.
+    return {u:core.clamp(hit.u,0,1),v:core.clamp(hit.v,0,1)};
+  }
   function swipeRipple(f, p, distance) {
     f.rippleDistance += distance;
     if (f.rippleDistance >= 10 && now - f.last > .12) {
@@ -249,6 +254,7 @@
     }
     if(mode!=='stone'&&stoneDrops.blocks(p.u,p.v))return;
     if (mode!=='stone' && renderer && renderer.terrain.blocks(p.u, p.v)) return;
+    p=waterPoint(p);
     if (core.shore(p.u, p.v) >= -.025) return;
     garden.classList.add('touched');
     initAudio();
@@ -282,8 +288,9 @@
       if(moved>.0001){field.stroke(oldU,oldV,f.boat.u,f.boat.v,.06);fishSchool.scare(f.boat.u,f.boat.v,.4);if(strokeAudio)strokeAudio.stroke(moved/Math.max(.016,gesture-f.movedAt));}
       f.u=f.boat.u;f.v=f.boat.v;f.movedAt=gesture;return;
     }
+    if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { p=waterPoint(p);f.u=p.u;f.v=p.v;return; }
+    p=waterPoint(p);dx=(p.u-f.u)*width;dy=(p.v-f.v)*height;distance=Math.sqrt(dx*dx+dy*dy);
     f.travel += distance;
-    if (stoneDrops.blocks(p.u,p.v) || (renderer && renderer.terrain.blocks(p.u, p.v))) { f.u=p.u;f.v=p.v;return; }
     if (core.shore(p.u, p.v) < -.02) {
       fishSchool.scare(p.u,p.v,Math.min(1,.35+distance/65),f.u,f.v);
       field.stroke(f.u, f.v, p.u, p.v, Math.min(.17, .035 + distance * .002) * tuning.values.waterStroke);

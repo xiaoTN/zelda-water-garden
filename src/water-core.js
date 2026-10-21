@@ -3,9 +3,8 @@
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
   function rainRadius(age, scale) { return (.003 + age * .042) * scale; }
   function shore(u, v) {
-    var x = (u - 0.5) / 0.465, y = (v - 0.49) / 0.35;
-    var angle = Math.atan2(y, x);
-    return Math.sqrt(x * x + y * y) - (1 + 0.048 * Math.sin(angle * 5 + 0.7) + 0.024 * Math.sin(angle * 9 - 0.5) + 0.04 * Math.cos(angle * 3));
+    // All visible coordinates are water; only invalid or off-screen input is dry.
+    return Number.isFinite(u) && Number.isFinite(v) && u >= 0 && u <= 1 && v >= 0 && v <= 1 ? -1 : 1;
   }
   function WaveField(width, height, aspect) {
     this.width = width; this.height = height; this.aspect = aspect || 1;
@@ -160,7 +159,8 @@
     if (aspect < 1) nx = Math.max(32, Math.round(nx * aspect)); else ny = Math.max(32, Math.round(ny / aspect));
     var count = (nx + 1) * (ny + 1), vertices = new Float32Array(count * 5), dynamics = new Float32Array(count), indices = new Uint16Array(nx * ny * 6), at = 0;
     for (var y = 0; y <= ny; y++) for (var x = 0; x <= nx; x++) {
-      var i = y * (nx + 1) + x, u = x / nx, v = y / ny;
+      // Overscan covers the camera's vertical shift even at maximum wave height.
+      var i = y * (nx + 1) + x, u = x / nx * 1.12 - .06, v = y / ny * 1.12 - .06;
       vertices[i * 5] = (u - .5) * aspect * 2; vertices[i * 5 + 1] = 0;
       vertices[i * 5 + 2] = (v - .5) * 2 / .8660254; vertices[i * 5 + 3] = u; vertices[i * 5 + 4] = v;
       if (x < nx && y < ny) { indices[at++] = i; indices[at++] = i + nx + 1; indices[at++] = i + 1; indices[at++] = i + 1; indices[at++] = i + nx + 1; indices[at++] = i + nx + 2; }
